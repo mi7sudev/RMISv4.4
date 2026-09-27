@@ -15,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { NAV_CONFIG, displayNameOf, initialsOf, performSignOut } from "@/components/shell/nav-rail";
+import { BrandLogo } from "@/components/brand-logo";
 import { useSession } from "@/components/session-provider";
 import { navigate, ROLE_HOME } from "@/lib/router";
 
@@ -49,8 +50,8 @@ export function MobileNav({ view }: { view: string }) {
               onClick={() => go(ROLE_HOME[user.role])}
               className="flex min-h-[44px] items-center gap-3"
             >
-              <img src="/MIRDC-mark.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
-              <span className="text-sm font-medium text-ink">MIRDC Recruitment</span>
+              <BrandLogo logoSize={26} />
+              <span className="text-sm font-medium text-ink">RMIS</span>
             </button>
           </div>
 

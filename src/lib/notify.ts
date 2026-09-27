@@ -37,7 +37,7 @@ export async function sendEmail(input: EmailInput): Promise<SendResult> {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "DOST-MIRDC Recruitment <onboarding@resend.dev>",
+            from: process.env.EMAIL_FROM || "RMIS <onboarding@resend.dev>",
             to: [input.to],
             subject: input.subject,
             text: input.bodyText,
@@ -152,7 +152,7 @@ function emailShell(title: string, bodyHtml: string): string {
     <h1 style="margin:0 0 16px;font-size:22px;color:#181825;">${title}</h1>
     ${bodyHtml}
     <hr style="border:none;border-top:1px solid #eee;margin:24px 0 12px;" />
-    <p style="margin:0;font-size:11px;color:#949494;">This is an automated message from the MIRDC Recruitment Management Information System. Please do not reply.</p>
+    <p style="margin:0;font-size:11px;color:#949494;">This is an automated message from RMIS (Recruitment Management Information System). Please do not reply.</p>
   </div></body></html>`;
 }
 
@@ -262,11 +262,11 @@ export function emailDirect(senderName: string, subject: string, message: string
 }
 
 export function smsApplicationReceived(jobTitle: string) {
-  return `DOST-MIRDC Recruitment: Your application for ${jobTitle} has been received and is awaiting evaluation. Do not reply.`;
+  return `RMIS: Your application for ${jobTitle} has been received and is awaiting evaluation. Do not reply.`;
 }
 
 export function smsStatusChanged(status: string, jobTitle: string, reason?: string | null) {
-  return `DOST-MIRDC Recruitment: Your application for ${jobTitle} is now ${status.toUpperCase()}.${reason ? ` Remarks: ${reason}` : ""} Do not reply.`;
+  return `RMIS: Your application for ${jobTitle} is now ${status.toUpperCase()}.${reason ? ` Remarks: ${reason}` : ""} Do not reply.`;
 }
 
 export function smsNotice(text: string) {

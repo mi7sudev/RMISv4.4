@@ -29,6 +29,7 @@ import { navigate, useHashRoute, type JobWire, type ApplicantMini } from "@/lib/
 import { dotClass, variantForJobStatus, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { JobFormDialog, ghostBtn, ghostBadBtn, ctaBtn, iconBtn } from "@/components/views/recruitment";
+import { BrandLogo } from "@/components/brand-logo";
 
 type QueueRow = {
   id: number;
@@ -228,7 +229,7 @@ export default function JobWorkspace() {
           </button>
           <div className="min-w-0 flex items-center gap-3">
             <span aria-hidden="true" className="contents">
-              <img src="/MIRDC-mark.png" alt="" className="h-11 w-11 object-contain max-sm:hidden" />
+              <BrandLogo logoSize={30} className="max-sm:hidden" />
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">

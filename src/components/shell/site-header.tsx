@@ -14,6 +14,7 @@
 // ============================================================================
 
 import { useSession } from "@/components/session-provider";
+import { BrandLogo } from "@/components/brand-logo";
 import { navigate, ROLE_HOME, useHashRoute } from "@/lib/router";
 
 export function SiteHeader() {
@@ -28,14 +29,15 @@ export function SiteHeader() {
         <button
           onClick={() => navigate("home")}
           className="flex min-h-[44px] items-center gap-3"
-          aria-label="MIRDC Recruitment home"
+          aria-label="RMIS home"
         >
-          {/* Official system logo — the MIRDC emblem (the old RMIS brand mark). */}
-          <img src="/MIRDC-mark.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
+          {/* Official two-logo lockup — DOST seal + MIRDC emblem on the black
+              plate (the emblems' art carries the black background). */}
+          <BrandLogo logoSize={26} />
           <span
             className="hidden text-sm font-semibold tracking-[-0.01em] text-ink sm:inline"
           >
-            MIRDC Recruitment
+            RMIS
           </span>
         </button>
 

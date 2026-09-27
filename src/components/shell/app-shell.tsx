@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { useSession } from "@/components/session-provider";
+import { BrandLogo } from "@/components/brand-logo";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { NavRail } from "@/components/shell/nav-rail";
 import { WorkspaceHeader } from "@/components/shell/workspace-header";
@@ -48,12 +49,11 @@ export function AppShell({
               className="flex min-h-[44px] items-center gap-2.5"
               aria-label="Go to my workspace"
             >
-              {/* Official logo on a white plate — the emblem's black quarters
-                  would vanish against the dark rail. */}
-              <span className="grid h-9 w-9 shrink-0 place-items-center bg-white p-[3px]">
-                <img src="/MIRDC-mark.png" alt="" className="h-full w-full object-contain" />
-              </span>
-              <span className="text-sm font-semibold text-white">MIRDC Recruitment</span>
+              {/* Official two-logo lockup on its black plate — the emblems'
+                  art carries the black background, so it reads cleanly on the
+                  dark rail strip. */}
+              <BrandLogo logoSize={22} />
+              <span className="text-sm font-semibold text-white">RMIS</span>
             </button>
           </div>
 

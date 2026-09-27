@@ -98,7 +98,7 @@ export const POST = handleApi(async (req: Request) => {
     const sms = await sendSms({
       to: app.applicant.contactNumber ?? "",
       message: smsNotice(
-        `DOST-MIRDC Recruitment: We regret to inform you that you were not shortlisted for the position ${title}.`
+        `RMIS: We regret to inform you that you were not shortlisted for the position ${title}.`
       ),
       relatedType: "application",
       relatedId: applicationId,

@@ -29,6 +29,7 @@ import {
 import { apiFetch, deadlineState, formatCurrency, formatDate } from "@/lib/client";
 import type { JobWire } from "@/lib/router";
 import { navigate } from "@/lib/router";
+import { BrandLogo } from "@/components/brand-logo";
 import { textToHtml } from "@/lib/sanitize";
 import { variantForJobStatus } from "@/lib/status-ui";
 import {
@@ -652,7 +653,7 @@ export default function Recruitment() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <span aria-hidden="true" className="contents">
-                            <img src="/MIRDC-mark.png" alt="" className="h-7 w-7 object-contain" />
+                            <BrandLogo logoSize={20} />
                           </span>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-ink">{j.title}</p>

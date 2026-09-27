@@ -25,6 +25,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -186,16 +187,15 @@ export function NavRail({ view }: { view: string }) {
             className={`flex min-h-[44px] items-center gap-3 ${expanded ? "min-w-0 flex-1" : ""}`}
             aria-label={expanded ? "Go to my workspace" : "Expand navigation"}
           >
-            {/* Official logo on a white plate — see the app-shell note. */}
-            <span className="grid h-9 w-9 shrink-0 place-items-center bg-white p-[3px]">
-              <img src="/MIRDC-mark.png" alt="" className="h-full w-full object-contain" />
-            </span>
+            {/* Official two-logo lockup on its black plate — see brand-logo. */}
+            {expanded ? (
+              <BrandLogo logoSize={22} />
+            ) : (
+              <BrandLogo logoSize={16} />
+            )}
             {expanded && (
               <span className="min-w-0 text-left">
-                <span className="block truncate text-sm font-semibold text-white">MIRDC Recruitment</span>
-                <span className="block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--rail-text-dim)]">
-                  DOST · RMIS
-                </span>
+                <span className="block truncate text-sm font-semibold text-white">RMIS</span>
               </span>
             )}
           </button>

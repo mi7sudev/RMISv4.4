@@ -129,7 +129,7 @@ export const POST = handleApi(async (req: Request, ctx: { params: Promise<{ id: 
       relatedType: "application",
       relatedId: id,
     });
-    smsText = `DOST-MIRDC Recruitment: We regret to inform you that you were not shortlisted for the position ${title}.`;
+    smsText = `RMIS: We regret to inform you that you were not shortlisted for the position ${title}.`;
     const sms = await sendSms({ to: mobile, message: smsNotice(smsText), relatedType: "application", relatedId: id });
     notificationDescription = `A regret letter was sent for your application for ${title}.`;
     await db.notification.create({

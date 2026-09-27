@@ -18,10 +18,10 @@ const radio = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "MIRDC Recruitment — RMIS",
+  title: "RMIS",
   description:
     "Recruitment Management Information System of the Metals Industry Research and Development Center (DOST-MIRDC). Browse positions, apply online, and track your application.",
-  icons: { icon: "/MIRDC-mark.png" },
+  icons: { icon: "/logo-mirdc.png" },
 };
 
 export default function RootLayout({

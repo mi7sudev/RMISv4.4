@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize } from "@/lib/client";
+import { BrandLogo } from "@/components/brand-logo";
 import { divisionName } from "@/lib/constants";
 import { navigate, useHashRoute } from "@/lib/router";
 import type { JobWire } from "@/lib/router";
@@ -219,13 +220,9 @@ function JobCard({
   return (
     <article className="dlg-card p-4 transition-shadow duration-200 hover:shadow-dialog-subtle sm:p-6">
       <div className="flex items-start gap-4">
-        {/* Official MIRDC emblem — anchors the card the way a company logo
-            does on every top-ranked job-board design */}
-        <img
-          src="/MIRDC-mark.png"
-          alt=""
-          className="hidden h-12 w-12 shrink-0 object-contain sm:block"
-        />
+        {/* Official two-logo lockup — anchors the card the way a company
+            logo does on every top-ranked job-board design */}
+        <BrandLogo logoSize={36} className="hidden sm:inline-flex" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <DeadlinePill job={job} />

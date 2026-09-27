@@ -16,6 +16,7 @@ import { Activity, Check, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { BrandLogo } from "@/components/brand-logo";
 import { IconChip } from "@/components/ui/shell";
 import type { ChipTone } from "@/components/ui/shell";
 import { useSession } from "@/components/session-provider";
@@ -53,11 +54,10 @@ function AuthBrandPanel() {
 
       <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
         <div className="inline-flex w-fit items-center gap-3 bg-white/[0.06] py-2 pl-2 pr-4 ring-1 ring-white/10 backdrop-blur">
-          {/* Official logo on a white plate — the aside is dark. */}
-          <span className="grid h-8 w-8 shrink-0 place-items-center bg-white p-[3px]">
-            <img src="/MIRDC-mark.png" alt="" className="h-full w-full object-contain" />
-          </span>
-          <span className="text-sm font-semibold text-white/90">MIRDC Recruitment</span>
+          {/* Official two-logo lockup on its black plate — the emblems' art
+              carries the black background, so it sits cleanly on the aside. */}
+          <BrandLogo logoSize={22} className="ring-1 ring-white/15" />
+          <span className="text-sm font-semibold text-white/90">RMIS</span>
         </div>
 
         <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] tracking-[-0.01em] text-white">
