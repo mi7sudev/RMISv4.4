@@ -31,8 +31,8 @@ export function SiteHeader() {
           className="flex min-h-[44px] items-center gap-3"
           aria-label="RMIS home"
         >
-          {/* Official two-logo lockup — DOST seal + MIRDC emblem on the black
-              plate (the emblems' art carries the black background). */}
+          {/* Official two-logo lockup — DOST seal + MIRDC emblem. The emblems'
+              art carries transparent backgrounds and floats on the header. */}
           <BrandLogo logoSize={26} />
           <span
             className="hidden text-sm font-semibold tracking-[-0.01em] text-ink sm:inline"

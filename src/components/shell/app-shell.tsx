@@ -49,10 +49,9 @@ export function AppShell({
               className="flex min-h-[44px] items-center gap-2.5"
               aria-label="Go to my workspace"
             >
-              {/* Official two-logo lockup on its black plate — the emblems'
-                  art carries the black background, so it reads cleanly on the
-                  dark rail strip. */}
-              <BrandLogo logoSize={22} />
+              {/* Official two-logo lockup — the emblems' art carries transparent
+                  backgrounds, so it floats directly on the dark rail strip. */}
+              <BrandLogo logoSize={22} tone="dark" />
               <span className="text-sm font-semibold text-white">RMIS</span>
             </button>
           </div>

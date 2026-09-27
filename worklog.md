@@ -67,3 +67,17 @@ Work Log:
 
 Stage Summary:
 - Review-queue kanban cards now match the other boards: single credential chip sits flush at the card bottom, dead space gone; hover/keyboard/touch affordance for opening the candidate profile preserved (absolutely positioned at the tags row)
+---
+Task ID: 5
+Agent: Z.ai Code (main orchestrator)
+Task: Logo chip at the upper-left corner showed a black background — make it white like the header
+
+Work Log:
+- Pixel-analyzed public/logo-dost.png + logo-mirdc.png with sharp (RGBA): BOTH PNGs already carry TRANSPARENT backgrounds (0,0,0,a0 top color) — the black box was purely the bg-black plate span in BrandLogo, not the artwork
+- Rewrote brand-logo.tsx: removed the bg-black plate entirely — emblems now float directly on the underlying surface (white header shows through = user's request; dark rail shows through = unchanged look). Added tone prop ("light" default / "dark") that flips the divider hairline (bg-black/15 vs bg-white/25); geometry (p-1, logoSize+8) untouched
+- tone="dark" applied to dark surfaces: nav-rail expanded+collapsed, app-shell mobile bar, signin + signup aside chips; default light tone on site-header, jobs cards, recruitment rows, job-workspace header, mobile-nav sheet
+- Removed obsolete ring-1 ring-white/15 overrides on signin/signup (ring was for the old black plate) and updated all stale "black plate" comments in 5 files
+- Browser-verified all 9 surfaces: public header (emblems on white — fix confirmed), jobs cards, signin dark aside chip, admin rail expanded/collapsed, recruitment rows, job workspace header, mobile 390px top bar + nav sheet; lint clean
+
+Stage Summary:
+- Brand lockup no longer renders a black box anywhere: transparent-background emblems float on the surface with a tone-adaptive divider; white header now shows the logo on pure white, dark rail/asides keep their prior blended look

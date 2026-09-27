@@ -54,9 +54,9 @@ function AuthBrandPanel() {
 
       <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
         <div className="inline-flex w-fit items-center gap-3 bg-white/[0.06] py-2 pl-2 pr-4 ring-1 ring-white/10 backdrop-blur">
-          {/* Official two-logo lockup on its black plate — the emblems' art
-              carries the black background, so it sits cleanly on the aside. */}
-          <BrandLogo logoSize={22} className="ring-1 ring-white/15" />
+          {/* Official two-logo lockup — the emblems' art carries transparent
+              backgrounds, so it floats directly on the dark aside. */}
+          <BrandLogo logoSize={22} tone="dark" />
           <span className="text-sm font-semibold text-white/90">RMIS</span>
         </div>
 
