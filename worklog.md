@@ -35,3 +35,20 @@ Work Log:
 Stage Summary:
 - Brand lockup now shows BOTH official emblems (DOST seal + MIRDC emblem) everywhere the logo appears; system renamed "RMIS" across UI, page title, footer, favicon, and outbound email/SMS copy
 - New assets: public/logo-dost.png, public/logo-mirdc.png; original preserved at upload/mirdc-logo.png (old composite MIRDC-mark.png still in public/, no longer referenced)
+---
+Task ID: 3
+Agent: Z.ai Code (main orchestrator)
+Task: Kanban applicant cards show ONE credential tag (education → training → eligibility fallback) instead of overflowing multi-chip rows like [PRIMARY SECONDARY N/A +3]
+
+Work Log:
+- Traced all tag rendering to the shared API: admin Candidates kanban, evaluator Job Workspace pipeline kanban, and Review Queue kanban all consume /api/evaluator/queue; tags were built per SNAPSHOT ROW (every education entry + every eligibility title), so applicants like MAR JAMES (5 edu rows incl. junk "N/A"/"PRIMARY"/"SECONDARY" + eligibility) produced 8 chips overflowing to "+3"
+- Created src/lib/credential-tag.ts — credentialTagFor(snapshot) returns ONE tag: (1) most advanced education entry (eduRank: graduate>college>vocational>secondary>elementary) with a real course/degree label, skipping junk values (N/A, na, -, none...); if every edu label is junk falls back to the highest entry's level name; (2) else first training title; (3) else first eligibility title; else "" (no chip). Whitespace-collapsed, trimmed
+- /api/evaluator/queue/route.ts now emits tags = tag ? [tag] : [] — single credential per card for ALL consuming views; KanbanTags component untouched (MAX_TAGS logic harmless)
+- Verified API as admin: App 1/2 (Maria Santos) → ["BS Chemistry"]; App 8 (MAR JAMES) → ["BACHELOR OF SCIENCE IN INFORMATION TECHNOLOGY"] (junk rows skipped, College degree chosen)
+- Bun sanity check of all 5 fallback branches: edu-wins / no-edu→training / no-edu-train→eligibility / all-junk-edu→level-name / nothing→"" — all correct
+- Browser-verified (Agent Browser): admin Candidates kanban toggle, evaluator #/job?id=1&tab=pipeline board, evaluator #/review-queue board — every card renders exactly one chip; native JS click needed for the React mode-toggle buttons (synthetic click race, same as signin)
+- Mobile 390px: kanban lanes snap-scroll cleanly, one chip per card; lint clean; dev.log clean
+
+Stage Summary:
+- Applicant cards on admin kanban, evaluator job-workspace pipeline, and review queue now display exactly ONE credential tag with fallback education → training → eligibility; overflow "+N" chips are gone
+- New lib: src/lib/credential-tag.ts (pure, reusable); single touch point /api/evaluator/queue/route.ts feeds all views

@@ -10,6 +10,7 @@ import { ok, handleApi } from "@/lib/api";
 import { requireEvaluatorFromReq } from "@/lib/auth";
 import { stageForStatus, QUERYABLE_STATUSES } from "@/lib/status";
 import { buildRequirementsReport, type SnapshotShape } from "@/lib/requirements";
+import { credentialTagFor } from "@/lib/credential-tag";
 import { safeJsonParse } from "@/lib/snapshot";
 import { paginationSchema } from "@/lib/validation";
 
@@ -66,13 +67,10 @@ export const GET = handleApi(async (req: Request) => {
       eligibilities: safeJsonParse<SnapshotShape["eligibilities"]>(app.snapshotEligibilities, []),
     };
     const report = buildRequirementsReport(snapshot, position ?? {});
-    // Display-only credential tags (frozen snapshot — never live data).
-    const tags = [
-      ...snapshot.educations
-        .map((e) => [e.degree, e.course, e.specifyOthers].filter(Boolean).join(" ").trim())
-        .filter(Boolean),
-      ...snapshot.eligibilities.map((e) => (e.title || "").trim()).filter(Boolean),
-    ];
+    // Display-only credential tag (frozen snapshot — never live data).
+    // ONE tag per card: education, else training, else eligibility.
+    const tag = credentialTagFor(snapshot);
+    const tags = tag ? [tag] : [];
     return {
       id: app.id,
       status: app.status,
