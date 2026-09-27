@@ -52,3 +52,18 @@ Work Log:
 Stage Summary:
 - Applicant cards on admin kanban, evaluator job-workspace pipeline, and review queue now display exactly ONE credential tag with fallback education → training → eligibility; overflow "+N" chips are gone
 - New lib: src/lib/credential-tag.ts (pure, reusable); single touch point /api/evaluator/queue/route.ts feeds all views
+---
+Task ID: 4
+Agent: Z.ai Code (main orchestrator)
+Task: Remove dead space below the credential tag on kanban applicant cards (review queue board)
+
+Work Log:
+- User reported tall empty gap under the single tag chip; reproduced + measured live: review-queue cards were 155px vs 138px on the other boards — divider row inflated to 47px while the chip is 19px
+- Root cause: the hover-revealed "Open profile" icon button sat IN FLOW (justify-between) with iconBtn base h-8 w-8 overriding the stacked h-7 w-7 (same specificity, h-8 later in generated CSS) → invisible ~32-36px block dictated the row height; exposed once the extra tag chips were removed
+- Fix in review-queue.tsx: divider row now `relative flex items-center`, button `absolute top-1/2 right-0 -translate-y-1/2` (no layout impact), explicit h-7 w-7 grid classes instead of stacked iconBtn, KanbanTags gets pr-8 so chips never run under the button; stopPropagation + aria-label kept
+- Measured after fix: card 138px (matches candidates/job-workspace boards), divider row 30px, gap chip→card bottom 17px (= p-4 only)
+- Verified reveal paths: max-lg (touch) button always visible at 900px (opacity 1); keyboard focus-visible → opacity 1 (transition); group-hover/card classes unchanged from the previously working code (headless CLI can't synthesize real :hover, verified the other two paths live instead)
+- lint clean; dev.log clean
+
+Stage Summary:
+- Review-queue kanban cards now match the other boards: single credential chip sits flush at the card bottom, dead space gone; hover/keyboard/touch affordance for opening the candidate profile preserved (absolutely positioned at the tags row)

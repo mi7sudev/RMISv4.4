@@ -327,11 +327,11 @@ export default function ReviewQueue() {
                           </div>
                           <MatchBadge metCount={row.match?.metCount ?? 0} requiredCount={row.match?.requiredCount ?? 0} />
                         </div>
-                        <div className={KANBAN_DIVIDER + " flex items-start justify-between gap-2"}>
-                          <KanbanTags tags={row.tags ?? []} className="min-w-0 flex-1" />
+                        <div className={KANBAN_DIVIDER + " relative flex items-center"}>
+                          <KanbanTags tags={row.tags ?? []} className="min-w-0 flex-1 pr-8" />
                           <button
                             type="button"
-                            className={iconBtn + " h-7 w-7 shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/card:opacity-100 max-lg:opacity-100"}
+                            className="absolute top-1/2 right-0 grid h-7 w-7 -translate-y-1/2 place-items-center text-stone transition-opacity hover:bg-fog hover:text-ink focus-ring opacity-0 focus-visible:opacity-100 group-hover/card:opacity-100 max-lg:opacity-100"
                             aria-label={`Open ${name}'s profile`}
                             onClick={(e) => {
                               e.stopPropagation();
