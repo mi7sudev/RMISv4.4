@@ -1,0 +1,511 @@
+     1→---
+     2→Task ID: 1
+     3→Agent: Z.ai Code (main orchestrator)
+     4→Task: Clone https://github.com/mi7sudev/RMIS-Minimalist.git and make it our own project in /home/z/my-project
+     5→
+     6→Work Log:
+     7→- Cloned repo to /tmp/rmis-inspect; identified it as RMIS (Recruitment Management Information System, DOST-MIRDC) — Next.js 16 + Prisma/SQLite + shadcn/ui, same scaffold as our project
+     8→- Diffed configs: components.json/tsconfig/postcss/tailwind/Caddyfile identical; next.config.ts adds serverExternalPackages; eslint adds react-hooks/set-state-in-effect off
+     9→- Copied src/, prisma/ (schema + seed), public/ into /home/z/my-project; patched next.config.ts + eslint.config.mjs
+    10→- Installed 5 extra deps: bcryptjs, jose, mammoth, unpdf, xlsx
+    11→- Reset db/custom.db, ran bun run db:push + bun prisma/seed.ts (demo accounts: testadmin/testevaluator/testapplicant/maria.santos — password123)
+    12→- Verified via Agent Browser: public landing, sign-in flow (login POST → JWT cookie → session → role home), admin Command Center + Analytics, applicant home + 7-part profile, maria.santos pipeline tracker (Shortlisted with stepper), evaluator Review Queue kanban, mobile 390px responsive + sticky footer
+    13→
+    14→Stage Summary:
+    15→- RMIS now runs as our project: single-route hash-routed SPA with role-based dashboards (ADMIN/EVALUATOR/APPLICANT), jobs board, applications, MQR engine, PDS upload, notifications
+    16→- Per user request removed: (1) 4 pipeline KPI cards in Review Queue (evaluator+admin), (2) landing stats band (Open positions/Hiring divisions/Soonest deadline/Salary range), (3) "Why Apply With MIRDC" value band; moved error/retry UI into positions grid; cleaned unused imports/helpers; lint clean
+    17→---
+    18→Task ID: 2
+    19→Agent: Z.ai Code (main orchestrator)
+    20→Task: UI removals per user request (KPI cards, stats band, value band)
+    21→
+    22→Work Log:
+    23→- review-queue.tsx: removed Stage KPIs grid (Applied/Under Review/Shortlisted/Rejected with hints "awaiting start/being screened/advancing/not qualified"), removed SkeletonKpis from loading skeleton, cleaned imports (ScanSearch, Star, XCircle, KpiCard, SkeletonKpis)
+    24→- public-landing.tsx: removed stats band section (Open positions/Hiring divisions/Soonest deadline/Salary range), removed "Why Apply With MIRDC" value band section, removed now-dead code (Stat component, VALUE_ITEMS, metrics memo, salaryRangeLabel helper), cleaned imports (Banknote, Building2, CalendarClock, FileUp, ScrollText, ReactNode, LucideIcon, formatDate); re-homed the error+retry UI into the positions grid section
+    25→- Verified in browser at 1440px: landing flows hero → Open Positions → How to Apply → CTA → footer; evaluator review queue starts directly with the 4-column kanban
+    26→- bun run lint passes clean; dev.log shows all 200s
+    27→
+    28→Stage Summary:
+    29→- Three UI blocks removed as requested, no broken references, error feedback preserved, lint clean, browser-verified
+    30→
+    31→---
+    32→Task ID: ui-remove-applicant-kpi
+    33→Agent: Z.ai Code (main)
+    34→Task: Remove the 3 summary/KPI cards on the applicant home page ("Open Positions / published now", "My Applications / total submitted", "In Progress / awaiting decision")
+    35→
+    36→Work Log:
+    37→- Located the KPI row in src/components/views/applicant-home.tsx (SummaryCard x3 inside a sm:grid-cols-3 grid)
+    38→- Removed the KPI grid block and its matching SkeletonKpis(count=3) loading skeleton
+    39→- Deleted the now-unused SummaryCard component and inProgress derived value
+    40→- Cleaned unused imports (LucideIcon, ChipTone, ClipboardList)
+    41→- bun run lint -> clean
+    42→- Browser-verified (agent-browser): logged in as testapplicant via form requestSubmit; confirmed none of "published now"/"total submitted"/"awaiting decision" remain in the DOM; page flows from profile banner straight to Open Positions section; no console/page errors; API calls all 200
+    43→- Also completed previously interrupted evaluator verification: testevaluator Review Queue renders Kanban with live data (Applied 0 / Under Review 1 / Shortlisted 1 / Rejected 0), no leftover stat cards
+    44→- Checked mobile viewport (390x844): single-column layout intact
+    45→
+    46→Stage Summary:
+    47→- Applicant home KPI cards fully removed; unused code cleaned; lint clean; browser-verified on desktop + mobile
+    48→- Evaluator dashboard verification from the earlier task is now complete
+    49→
+    50→---
+    51→Task ID: ui-port-applicant-layouts
+    52→Agent: Z.ai Code (main)
+    53→Task: Port the applicant HOME and PROFILE page layouts from github.com/mi7sudev/rmis-main-ui (desktop + mobile), restyled in our sharp-edge design system
+    54→
+    55→Work Log:
+    56→- Cloned reference repo to /tmp/rmis-main-ui; studied workspaces/applicant/applicant-home.tsx, views/profile-view.tsx (+ screenshots) for the exact layout grammar
+    57→- applicant-home.tsx rewritten: editorial welcome header (eyebrow "APPLICANT PORTAL" · display title "Welcome Back, {first}" · standfirst, hairline bottom border); lg:grid-cols-12 two-pane workspace — LEFT (col-span-7) "Open Positions / Apply Now" stacked full-width list rows with pipe-separated vitals (place | type | pay | closes), square ember +/− toggle and inline quick view (clamped description, 6 QuickFacts, Apply now / Read full description actions); RIGHT (col-span-5) sticky "Your Applications / In Progress" rail with own overflow scroll, journey cards in reference arrangement (No. 01 kicker · status pill · chevron · 3-checkpoint timeline · NEXT STEP block); rail stacks FIRST on mobile (order-1/order-2 swap)
+    58→- profile-view.tsx chrome rewritten: ONE cohesive record card (avatar · name · status pill · docs count · ring pinned right on phones; hairline-separated desktop lockup with ring + "N of 7 sections" + Mark Complete CTA); quiet completion note; PDS strip inside the card; desktop (lg+) sticky numbered workflow band (done=ember check · active=ember number · ahead=hollow, hairline connectors, "Approx N Min" second line) pinned top-0 with glass frost; mobile sticky top-16 segmented 7-cell strip with framer-motion sliding ember block + prev/next caption bar ("SECTION N OF 7 · LABEL") and scroll-into-view on change; sections render in one column with fade/rise swap
+    59→- Kept all data logic intact (15s poll, focus refetch, detail modal, Mark Complete, PDS lock); styling all in-house: dlg-card sharp surfaces, dlg-cta ember, status pills, hairlines, rounded-none
+    60→- bun run lint clean; dev.log clean compiles
+    61→- Browser-verified via agent-browser: home desktop (quick view expand/collapse, actions, Applied pills, empty + real data via maria.santos), profile desktop (section switch, sticky band under scroll, completion ring 14%→86%), mobile 390px (rail-first stacking, stepper tap 01→03 with sliding block + auto-scroll), detail modal opens with full posting; no console/page errors
+    62→
+    63→Stage Summary:
+    64→- Both applicant surfaces now match the reference layout on desktop and mobile while staying sharp-edge consistent with our UI
+    65→- framer-motion (already a dependency) used for quick-view height glide + mobile stepper sliding block
+    66→
+    67→---
+    68→Task ID: ui-profile-sticky-and-yesno
+    69→Agent: Z.ai Code (main)
+    70→Task: (1) Fix mobile profile stepper not sticking on scroll; (2) replace unprofessional toggle switches with Yes/No controls matching the rmis-main-ui reference
+    71→
+    72→Work Log:
+    73→- Sticky fix (two root causes): (a) the mobile stepper was a grid item inside the single-column sections grid — a sticky element's containing block is its own grid area (exactly the strip's height), leaving zero stick range; moved the strip out of the grid to be a direct child of the tall view root (same level as the desktop band). (b) `.dlg-card` sets `position: relative` in UNLAYERED globals.css, which beats Tailwind's layered `sticky` utility — computed style stayed `relative`; swapped the strip to `dlg-card-plain shadow-e2` (no position property). Same latent bug fixed in settings.tsx tab rail (`lg:sticky` + dlg-card).
+    74→- Section-switch scroll hardened: double rAF + INSTANT scrollTo targeting the layout-stable strip position (−72px) — smooth scrollIntoView was being canceled by Chrome's scroll-anchoring yank when a short section swaps for a tall one; wrapper gets `overflow-anchor: none`. Also discovered earlier test artifact: querySelector on aria-label was hitting the hidden desktop-band buttons, not the mobile strip.
+    75→- Yes/No conversion: new shared `src/components/views/profile/yes-no-field.tsx` (role=radiogroup/radio, aria-checked, 44px sharp segmented pair — Yes | No — selected side carries the ember gradient, label grammar identical to sibling fields). Ported from rmis-main-ui's YesNoField (radio pair) re-dressed in sharp edges.
+    76→- personal-info-section.tsx: removed SwitchField + Switch import; 4 questions converted (PWD, government employee, administratively charged, charged of any crime). Conditional detail fields still toggle on Yes.
+    77→- form-dialog.tsx: "switch" and "checkbox" field types now render YesNoField (work experience: "Currently employed here?", "Government service"); removed Switch/Checkbox imports; Date-To disabledIf logic verified intact.
+    78→- Genuine multi-select checkboxes (documents bulk select) intentionally kept as checkboxes.
+    79→- bun run lint clean; dev.log clean; browser-verified desktop 1440px + mobile 390px.
+    80→
+    81→Stage Summary:
+    82→- Mobile stepper now pins at 64px (flush under the top bar) for the whole scroll, on both root causes fixed; section switching lands the strip below the bar deterministically
+    83→- All profile binary declarations are explicit Yes/No sharp controls — no toggles left in the profile forms; conditional/disabled logic preserved
+    84→
+    85→---
+    86→Task ID: 1
+    87→Agent: Z.ai Code (main)
+    88→Task: Port rmis-main-ui's exact Yes/No radio control look into our profile forms + port the actual repo footer (GovPH mono seal watermark behind footer contents)
+    89→
+    90→Work Log:
+    91→- Cloned https://github.com/mi7sudev/rmis-main-ui.git to /tmp/rmis-main-ui
+    92→- Studied src/components/views/profile/form-fields.tsx YesNoField: inline radio pair using shadcn RadioGroup/RadioGroupItem, options order No-first/Yes-second, flex-row gap-6 pt-1, size-4 round radios, labels "flex cursor-pointer items-center gap-2 text-sm font-normal text-foreground", value defaults to No
+    93→- Studied src/components/footer.tsx: relative mt-auto overflow-hidden footer, govph-seal-mono-footer.jpg absolute bottom-left at opacity-10 (z-0) behind contents (z-10), sharp rounded-[4px] ShieldCheck chip, DPA note, © DOST-MIRDC · RMIS
+    94→- Copied public/govph-seal-mono-footer.jpg (735x752 mono JPEG) into our public/
+    95→- Rewrote src/components/views/profile/yes-no-field.tsx: replaced segmented ember-gradient button pair with repo's exact inline radio pair (Radix RadioGroup, No-first, gap-6, size-4 round radios); kept our boolean API (all callers unchanged), our label grammar (text-xs font-medium text-graphite + dusty-rose star), added min-h-[44px] touch rows, text-ink option labels
+    96→- Rewrote src/components/shell/footer.tsx: repo footer structure 1:1 (seal watermark bottom-left opacity-10 behind z-10 contents, ShieldCheck square chip, DPA note, © line) using our tokens (border-divider/70, bg-card, text-stone, ember #ee7f38 chip icon, max-w-[1400px] 2xl:max-w-[1680px]); kept mt-auto sticky-footer contract
+    97→- Verified remaining <Switch> usages are filters/admin toggles (review-queue "Qualified only", settings user block) — not form questions, intentionally kept
+    98→- Browser verified (agent-browser, 1440x900 + 390x844, testapplicant): 4 Personal radiogroups render + toggle (PWD Yes→No round-trip, autosave PUT 200, final state unchanged); Work dialog "Currently employed here?"/"Government service" render as radios, isPresentWork=Yes still clears Date To; footer seal watermark visible behind contents on both viewports; mobile stepper still pinned while deep-scrolled; bun run lint clean; no browser errors
+    99→
+   100→Stage Summary:
+   101→- Yes/No form questions now visually identical to rmis-main-ui (round inline radio pair, No-first) while staying on our tokens/sharp language
+   102→- Footer now the actual repo footer incl. GovPH mono seal watermark behind contents
+   103→- Files: yes-no-field.tsx (rewritten), shell/footer.tsx (rewritten), public/govph-seal-mono-footer.jpg (added)
+   104→
+   105→---
+   106→Task ID: 2
+   107→Agent: Z.ai Code (main)
+   108→Task: Bounded section-content column (min/max height + internal scrollbar, mobile + desktop) and red-circle indicator for unfilled sections in the mobile stepper
+   109→
+   110→Work Log:
+   111→- profile-view.tsx — section content wrapper (sectionsRef) became a bounded scroll column: min-h-[360px] max-h-[65dvh] overflow-y-auto scroll-thin (lg: min-h-[420px] max-h-[72dvh]); same behavior mobile + desktop. overflowAnchor:none kept
+   112→- Added useEffect on `active`: sectionsRef.scrollTo({top:0}) so every section swap lands at its own top (inner offset no longer inherited across sections)
+   113→- Mobile stepper: unfilled sections now render a red ring (lucide Circle, h-3.5 w-3.5, text-[var(--bad)] #b3556a) matching the green CheckCircle2's size/weight; active unfilled cell uses a white ring on the ember block (red would clash); filled stays green check
+   114→- Verified with 50 seeded trainings (POST /api/applicant/trainings, all 201): content scrollHeight 7080–9836px capped at 648px desktop / 549px mobile (72dvh/65dvh), document height bounded at ~1316/1479px, internal scrollTop works, scrollbar = scroll-thin 6px thumb
+   115→- Regression verified: sticky mobile strip still pins at top 64 at max window scroll with 3000px inner offset; desktop band always within view on the bounded page; Training→Education→Training switch resets inner scrollTop to 0 (desktop + mobile path); empty Work section holds the 360px floor; footer reachable, seal watermark intact
+   116→- Cleaned up all 50 bulk trainings via DELETE /api/applicant/trainings/[id] (0 remaining); lint clean; no browser errors
+   117→
+   118→Stage Summary:
+   119→- Section content is height-bounded on both viewports: sparse sections hold a stable min-height (no footer jump between swaps), tall sections (50+ entries) scroll internally instead of stretching the page unboundedly
+   120→- Unfilled stepper sections are now flagged red on mobile — filled=green check, unfilled=red ring, active=ember block
+   121→- Files changed: src/components/views/profile-view.tsx only
+   122→
+   123→---
+   124→Task ID: 5
+   125→Agent: Zai Code (main)
+   126→Task: Roll back to Version V8 (commit 28cb6f9, Sep 24 10:04 PM) per user request — discard both footer-experiment commits
+   127→
+   128→Work Log:
+   129→- Inspected git history: V8 (28cb6f9) contains the bounded section column (min/max height + internal scrollbar) + red unfilled-circle stepper indicators + earlier yes/no radios and GovPH seal footer; the two commits after it (07e8004 footer-inside-column, ed6dade footer courtesy reveal) were the rejected footer experiments
+   130→- Working tree was clean (auto-committed), so ran git reset --hard 28cb6f9 — both footer experiments discarded, V8 restored exactly
+   131→- Verified: app-shell.tsx renders <Footer/> unconditionally at shell level; profile-view.tsx has the bounded column (min-h 360/420 + max-h 65dvh/72dvh + overflow-y-auto) and red Circle indicators; globals.css courtesy rules gone; no embedded footer
+   132→- bun run lint clean; browser sanity check (desktop 1440x900 + mobile 390x844, testapplicant): bounded column present, footer at shell level, 4 yes/no radiogroups on Personal, red circle on unfilled section 03, no console errors
+   133→
+   134→Stage Summary:
+   135→- Codebase is now exactly at Version V8 (28cb6f9): bounded section column + red circles + yes/no radios + GovPH seal footer at shell level; all footer repositioning experiments removed
+   136→- Note for future work: with the bounded column, the shell-level footer docks at the viewport bottom after the short page scroll (inherent geometry) — any further footer work must start from this V8 baseline per the user's instruction
+   137→
+   138→---
+   139→Task ID: 6
+   140→Agent: Z.ai Code (main) + Explore agent (audit phase)
+   141→Task: Full-system responsiveness audit and fixes across every aspect ratio — small phones (360), phones (390-430), iPad portrait (768-834), iPad landscape / small laptops (1024-1279), desktop (1280-1440), ultrawide (1920-2560)
+   142→
+   143→Work Log:
+   144→- Ran a very-thorough Explore audit of 21 view/shell files + grep sweep of admin/evaluator views; 20 findings (2 HIGH, 8 MEDIUM, 10 LOW), all fixed and browser-verified:
+   145→- HIGH-1 profile-view.tsx: desktop section-nav band overflowed at 1024-1279 (7 shrink-0 nowrap labels ≈ 880-920px vs ~704-896px column). Band is now its own overflow-x-auto scroll-thin track (ol w-max min-w-full, connectors min-w-2, labels 12.5px until xl); page never widens, band scrolls as safety net. Verified: at 1024 with 256px expanded rail navScrollW 920 > clientW 768, scrollLeftMax 152, doc ovx 0; fits with no scroll at 1280/1440/1920/2560
+   146→- HIGH-2 applicant-home.tsx: QuickFacts xl:grid-cols-6 crushed values to ~50-85px at 1280-1600 (currency wrapped mid-number). Now grid-cols-2 sm:grid-cols-3 everywhere; verified at 1440: 3 cols, all dd values single-line (h=24), ₱22,316 / Sep 14, 2026 intact
+   147→- MEDIUM: jobs-view filterRail converted to render function with id suffix — duplicate id="job-search" eliminated; job detail two-col split moved xl→lg so the sticky Position Summary/Apply CTA sits beside the description at 1024-1279 (verified at 1024: gridCols "340px 340px", summary top 168 = body top); filter chips 20px→28px hit areas (py-1.5 pl-3 pr-2 pills, h-7 w-7 buttons); quick-view toggle h-10→h-11; nav-rail h-screen→h-dvh (iPad Safari bottom controls no longer clipped); review-workspace lg rail 340→300px (less dossier squeeze); candidate-detail back button 36→44px; documents-section nested max-h-96 scroller removed below lg (no trapped touch scroll inside the bounded column); desktop band aria-label now "Profile section steps" (unique landmarks)
+   148→- LOW: 6 dialogs 90/92vh→dvh (apply-dialogs, applicant-home, form-dialog, candidates, recruitment, review-queue); sticky rails calc(100vh-3rem)→calc(100dvh-3rem) (applicant-home, review-workspace); command menu max-h min(420px,60dvh) + input row h-9→h-11 (verified fits 390x844 at 251px tall); kanban boards (candidates, review-queue, job-workspace + ui/kanban.tsx) get md:grid md:grid-cols-2 tier — verified at 820: true 2-col grid 378px columns instead of phone carousel; candidates pagination 36→44px; mobile stepper cells gap-1→gap-0.5 (48px cells at 390); footer container unified to the app's single max-w-[1600px] (footer left edge 608 = main left edge at 2560 — was 40px off with the old 1400/1680 override)
+   149→- Fixed one self-inflicted JSX parse error (comment inside ternary) — lint clean
+   150→- DIAGNOSED + FIXED: dev.log prisma "attempt to write a readonly database" (SQLITE_READONLY 1032) on auditLog.create during login/logout — stale connection in the dev server process that survived the earlier crash; file itself writable (fresh-process write test OK). Restarted dev server; full logout/login cycle re-verified with 0 prisma errors
+   151→- Browser matrix (agent-browser, zero horizontal overflow everywhere unless noted): 360x740 landing+home+jobs ✓, 390x844 landing/home/jobs/detail/profile/command-menu ✓ (cells 48px, strip sticky top-16, red circle on unfilled 03), 768x1024 profile ✓ (cells 99px, column 666px=65dvh), 820x1180 profile+kanban ✓, 1024x768 profile band scroll + detail two-col ✓, 1280/1440 profile band fits ✓, 1920x1080 profile screenshot ✓, 2560x1440 footer aligned ✓; only console message is the benign dev-only LCP warning on the decorative seal image (pre-existing)
+   152→
+   153→Stage Summary:
+   154→- The system now holds layout from 360px phones to 2560px ultrawide with zero horizontal overflow and no crushed/wrapped numerics; the 1024-1279 iPad-landscape dead zone is fully covered (profile band scrolls internally, job CTA side-by-side, kanban 2-up from md)
+   155→- 17 files touched: profile-view, applicant-home, jobs-view, nav-rail, review-workspace, candidate-detail, documents-section, command-menu, ui/command, candidates, review-queue, job-workspace, recruitment, apply-dialogs, form-dialog, shell/footer, ui/kanban
+   156→- Note: dev server was restarted at ~16:4x to clear the stale readonly SQLite connection — if prisma readonly errors reappear, restart bun run dev
+   157→
+   158→---
+   159→Task ID: 7
+   160→Agent: Z.ai Code (main)
+   161→Task: Frontpage job cards — port the rmis-main-ui job-card layout & contents onto the public landing, keeping our sharp-edge design system
+   162→
+   163→Work Log:
+   164→- Verified first that the rejected footer experiments were already rolled back (prior session git reset to V8 28cb6f9): app-shell.tsx renders <Footer/> unconditionally at shell level, profile-view.tsx has no footer embed (only AlertDialogFooter primitives) — V8 baseline intact; footer docking left as-is per that baseline
+   165→- Cloned/refreshed /tmp/rmis-main-ui; studied jobs-view.tsx card register: stacked sharp cards, momentum rule hover bar, humanized title + pipe-separated vitals (place | type | pay | closes), square +/− quick-view toggle, in-place quick view (clamped description, six QuickFacts: Item No./Vacancies/Salary Grade/Monthly Salary/Published/Deadline, Apply now + Read full description), single expandedId
+   166→- Mirrored our OWN accepted port of the same register (applicant-home.tsx JobListCard — square ember toggle, ember momentum gradient, text-sm vitals, 3-up QuickFacts) so landing/home/board all share one card language
+   167→- public-landing.tsx rewritten: LandingJobCard replaced (status-pill + division pill + monogram grid card → board-register row); grid sm:grid-cols-2 lg:grid-cols-3 → single-column stack in a left-aligned max-w-6xl column (matches board results-column scale ~1064-1224px); count 12 → first 6 openings; added expandedId single-expand state; error/empty/see-all blocks now share the column
+   168→- Wired public CTAs through the shared useApplyFlow gate: "Apply now" → requestApply (anonymous: toast + #/signin; applicant: confirm/fast-track) with {dialogs} mounted once at root; "Read full description" → navigate("jobs", { job: id }) deep-link; overdue → disabled CTA + red "Deadline passed"; removed divisionShort/divisionName import
+   169→- bun run lint clean; dev.log 200s, no compile errors
+   170→- Browser-verified (agent-browser): desktop 1440x900 — 3 open jobs render as register rows (1152px, vitals "Accounting Unit | Permanent | ₱22,316 monthly | Closes Oct 4, 2026"), quick view shows 6 correct QuickFacts + clamped description, single-expand enforced (opening card 2 closes card 1), Apply now → toast "Please sign in to apply" + #/signin, Read full description → #/jobs?job=1 full posting; mobile 390x844 — full-width cards, wrapped vitals, 2-col facts, 0 horizontal overflow; landing footer + seal watermark intact at page bottom; jobs board regression clean (3 cards, search rail, 0 overflow); zero console/page errors
+   171→
+   172→Stage Summary:
+   173→- Frontpage job cards now use the rmis-main-ui board register (layout + contents) while staying sharp-edge consistent with applicant-home and the positions board — one card language across all three surfaces
+   174→- Files changed: src/components/views/public-landing.tsx only
+   175→
+   176→---
+   177→Task ID: 8
+   178→Agent: Z.ai Code (main)
+   179→Task: Make the profile desktop section-nav band ("Personal Approx 8 Min · Education … · Documents") not scrollable
+   180→
+   181→Work Log:
+   182→- The band was an overflow-x-auto scroll-thin track (ol w-max, shrink-0 items, min-w-2 connectors) — the 1024-1279 safety net from the responsiveness audit, which read as "scrollable". Removed the track entirely (nav overflow-x-auto + scroll-thin, ol w-max/min-w-full) and rebuilt the row to always FIT its container
+   183→- Fit strategy: below xl (1280) the register compacts — h-7 w-7 chips (28px) with 11px numerals, gap-2, 11.5px labels, "Approx N Min" second line hidden; from xl up the full register is unchanged (h-8 w-8 chips, 13.5px labels, Approx lines visible); hairline connectors became min-w-1 flex-1 so they absorb leftover width at every viewport. Worst case math: lg-1024 with expanded w-64 rail = 704px inner; compact row ≈ 660px — fits with slack (verified exactly: last item right edge 992 = inner content edge 992)
+   184→- bun run lint clean
+   185→- Browser-verified via agent-browser (testapplicant, read-only — no data touched): 1024x768 (scrollWidth 768 === clientWidth 768, approx hidden, all 7 labels visible, doc ovx 0), 1280x800 + 1440x900 + 1920x1080 (not scrollable, Approx lines visible, doc ovx 0); band still pins at top 0 while scrolling; clicking "Section 4: Training" still switches the section and resets the bounded column scrollTop to 0; mobile 390x844 strip untouched (7 cells + prev/next, not scrollable); zero console/page errors
+   186→
+   187→Stage Summary:
+   188→- Desktop profile section-nav band is no longer scrollable at any width — it compact-fits below xl and renders the full register from xl up; sticky behavior, section switching, bounded column, and the mobile strip are all unchanged
+   189→- Files changed: src/components/views/profile-view.tsx only (band comment + nav/ol/connector/chip/label/approx classes)
+   190→
+   191→---
+   192→Task ID: 9
+   193→Agent: Z.ai Code (main)
+   194→Task: Preview-died health check + make Personal Information section content NOT scrollable in the profile bounded column
+   195→
+   196→Work Log:
+   197→- Preview-died triage: dev.log showed a failed duplicate `bun run dev` (EADDRINUSE :::3000) while the real server survived; verified single next-server on :3000 (200), Caddy gateway :81 (200), and rendered page via agent-browser — transient, fixed by refresh
+   198→- Bounded column (sectionsRef div) applied `max-h-[65dvh] overflow-y-auto lg:max-h-[72dvh]` to ALL 7 sections; Personal Information (1972px natural) got a large internal scrollbar
+   199→- Made the bound conditional: `active === 1` renders the column with `overflow-visible` and NO max-height (page itself scrolls, natural height); sections 2-7 keep the bounded internal scroll unchanged
+   200→- Existing logic audited and safe: sectionsRef scrollTo({top:0}) is a no-op when unscrollable; handleMobileSectionChange page-jump logic independent of column scrollability; min-h kept on both branches so footer does not jump between swaps
+   201→- bun run lint clean
+   202→- Browser-verified (agent-browser, testapplicant): desktop 1440x900 — Personal overflowY visible / maxHeight none / scrollHeight 1972 === clientHeight (not scrollable), page scrollable (2663 > 577); Training (04) still bounded overflowY auto / maxHeight 415.44px (72dvh) / scrollable 2380-in-420; round-trip 1→4→1 keeps each mode; mobile 390x844 — Personal visible/none + page scrolls + mobile strip visible, Training auto / 548.6px (65dvh) scrollable, round-trip ok; footer present; zero console/page errors
+   203→
+   204→Stage Summary:
+   205→- Personal Information (section 01) no longer has an internal scrollbar — it grows to natural height and the page scrolls, while Education/Work/Training/Eligibility/Awards/Documents keep the bounded internal scroll for long lists
+   206→- Files changed: src/components/views/profile-view.tsx only (conditional bounded-column classes + comment)
+   207→
+   208→---
+   209→Task ID: 10
+   210→Agent: Z.ai Code (main)
+   211→Task: Apply the reference repo's kanban (PipelineBoard) UI/UX layout to our boards, aligned to the sharp-edge RMIS system
+   212→
+   213→Work Log:
+   214→- Re-cloned the reference repo (old /tmp clone was cleared) and analyzed its kanban: dash/views/queue-bits.tsx PipelineBoard (Review Queue default) + candidates.tsx KanbanView + minimalist-style-guide.md kanban section — tinted stage columns (bg-secondary/40) with floating white cards, header = stage dot + label + count chip, 4-card preview + dashed "+ N more" / "Show less" expander (no column scroll), dashed empty column with inbox glyph, mobile snap-scroll lanes w-[min(320px,85vw)]
+   215→- Our previous column: white/60 panel, bare count number, always-scrolling body, plain-text empty state — now upgraded in ONE shared primitive (src/components/ui/kanban.tsx KanbanColumn): fog-tinted panel (rgb 247,247,247) + hairline border, white count chip, 4-card preview + dashed "+ N more"/"Show less" expander (React.Children.toArray slice), dashed empty box with Inbox icon, lanes w-[min(320px,85vw)]; sharp edges kept (no rounded panels) to stay in our UI language; KANBAN_CARD/lift/MatchBadge/tags unchanged
+   216→- Updated the 3 consumers (review-queue.tsx, job-workspace.tsx, candidates.tsx) to pass cards directly and drop their inline empty <p> (column renders the empty box now) — careful ternary-removal brace fixes
+   217→- SkeletonKanban (ui/shell.tsx) now mirrors the tinted column shape (dot + label + chip skels, two card blocks)
+   218→- Lint clean
+   219→- Browser-verified as testevaluator: review queue desktop 1440x900 — 4 tinted columns, count chips, dashed empty boxes with inbox glyph; expander tested end-to-end with seeded data (5 temp "Applied" apps via bun:sqlite, guarded insert/cleanup): 4 preview + "+ 1 more" → click → 5 cards + "Show less" → click → collapsed again; card click still opens the ReviewWorkspace dialog (Escape closes); candidates board (#/candidates → Kanban tab) and job pipeline (#/job?id=3 → Pipeline tab) both show the tinted layout with expander where >4; mobile 390x844 — 4 snap lanes at 320px, board scrolls horizontally, no page h-overflow; seed data fully removed (guard-checked DELETE), board back to 2 real applications; zero console/page errors
+   220→
+   221→Stage Summary:
+   222→- All three kanban surfaces (Review Queue, Candidates, Job Pipeline) now use the reference PipelineBoard layout — tinted columns, floating cards, count chips, "+ N more"/"Show less" expanders, dashed empty states, mobile snap lanes — while keeping sharp edges and our tokens (fog/ink/stone/pebble, lift, pastel avatars, match badges)
+   223→- Files changed: src/components/ui/kanban.tsx, src/components/ui/shell.tsx, src/components/views/{review-queue,job-workspace,candidates}.tsx
+   224→
+   225→---
+   226→Task ID: 11
+   227→Agent: Z.ai Code (main)
+   228→Task: Review Queue modal — much wider + bounded scrollable dossier sections (Profile / Education / Experience / Training / Eligibility / Awards)
+   229→
+   230→Work Log:
+   231→- Widened the review-queue DialogContent: w-[min(96vw,1152px)] sm:max-w-6xl → w-[min(96vw,1440px)] sm:max-w-[1440px] (1382px rendered at 1440 viewport)
+   232→- Added `bounded?: boolean` prop to ReviewWorkspace (shared body): modal passes bounded; the full-page evaluator-review view keeps natural flow (verified maxHeight none / overflow visible)
+   233→- Bounded section class: min-h-[280px] max-h-[56dvh] overflow-y-auto scroll-thin lg:min-h-[360px] lg:max-h-[60dvh] — applied to exactly the 6 dossier TabsContent (Profile incl. character refs, Education, Experience, Training, Eligibility, Awards); Documents tab left as-is per request scope
+   234→- Fixed secondary overflow: the decision rail's lg:max-h-[calc(100dvh-3rem)] (852px) exceeded the dialog interior (826px), forcing the dialog itself to scroll — rail now caps at calc(92dvh-4rem) when bounded (764px), so the rail scrolls internally and the dialog frame never scrolls
+   235→- bun run lint clean (both edits)
+   236→- Browser-verified as testevaluator, desktop 1440x900: dialog width 1382px; all 6 sections report minHeight 360px / maxHeight 540px (60dvh) / overflowY auto; scroll engagement proven by temporarily inflating app #2's training snapshot to 32 entries (bun:sqlite, original saved + guard-checked restore): Training section scrollH 3268 in 540 client, scrollTop works, dialog self-scroll false; rail 764px internal scroll; after restore (2 trainings) section shows 360px min-height, no scroll, dialog self-scroll false; mobile 390x844: dialog 358px, section max-h 472px (56dvh) scrolls internally, no page h-overflow; full-page #/evaluator-review?id=2 regression: natural flow preserved; zero console/page errors
+   237→
+   238→Stage Summary:
+   239→- Review Queue modal is a much wider fixed-frame surface: 6 dossier sections each bounded (min 280/360px, max 56/60dvh) with internal scrollbars, decision rail scrolls internally, the dialog itself no longer scrolls at lg — long dossiers (e.g. 32 trainings) stay contained
+   240→- Files changed: src/components/views/review-queue.tsx (dialog width + bounded prop), src/components/views/review-workspace.tsx (bounded prop, boundedSectionCls, section classes, rail cap)
+   241→---
+   242→Task ID: 11
+   243→Agent: Z.ai Code (main orchestrator)
+   244→Task: Review modal interactions — Decision remarks panel (reveal on Shortlist/Not Qualified + Confirm/Cancel with confirmation dialogs) and Direct email composer dialog (auto-retrieved recipient); verify prior wider-modal + bounded-sections work
+   245→
+   246→Work Log:
+   247→- Confirmed prior session's wider-modal work already in code: review-queue.tsx DialogContent at w-[min(96vw,1440px)] sm:max-w-[1440px] max-h-[92dvh]; ReviewWorkspace `bounded` prop + boundedSectionCls (min-h-[280px]/max-h-[56dvh], lg: min 360px/max 60dvh, overflow-y-auto scroll-thin) applied to all 6 dossier tabs
+   248→- Reworked Decision card (review-workspace.tsx): remarks textarea now HIDDEN until Shortlist or Not Qualified clicked → new pendingDecision state reveals panel ("Shortlisting/Marking as Not Qualified — remarks are optional…") with Confirm + Cancel buttons below
+   249→- Confirm → existing decision AlertDialog ("Mark as Shortlisted?" / "Mark as Not Qualified?") with remarks echoed in the description → executes PATCH decision; decide() now also clears pendingDecision
+   250→- Cancel → NEW "Discard this decision?" AlertDialog (Keep editing / Discard); Discard clears selection + remarks, decision buttons return
+   251→- Start Review (stage Applied) keeps its direct-confirm behavior; Revise decision (flip/return) untouched
+   252→- Rewrote DirectEmailCard: inline form removed; card now has recipient note + "Send a direct email" ctaBtn (disabled when no email on record) + history list
+   253→- New DirectEmailDialog: To field read-only pre-filled from applicant profile email (payload.applicant.emailAddress; server re-resolves on POST), Subject, Message*, attach files (≤3×5MB logic preserved); Send → NEW "Send this email?" AlertDialog naming the recipient → POST FormData to /api/evaluator/applications/[id]/email → toast + history refresh + composer closes
+   254→- Lint clean; browser-verified (1440×900 + 390×844) on App 1 (Under Review): dialog 1382px wide; all 6 tabs bounded min 360/max 540px + overflow auto (injected 40-row filler → clamps at 540px and scrolls internally, modal no longer stretches); decision flow full pass (reveal → remarks → Cancel→discard-confirm → Keep editing keeps text → Discard collapses; Shortlist→remarks→Confirm→decision dialog w/ remarks→executed, toast "notification email sent"); email flow full pass (To auto-filled maria.santos@example.com, Send→confirm→toast "Direct email mock", history entry appears); mobile 358px modal fits, composer fits, sections 280/472px bounded; Escape cascade closes composer→modal; kanban intact; App 2 regression (Revise decision Flip/Return + composer present)
+   255→- DB cleanup via bun:sqlite with exact-id guards (each DELETE verified 1 row): Notification id3, EmailLog id1+id2 (shortlist notice + test direct email), SmsLog id1, AuditLog id68+69; Application 1 restored to status='Under Review', reason=NULL; re-verified modal shows decision card again after restore
+   256→
+   257→Stage Summary:
+   258→- Review modal: 1440px-wide surface; 6 dossier sections each min/max-bounded with internal scroll (no modal stretching)
+   259→- Decision: remarks only appear after picking Shortlist/Not Qualified; both Confirm and Cancel are guarded by confirmation dialogs
+   260→- Direct email: "Send a direct email" button opens composer with recipient auto-retrieved from the applicant profile; send is confirm-guarded; history intact
+   261→- Test data fully reverted; seed state matches pre-test (2 applications: Under Review + Shortlisted)
+   262→---
+   263→Task ID: 12
+   264→Agent: Z.ai Code (main orchestrator)
+   265→Task: Rework Decision interaction per user clarification — Shortlist / Not Qualified must open a separate modal (like the direct-email composer) instead of the inline remarks panel
+   266→
+   267→Work Log:
+   268→- Removed the Task-11 inline remarks panel + discard-confirm AlertDialog; parent states pendingDecision/discardOpen/remarks dropped from ReviewWorkspace
+   269→- Added DecisionDialog (review-workspace.tsx): opens from Shortlist ("Shortlist this applicant") / Not Qualified ("Mark as Not Qualified") buttons; contains remarks textarea (optional, 500 max, decision-specific placeholder) + Cancel/Confirm footer — identical pattern to DirectEmailDialog
+   270→- Modal Confirm → nested "Mark as Shortlisted?" / "Mark as Not Qualified?" AlertDialog (description: email consequence + remarks echo; destructive styling on the rejected variant) → executes PATCH { status, reason } → toast → composer + confirm close → rail switches to Revise decision
+   271→- AlertDialog Cancel keeps the composer open with remarks intact; composer Cancel just closes (mirrors email composer); Start Review + Revise-decision flips keep the parent confirmAction flow (decide() simplified: reason no longer injected there)
+   272→- Lint clean; browser-verified 1440×900 + 390×844 on App 1: no inline textarea in Decision card; Shortlist modal 1382px-parent/512px-composer flow (mobile 358px fits); remarks echo in confirm; Cancel-then-Confirm path executes end-to-end (toast "Applicant marked as Shortlisted — notification email sent"); Not Qualified variant verified incl. destructive confirm styling; Escape cascade composer→review modal; email composer regression untouched
+   273→- DB cleanup with exact-id guards (each = 1 row): Notification id4, EmailLog id3, SmsLog id2, AuditLog id70; Application 1 restored to 'Under Review'/NULL; final state verified (2 seed notifications, 0 email logs, status intact) — Cancel-only runs confirmed non-mutating
+   274→
+   275→Stage Summary:
+   276→- Decision now mirrors direct email: dedicated composer modal per decision with confirm-guarded submit; inline panel and discard dialog removed
+   277→- All verification green on desktop + mobile; seed data restored; worklog current
+   278→---
+   279→Task ID: 13
+   280→Agent: Z.ai Code (main orchestrator)
+   281→Task: Round the kanban applicant cards + proper icons on the decision flow (colored star for Shortlist, X-circle for Not Qualified)
+   282→
+   283→Work Log:
+   284→- Kanban rounding: first tried `rounded-xl` on KANBAN_CARD — browser showed 0px because globals.css @theme collapses the whole Tailwind radius scale to 0px (sharp-enterprise system, --radius-xs…4xl all 0). Switched to arbitrary `rounded-[12px]`, which bypasses the theme scale and stays scoped to the applicant cards only (KANBAN_CARD is used by review-queue / candidates / job-workspace kanbans); columns, "+N more" expander and empty states stay sharp; header comments updated
+   285→- Decision icons: DecisionDialog composer header now leads with an IconChip (emerald Star for "Shortlist this applicant", rose XCircle for "Mark as Not Qualified") and the composer's Confirm button swaps its generic Check icon for the same decision-specific IconChip — mirroring the Decision card buttons ("colored star icon" reference) and the Send-icon pattern of "Send a direct email"
+   286→- Lint clean; browser-verified 1440×900 + 390×844: card computed radius 12px vs column 0px (screenshots), Decision card star/X chips intact, Shortlist composer star in header+Confirm, Not Qualified composer X-circle in header+Confirm, remarks echo in "Mark as Not Qualified?" alert, Cancel keeps remarks, Escape cascade composer→modal, mobile composer 358px fits with icons visible
+   287→- Zero DB mutations this session (cancel-only flows): Application 1 still Under Review/NULL; Notification=2, EmailLog=0, AuditLog=66 unchanged
+   288→
+   289→Stage Summary:
+   290→- Kanban applicant cards now float with 12px rounded corners on all three boards; everything else in the sharp-enterprise system untouched
+   291→- Decision flow carries proper colored icons end-to-end: card buttons, composer header, composer Confirm (star = Shortlist, X-circle = Not Qualified); email composer unchanged as the icon-style reference
+   292→- Seed data intact; worklog current
+   293→---
+   294→Task ID: 14
+   295→Agent: Z.ai Code (main orchestrator)
+   296→Task: Replace the boxed IconChip glyphs on decision actions with proper plain lucide icons (outlined/filled, like the Send icon on "Send a direct email")
+   297→
+   298→Work Log:
+   299→- Decision card: Start Review → plain gold ScanSearch; Shortlist → plain filled gold star (fill-amber-400 + var(--warn) stroke); Not Qualified → plain outlined red X-circle (var(--bad)); no more chip boxes on any decision button
+   300→- Revise decision card: Flip to Not Qualified / Flip to Shortlisted / Return to Review converted to the same plain glyph treatment
+   301→- DecisionDialog composer: header icon + Confirm button icon swapped from IconChip to plain star / X-circle SVGs (h-5 header, h-4 button); composer now renders zero .chip elements
+   302→- Rail section headers (Gavel/History/Mail IconChips) intentionally untouched — they are the shared design-system rail pattern, the user's complaint targeted the action buttons
+   303→- Lint clean; browser-verified 1440×900 + 390×844 after re-signin: computed fill = amber-400 gold + stroke #a16207 on the star, stroke #b3556a on the X-circle, chipCount=0 in both composers, screenshots confirm clean glyphs on white + orange CTA surfaces; confirm alert still echoes remarks; Cancel/Escape cascade intact; mobile composer 358px fits
+   304→- DB audit: 4 new AuditLog rows are LOGIN/LOGOUT lifecycle only (session expiry + re-signin) — Application 1 still Under Review/NULL, Notification=2, EmailLog=0, zero decision mutations (cancel-only verification)
+   305→
+   306→Stage Summary:
+   307→- All decision actions now use proper plain lucide glyphs — filled gold star for Shortlist, outlined red X-circle for Not Qualified — matching the Send-icon style the user referenced; chip boxes removed from the decision flow
+   308→- Verification green on desktop + mobile; applicant data untouched; worklog current
+   309→---
+   310→Task ID: 15
+   311→Agent: Z.ai Code (main orchestrator)
+   312→Task: Fix "some of the modal forms are not responsive" — audit every dialog and cap/scroll the ones that overflow short viewports
+   313→
+   314→Work Log:
+   315→- Enumerated all 20+ Dialog/AlertDialog/CommandDialog surfaces across the app; measured each at 390×844 portrait, 844×390 landscape, and 1280×620 short-desktop via agent-browser (bounding rects, elementFromPoint overflow sweep, scrollability)
+   316→- Root cause: 5 DialogContent elements had NO max-height/overflow cap — on short viewports (landscape phones, small preview windows) they rendered taller than the viewport, cut off at top AND bottom with no scrolling: Direct email composer (572px in a 390px viewport, Send button unreachable), Decision composer, Notices composer, Settings Create User, Settings Edit User
+   317→- Fixes: added max-h-[92dvh] overflow-y-auto scroll-thin to those 5 DialogContent elements; base-level guards added to ui/alert-dialog.tsx AlertDialogContent (max-h-[90dvh]) and ui/command.tsx CommandDialog (max-h-[85dvh]) so every alert/confirm and the command palette are protected app-wide
+   318→- Verified fixed state: email composer 359px in 390px landscape (title visible, internal scroll reaches Send), decision composer 304px fits, Create User 359px scrollable with submit reachable, "Mark as Shortlisted?" alert fits; portrait 390×844 re-run (358px, fits, Escape cascade clean, no stale overlays); desktop 1280×800 review modal (1229×722, kanban cards still 12px rounded); lint clean
+   319→- Note: agent-browser real-CDP input desynced mid-session (real mouse/keys stopped reaching the page while synthetic dispatch + keyboard events worked) — worked around with synthetic PointerEvent/KeyboardEvent sequences; app handlers proven functional via keyboard + synthetic events
+   320→- DB untouched (cancel-only verification): Application 1 still Under Review/NULL, 2 notifications, 0 email/SMS logs
+   321→
+   322→Stage Summary:
+   323→- Every modal/form in the app now scrolls internally instead of overflowing on short viewports; phone portrait, landscape, and short-desktop all verified
+   324→- Alert dialogs and command palette protected at the base-component level
+   325→- Seed data intact; worklog current
+   326→
+   327→---
+   328→Task ID: 16
+   329→Agent: Z.ai Code (main orchestrator)
+   330→Task: Fix "modals are not responsive on mobile view" — narrow-viewport (width) overflow pass across every dialog form
+   331→
+   332→Work Log:
+   333→- User clarified the earlier complaint targets mobile WIDTH, not height. Re-measured every dialog at 320×568 (iPhone SE) and 390×844 via agent-browser (dialog rect vs viewport, scrollWidth vs clientWidth, recursive overflow walk + min-content probes)
+   334→- Found 4 broken surfaces, all with the same mechanism: DialogContent is a CSS grid whose implicit `auto` column cannot shrink below a child's min-content, so wide children silently clipped (overflow-hidden) or added horizontal scroll: (1) apply fast-track stepper — nowrap flex row of 5 pills, min-content ~368px > 356px dialog; (2) JobFormDialog — raw shadcn Input intrinsic min-content ~260px propagated through block chain, sw 343 vs 286 at 320px; (3) Review Queue main modal workspace grid — implicit auto track + LedgerRow value span (long unbreakable email-like strings, min-content 183px) pushed track to 308px, sw 332 vs 286 at 320 (passed at 390 by only 2px of luck); (4) Candidate quick view mini-pipeline chip row (Submitted/Review/Shortlisted), sw 294 vs 286 at 320
+   335→- Central fix: added `grid-cols-[minmax(0,1fr)]` to ui/dialog.tsx DialogContent and ui/alert-dialog.tsx AlertDialogContent so the single column can always shrink below min-content (desktop rendering unchanged — auto tracks already stretch to fill)
+   336→- Local fixes: apply-dialogs stepper `flex-wrap` + confirm/review/upload button rows stack on mobile (`flex-col gap-3 sm:flex-row`, matching the done-step/form-dialog pattern already in the codebase); review-workspace.tsx workspace grid `grid-cols-1` + LedgerRow value span `min-w-0` (break-words can then engage); candidate-detail.tsx same LedgerRow `min-w-0`; candidates.tsx pipeline row `flex-wrap`
+   337→- Verification matrix (agent-browser, hScroll = scrollWidth > clientWidth): review modal 320/390/1440 → sw==cw at 320 & 390, 1382px two-col (928+380) intact at 1440; DecisionDialog 288/358/512 all clean; DirectEmailDialog 288/358/512 clean; JobFormDialog 288/358/672 clean (2-col Experience/Training intact at 1440); Candidate quick view 288/358/512 clean after pipeline wrap; Apply fast-track 288/358/512 clean, stepper wraps to 2 rows at 320-390, single row at 1440; Create User 288/358; Add Education FormDialog 288/358/672 with sm:grid-cols-2 intact; cmdk 358 clean; mobile nav drawer already safe (w-[min(300px,85vw)])
+   338→- Account switches for coverage: testadmin (settings/jobs/review-queue/candidates), testapplicant (apply flow, profile FormDialog) via /api/auth/logout + quick-fill sign-in
+   339→- Zero-mutation: no dialog submissions — apply flow cancelled, decision/email cancelled, no job edits saved; lint clean; dev.log clean
+   340→
+   341→Stage Summary:
+   342→- Every modal/form now verified overflow-free at 320, 390 and 1440; the grid minmax(0,1fr) base guard makes the whole dialog system width-safe by construction, so future dialog content can't reintroduce this class of bug
+   343→- Mobile button rows now stack (44px touch targets preserved); stepper readable on narrow screens
+   344→- DB untouched; worklog current
+   345→
+   346→---
+   347→Task ID: 17
+   348→Agent: Z.ai Code (main orchestrator)
+   349→Task: Fix "scroll bar on mobile view forms is taking space on the right side" — space-free (overlay-style) scrollbars below the sm breakpoint
+   350→
+   351→Work Log:
+   352→- User refined the mobile complaint: the scrollbar strip itself. Root cause analysis: all dialogs already had max-h + overflow-y-auto + scroll-thin (Tasks 15/16), but scroll-thin renders a styled scrollbar that still RESERVES layout width in classic-scrollbar engines (desktop-engine preview at mobile width); additionally the document-level scrollbar shows on scrollable pages (review-queue page scrolls 1028px at 390×844), and Radix/react-remove-scroll scroll-lock (body[data-scroll-locked]) compensates the removed classic scrollbar with body padding/margin → an empty strip appears on the right of the whole app while a dialog is open. Real phones don't show any of this (native overlay scrollbars), which is why it only appears in mobile VIEW (desktop engine at mobile width)
+   353→- Measured baseline at 390×844 via agent-browser (headless Chromium already uses overlay scrollbars, so the defect is engine-dependent): review modal 358px wide, scrollable 2317 vs 774, scrollbar-width thin, body padding-right 0; DecisionDialog 358px fits; DirectEmailDialog 358px, inputs 308px all in-viewport; zero horizontal overflow (scrollWidth == clientWidth at page and dialog level)
+   354→- Fix (globals.css, single @media (max-width: 639.98px) block): scrollbar-width none + -ms-overflow-style none on * (with !important so it beats .scroll-thin / .rail specificity), ::-webkit-scrollbar display:none width/height 0 (hides styled scrollbars too), and html body[data-scroll-locked] margin/padding-right 0 !important so scroll-lock gap compensation can never pad the page. Desktop/tablet (≥640px) untouched: html scrollbar-width auto, .scroll-thin still thin/6px
+   355→- Verified after fix: 390×844 — dialog + html computed scrollbar-width "none", modal still fully scrollable (scrollTop reaches max 1543), decision rail CTAs (Shortlist / Not Qualified / Send a direct email) all visible at max scroll, DecisionDialog opens with Task 14 star fill intact (computed amber fill) + Confirm present, email composer fields 308px all fit, no page horizontal overflow (390==390); 768 — html back to "auto", no overflow; 1440×900 — review modal 1382.4px (96vw) with scrollbar-width "thin" kept, desktop behavior unchanged
+   356→- Zero-mutation verification (dialog cancels only); lint clean; dev.log all 200s
+   357→
+   358→Stage Summary:
+   359→- Mobile view (<640px) now renders exactly like a native phone: zero scrollbar layout space anywhere (page, modals, forms, lists) — forms use full width and dialog open/close can't shift layout via scroll-lock compensation; scrolling itself is untouched (touch/wheel/trackpad)
+   360→- Desktop keeps the accepted subtle 6px scroll-thin scrollbars; single CSS block, no component changes
+   361→- DB untouched; worklog current
+   362→
+   363→---
+   364→Task ID: 18
+   365→Agent: Z.ai Code (main orchestrator)
+   366→Task: Swap the Shortlist decision icon from a star to a check (user request)
+   367→
+   368→Work Log:
+   369→- Grepped all Star usages — 4 instances, all in review-workspace.tsx (DecisionDialog header h-5, DecisionDialog Confirm button h-4, Decision card "Shortlist" button h-4, Revise card "Flip to Shortlisted" h-4); no other file uses a star for shortlist (kanban columns/stepper use StageDot dots)
+   370→- Color decision: kept the outlined-circle language but moved Shortlist from amber to green var(--ok) — the kanban STAGE_DOT_CLASS already maps "Shortlisted" to green (#2e9e5b), so a green check is MORE consistent than the amber star was, and it pairs with the rose XCircle; used lucide CheckCircle2 (renders as lucide-circle-check), same plain-icon style as XCircle/Send (no chip boxes)
+   371→- Edits: import Star→CheckCircle2 (alphabetical front), 4 JSX swaps to `<CheckCircle2 className="h-4|5 w-4|5 text-[var(--ok)]" aria-hidden />`, updated the stale file-header comment ("filled gold star" → "outlined green check-circle")
+   372→- Verified via agent-browser (1440×900, testevaluator): Decision card Shortlist button → lucide-circle-check stroke rgb(46,125,79) fill none, Not Qualified → lucide-circle-x rgb(179,85,106) unchanged; Shortlist dialog header + Confirm button both circle-check green; Not Qualified dialog still circle-x rose; zero console errors, dialogs close cleanly
+   373→- 4th instance ("Flip to Shortlisted" on a rejected-stage applicant) not browser-exercised — no rejected applicant exists and flipping would mutate data/send email; statically verified identical swap (grep). Browser relaunched mid-verify (session lost) → re-signed in via DOM value-setter + form submit
+   374→- Zero-mutation verification (cancels only); lint clean; dev.log all 200s
+   375→
+   376→Stage Summary:
+   377→- Shortlist decision icon is now a green outlined check-circle everywhere it appears (decision card, decision dialog header, Confirm button, revise-decision flip) — consistent with the green Shortlisted stage dot and the rose X for Not Qualified
+   378→- DB untouched; worklog current
+   379→
+   380→---
+   381→Task ID: 19
+   382→Agent: Z.ai Code (main orchestrator)
+   383→Task: Rebuild the public frontpage into the user's uploaded reference — a two-pane master-detail job explorer (list register left, full posting right), nothing else on the page
+   384→
+   385→Work Log:
+   386→- Read the uploaded reference image (LinkedIn/JobsDB-style board): left scrollable rounded job cards (title, company, location, salary, clamped snippet, posted age, chevron + bookmark; selected card = blue ring + indigo title), right detail pane (display title, company + verified badge + "View all jobs" underlined link, icon meta rows, "Posted Xd ago", pink Quick apply + lavender Save, description paragraphs, bulleted Responsibilities)
+   387→- Mapped data: JobWire (title, positionType, briefDescription(+Html), dutiesResponsibilities(+Html), compensationPackage(+Html), otherQualifications(+Html), publishDate/publishedAt, deadlineDate, position{positionTitle, division, placeOfAssignment, salaryGrade/Step/Amount}); reused timeAgo ("1d ago"), deadlineState, formatCurrency, humanize, navigate("jobs"), useApplyFlow gate, existing RichSection html/text pattern
+   388→- Rewrote public-landing.tsx entirely: removed hero/HeroMockup/stats/how-to-apply/footer-CTA band (frontpage = the board, per "no further else"); kept SiteHeader + Footer + shared apply dialogs + 30s silent poll + error/empty states + QuickFacts quick view
+   389→- New components: JobListCard (rounded-[12px] card via arbitrary values — theme collapses the radius scale; select button + bottom register row with posted-age button, rotating chevron quick-view toggle, localStorage bookmark with fill state; AnimatePresence inline quick view with description clamp + 6 QuickFacts + "Read full description" deep-link), JobDetail (h2 title, DOST-MIRDC + BadgeCheck + View all jobs → #jobs, icon meta rows MapPin/Building2/Briefcase/Banknote/Clock, Posted timeAgo, pink Quick apply (#e11d6f, disabled + red note when overdue), lavender Save (#e3ecfb/#2f5fd0, toggles Saved + fill), body paragraphs, TextBullets/PostingSection for Responsibilities/Qualifications/Compensation), useSavedJobs (localStorage rmis-frontpage-saved-jobs + sonner toast)
+   390→- Behavior: ALL open jobs listed (was first 6); desktop ≥1024 pre-selects the first posting and keeps both panes (h-[calc(100dvh-232px)] with independently scrolling panes, footer stays visible); mobile swaps list ↔ detail with a "Back to job list" button and scroll-to-top on select; stale selection after poll snaps to the top card
+   391→- Verified via agent-browser — desktop 1440: 3 cards + "3 open" pill, first card ring-2 blue + title rgb(90,75,218), detail "Administrative Assistant I" with division/type/salary·SG/closes meta rows, card select swaps detail, bookmark → fill rgb(47,95,208) + localStorage [3] + toast, chevron quick view shows all 6 facts, guest Quick apply routes to #/signin (existing gate), footer visible; mobile 390 fresh load: list only → card 3 → detail replaces (back + Quick apply present, scroll reset) → back restores list; saved bookmark persists across reload; zero page errors; lint clean; dev.log all 200s
+   392→- Zero-mutation (guest gate route only, no submissions); worklog current
+   393→
+   394→Stage Summary:
+   395→- Frontpage is now the reference job explorer: rounded master-detail board with blue-ring selection, indigo selected titles, pink Quick apply, lavender Save with persistent bookmarks, chevron quick views, full posting sections, and the mobile list↔detail pattern
+   396→- All prior landing behaviors preserved (apply gate, deep-links, polling, error/empty states); hero/how-to/CTA bands removed per "no further else"
+   397→- DB untouched; worklog current
+   398→
+   399→---
+   400→Task ID: 20
+   401→Agent: Z.ai Code (main orchestrator)
+   402→Task: Fix the frontpage bug where the selected job card's outline/border is not visible because the page container covers it
+   403→
+   404→Work Log:
+   405→- Reproduced in agent-browser (1440×900): selected card flush with the left register scroll container — card.left == register.left == 32, paddingLeft 0, overflowY auto; zoomed screenshot showed the blue ring visible ONLY on the right (6px pr-1.5) and completely cut on the left/top; firstCardTopFlush 0; content taller than viewport (692 > 668) so the last card's bottom ring also clipped at scroll-bottom
+   406→- Root cause: the selected style is `ring-2` (2px painted OUTSIDE the card border box, ink overflow) and the register is `lg:overflow-y-auto` — CSS clips ink overflow at the scroll container's padding box, and the register had no left/top/bottom padding, so the "container of the whole page" (the scroll register) covered the selection border; shadow-e2 clipped with it
+   407→- Fix (public-landing.tsx, register container only): `lg:-ml-2 lg:-my-2 lg:overflow-y-auto lg:py-2 lg:pl-2 lg:pr-1.5` — 8px of ring room inside the scroll container on every side, with matching negative margins so geometry is pixel-identical: negative -ml/-my extend the box into the page gutter (main px-8 / mt-5 / pb-10 absorb it invisibly), pl/py push content back to its original position; verified by measurement: card still at (32,137), width still 424, cardLeftEqualsH1Left true, content viewport height unchanged, scrollbar position unchanged (right side untouched, pr-1.5 kept)
+   408→- Verified in browser: zoomed after-screenshot shows the full ring around the selected card (left, top, corners); selected LAST card + scrolled to bottom → bottom ring has ~7.9px room inside the padding box (no clip), detail pane swaps to "Supervising Science Research Specialist"; mid-card select works (leftRoom 8, detail syncs); zero page errors, console only has the pre-existing footer-seal LCP warning
+   409→- Mobile 390×844 sanity: all changes are lg:-scoped — overflowY visible, margin/padding-left 0, card at x16, no horizontal overflow, list renders identically
+   410→- Zero data mutation (selection/bookmark toggles only, no submissions); lint clean; dev.log GET / 200
+   411→
+   412→Stage Summary:
+   413→- The selected job card's blue ring is now fully visible on all four sides (left/top were clipped by the register's overflow padding box, bottom clipped at scroll-bottom); layout, column alignment, card width, and scrollbar position are pixel-identical to before
+   414→- One-line class change + comment in public-landing.tsx; no other views touched; DB untouched; worklog current
+   415→
+   416→---
+   417→Task ID: 21
+   418→Agent: Z.ai Code (main orchestrator)
+   419→Task: Re-skin the RMIS color palette to the old RMIS blue palette from https://github.com/mi7sudev/rmis-main-ui.git
+   420→
+   421→Work Log:
+   422→- Cloned the old repo to /tmp/rmis-old and extracted its palette: "RMIS electric blue #1591DC is THE primary — filled CTA fill, focus rings, selection, progress" with hover #0E7ABF, white ink on filled controls, ring #1591DC ("focus-visible = 2px blue outline"), sidebar-primary #1591DC; blue is rationed to CTA/progress/focus/selection while semantic colors keep their meaning
+   423→- Mapped the warm "ember" system onto the RMIS blue ramp: primary #1591DC, hover/dark #0E7ABF, light gradient stop #3AA9E4 (replaces the old light-orange stops), washes #E9F5FC/#D2EBFA, blue rgba(21,145,220,x) for glows/shadows — legacy tangerine token names (--tangerine-tag, --color-tangerine) kept so call sites don't change, values are blue now
+   424→- globals.css (19 edits): --tangerine-tag/--viz-1/--chart-1/--sidebar-primary/--color-tangerine → #1591dc; shadcn --primary #181825 → #1591dc (white foreground; sidebar-primary-foreground → #ffffff); --ring → #1591dc; :focus-visible/.focus-ring outlines → blue, .dlg-cta focus → #0e7abf; .dlg-cta gradient → #3aa9e4/#1591dc/#0e7abf with white ink; --shadow-cta(+hover) → blue-tinted; body::before + .rail radial glows → blue; .grad-ember → blue gradient; .grad-ink warm-brown tail → #3d5a73; .chip-amber (unused elsewhere) → blue wash #0e7abf; .monogram-warm → blue gradient + white text; .dlg-input:focus → blue border + blue glow ring; header comment documents the palette provenance
+   425→- Components (14 files): site-header/app-shell/nav-rail monogram gradients → blue + white letters; nav-rail active indicator bar, glow, and active icon → blue; footer shield chip → #1591dc; signin/signup aside glow orbs → rgba(21,145,220,…); review-workspace active tab underline gradient → #1591dc→#0e7abf; applicant-home card hover hairline + "Read full description" hover → blue; profile-view completion ring SVG stops + step-number gradients + mobile segment → blue; pds-upload-card progress bar + dragover ring/radial → blue; documents-section hover radial → blue; analytics VIZ_1 → #1591dc; apply-dialogs comment updated
+   426→- Frontpage (public-landing.tsx): RING_SELECTED #3565e8 → #1591dc (old RMIS selection blue), TITLE_SELECTED #5a4bda → #0e7abf, Quick apply #e11d6f → #1591dc/#0e7abf (was pink), Save #e3ecfb/#2f5fd0 → #e9f5fc/#0e7abf, bookmark fill + "Back to job list" → #0e7abf — frontpage accents now all in the RMIS blue family
+   427→- Semantic system untouched: --ok/--warn/--bad/dusty-rose, kanban stage dots, status pills, decision icons (Shortlist green check verified intact), chip-emerald/gold/rose/slate
+   428→- Verified via rg: zero warm hexes (#f69251/#f9a468/#ee7f38/#e0742a/#f2ab6e/#ef8340/#c05a12/rgba(246,146,81)) and zero old frontpage accents (#e11d6f/#c9165e/#3565e8/#5a4bda) remain in src
+   429→- Browser verification (1440×900): frontpage — Quick apply rgb(21,145,220) white text, Sign in gradient rgb(58,169,228)→rgb(21,145,220)→rgb(14,122,191), Save rgb(233,245,252)/rgb(14,122,191), selected ring #1591dc, monogram blue; signed in as testevaluator → workspace rail active indicator gradient rgb(58,169,228)→rgb(21,145,220) + glow rgba(21,145,220,0.7) + active icon rgb(58,169,228); applicant modal active tab underline rgb(21,145,220)→rgb(14,122,191); mobile 390 clean (no overflow, footer sticky); zero page errors; lint clean; dev.log compiled + all 200s
+   430→- Zero data mutation (modal opened and closed via Close only); worklog current
+   431→
+   432→Stage Summary:
+   433→- The whole app now wears the old RMIS electric-blue palette (#1591DC primary / #0E7ABF hover) across CTAs, focus rings, selection, progress, nav-rail actives, glows, and the frontpage explorer — semantic status colors intentionally unchanged
+   434→- 16 files touched (globals.css + 15 components); legacy tangerine token names preserved so no call-site churn; DB untouched
+   435→---
+   436→Task ID: 22
+   437→Agent: Z.ai Code (main orchestrator)
+   438→Task: Frontpage sticky description — scrolling the left job cards must keep the clicked job's description visible on the right (reference-board behavior)
+   439→
+   440→Work Log:
+   441→- Reproduced at 1440×900: page WAS scrollable by 65px (scrollH 965 vs 900) — the stale magic constant in `lg:h-[calc(100dvh-232px)]` assumed header+footer=120px, but they now total 185px (65+120); wheel over the cards consumed the register's 24px then chained to the page, drifting the whole board up 65px (description top slid under the header; before-shot /tmp/task22-before.png)
+   442→- Fix (public-landing.tsx only): replaced the magic constant with a self-adapting flex chain — root wrapper `flex min-h-screen flex-col lg:h-dvh` (definite height on lg so the chain can constrain), main `lg:flex lg:min-h-0 lg:flex-col`, grid `lg:min-h-0 lg:flex-1` — the board now flex-fills exactly the space between the real header and footer at ANY lg width; both panes keep internal overflow-y-auto, so the open posting stays pinned while cards scroll
+   443→- Added `lg:overscroll-contain` to both panes (belt-and-braces: wheel over the board can never chain to the page even on pathologically short viewports)
+   444→- Reference-board parity bonus: `paneRef` + effect resets the right pane's scrollTop to 0 on selectedId change — a freshly picked posting always opens from the top even if the previous one was scrolled deep
+   445→- In-progress hiccup: first attempt placed a `{/* */}` JSX comment inside the ternary's parenthesized expression position → SWC parse error ("Expected '</', got 'className'"); fixed by using `//` line comments inside the parens
+   446→- Verified 1440×900: page unscrollable (900==900), grid self-derives to 603px, register scrolls internally (619 box vs 708 content), pane pinned at top 137 across heavy wheel input (winScrollY stays 0), footer fully visible 780→900; clicked job 2 then job 3 — detail switches, pane resets 600→0, register scroll position preserved (89), Task 20 selected-ring room intact (bottom 8 / left 8 / right 6 margins)
+   447→- Verified 1366×768 and 1024×768: unscrollable, pane pinned at 137, footer flush at bottom (flex chain adapts — no constant to go stale); mobile 390: all changes lg-scoped — block layout, natural page scroll, list→detail→back swap works, no horizontal overflow
+   448→- agent-browser quirk noted: synthetic `mouse wheel` only drives the root scroller in this headless setup (pre-fix it moved the page 65px; post-fix root is pinned so synthetic wheels no-op); internal scrolling proven via native scrollTop behavior + the pre-fix evidence that the register consumes wheel before the page
+   449→- Zero page errors (console shows only the pre-existing footer-seal LCP warning); `agent-browser errors` prints an empty "✗" with exit 0 when clean (CLI quirk); lint clean; dev.log all 200s; zero data changes (frontpage reads only)
+   450→
+   451→Stage Summary:
+   452→- Frontpage now matches the reference board: the description of the clicked job is effectively sticky — scrolling the left card register never moves the right posting pane, and picking a new card opens its posting from the top
+   453→- Board height is now derived from the real header/footer via a definite-height (lg:h-dvh) flex chain instead of the stale 232px viewport constant, killing the 65px page drift at every lg width; Task 20 ring-room fix preserved; single file changed (public-landing.tsx); DB untouched
+   454→---
+   455→Task ID: 23
+   456→Agent: Z.ai Code (main orchestrator)
+   457→Task: Adopt the official MIRDC emblem as the system logo (user: "use this attached png for our official logo of the system")
+   458→
+   459→Work Log:
+   460→- The chat attachment did not sync into the sandbox (no image block in the message, nothing new under upload/); identified the intended asset from context — the user has been porting the old RMIS (repo cloned in Task 21 at /tmp/rmis-old), whose code comments call /public/MIRDC-mark.png "the single official emblem" and whose site header renders exactly that <img src="/MIRDC-mark.png">; verified the asset: 383×383 RGBA (transparent), MIRDC gear mark (blue/black quartered circles + white plate + gear)
+   461→- Copied /tmp/rmis-old/public/MIRDC-mark.png → public/MIRDC-mark.png (curl 200 image/png)
+   462→- Replaced every system-brand "M" tile with the emblem (9 slots, 8 files): site-header (36px bare, light bar), app-shell mobile topbar + nav-rail brand (36px inside white p-[3px] plate — the emblem's black quarters would vanish on the dark #191925 rail, same plate trick the old repo used with dark:bg-parchment), mobile-nav sheet brand (36px bare on white sheet), sign-in + sign-up aside chips (32px in white plate, dark asides; pruned now-unused Monogram imports), job-workspace topbar (44px, max-sm:hidden kept), recruitment table rows (28px, Monogram import pruned), jobs board card anchor (48px, hidden sm:block kept) — user-avatar Monograms (candidate/applicant initials) intentionally untouched; giant decorative "M" watermarks in the auth asides left as-is
+   463→- Fixed the long-broken favicon: layout.tsx metadata icons pointed at nonexistent /favicon.svg (404 in dev.log since Task 1) → now /MIRDC-mark.png
+   464→- Verified at 1440: header emblem 36px loaded with header height unchanged at 65px (no layout shift — Task 22's pinned board intact); sign-in aside chip 26px-in-white-plate confirmed; signed in as testadmin → nav-rail plate emblem 30px, recruitment table 28px rows (4 loaded), jobs board 48px card anchors, job-workspace topbar 44px — all loaded (naturalWidth 383)
+   465→- Mobile 390: app-shell topbar emblem on white plate renders (screenshot); nav sheet opens via direct React onClick invocation and shows the 36px emblem on the white sheet — note: headless agent-browser cannot deliver the pointer/click event sequence Radix's Sheet trigger responds to in this environment (synthetic click, trusted CDP mouse down/up, and synthetic Enter all fail to open ANY tested Radix dialog trigger here), so the sheet was verified by invoking the trigger's React handler directly; component wiring inspected and standard (controlled Radix Sheet, single visible trigger) — not a regression
+   466→- Sheet closed cleanly via its Close button; zero page errors (console shows only the pre-existing footer-seal LCP warning); lint clean; dev.log all 200s; zero data changes (login/logout-free session via demo quick-fill, read-only navigation)
+   467→
+   468→Stage Summary:
+   469→- The official MIRDC emblem is now the system logo everywhere the brand mark appears: public header, favicon (404 fixed), sign-in/sign-up asides, workspace rail + mobile topbar + nav sheet, job workspace topbar, recruitment table, and jobs board cards — dark surfaces use a white plate so the emblem's black quarters stay visible
+   470→- public/MIRDC-mark.png (383×383 transparent PNG from the old RMIS repo) is the canonical logo asset; if the user's intended attachment was a different PNG they can re-attach and only the asset + these 9 slots' src stay identical
+   471→- 9 files changed (8 components + layout.tsx) + 1 new public asset; DB untouched
+   472→---
+   473→Task ID: 24
+   474→Agent: Z.ai Code (main orchestrator)
+   475→Task: Sidebar behavior update — remove the collapsible button when the sidebar is closed, make the closed sidebar clickable to open, and move the collapse button next to "MIRDC Recruitment" when open
+   476→
+   477→Work Log:
+   478→- Target: nav-rail.tsx (desktop left rail; previously the collapse toggle was a full-width bottom bar button — "Collapse"/PanelLeftClose when expanded, "Expand navigation"/PanelLeftOpen when collapsed)
+   479→- Expanded state: moved the collapse toggle into the brand row, rendered right after the brand title (PanelLeftClose, 36×36 ghost button, aria-label + title "Collapse navigation"); brand button became flex-1 min-w-0 so the title truncates and the toggle hugs the row's right edge; removed the bottom "Collapse" button entirely — bottom bar now holds only the user dropdown (space-y-1 dropped, comment updated)
+   480→- Collapsed state: removed the visible "Expand navigation" bottom button (PanelLeftOpen import pruned); made the whole aside clickable to expand — aside onClick={handleRailClick} which no-ops when expanded and, when collapsed, ignores clicks that land on real controls via target.closest("button, a, [role='button']") so nav icons still navigate and the avatar menu still opens; added cursor-pointer on the collapsed rail; collapsed brand plate button now expands instead of navigating (aria-label flips to "Expand navigation")
+   481→- Keyboard parity: since no visible expand button remains when collapsed (by design), an sr-only "Expand navigation" button renders only in collapsed state as the keyboard/AT path
+   482→- File header comment rewritten to document the new interaction model
+   483→- Verified at 1440×900 (testadmin session): expanded rail 256px with toggle at x=207 right of the title and exactly ONE "Collapse navigation" button in the whole rail, bottom bar = account dropdown only (1 child); toggle click (native dispatch) 256→64 with localStorage rmis.rail-expanded→"0"; collapsed rail 64px with zero visible expand buttons (bottom children: 1 — avatar menu); collapsed brand-plate click 64→256; collapsed empty-chrome click (nav divider DIV) 64→256; collapsed nav-icon click navigated #/operations→#/candidates while the rail stayed 64px (exclusion logic works); elementFromPoint at the toggle center returns the button's own SVG path — hit-target unobstructed
+   484→- Screenshots: /tmp/task24-expanded.png (toggle beside "MIRDC Recruitment", bottom avatar-only), /tmp/task24-collapsed.png (clean 64px icon rail, content reflows full-width)
+   485→- Mobile 390 regression check: rail is hidden below lg (element present but display:none), docW 390 == winW 390 (no horizontal overflow), mobile topbar/nav sheet untouched
+   486→- Environment quirk (consistent with Task 23's Radix finding): trusted CDP mouse clicks (find-by-name, click-by-ref, and raw mouse down/up at exact coordinates) do not dispatch into the page in this headless setup even with an unobstructed hit-target; native el.click() exercises the identical React onClick chain and was used for interaction tests — real user clicks are unaffected
+   487→- Zero page errors (console shows only the pre-existing footer-seal LCP warning); lint clean; dev.log all 200s; zero data changes (navigation-only session)
+   488→
+   489→Stage Summary:
+   490→- The rail now opens and closes from the same place: expanded → the PanelLeftClose toggle sits next to "MIRDC Recruitment" in the brand row; collapsed → no expand button at all, the entire icon rail is clickable (brand plate, dividers, any empty chrome) to expand it, with an sr-only button preserving keyboard access
+   491→- Nav icons and the account menu keep their own behavior in collapsed state via a closest("button") exclusion in the rail's click handler; persistence (localStorage rmis.rail-expanded), tooltips, and the user dropdown are unchanged
+   492→- Single file changed (nav-rail.tsx); DB untouched
+   493→---
+   494→Task ID: 25
+   495→Agent: Z.ai Code (main orchestrator)
+   496→Task: Remove the "AI-assisted" indicator on the applicant profile and the quick-apply (PDS fast-track) flow that appeared when applying with an incomplete profile
+   497→
+   498→Work Log:
+   499→- Traced the flow: apply-dialogs.tsx useApplyFlow gated applicants — incomplete profile opened the 5-step "Apply with your PDS" fast-track dialog (upload → AI extract → auto-fill → certify → submit); profile-view.tsx showed a gold "AI-assisted" Sparkles chip in the identity row when any extractable doc was EXTRACTED/PARTIALLY_EXTRACTED
+   500→- apply-dialogs.tsx rewritten: requestApply now routes incomplete profiles to toast.info("Complete your profile to apply") with a "Go to profile" action + navigate("profile") — no dialog; removed the fast-track step entirely (ftPhase/ftProgress/ftError/ftSummary/ftRequirements/certified state, runFastTrack, submitFastTrack, Checklist, CompletionReq, fileRef, Checkbox/useEffect/useRef imports, the step==="fasttrack" UI block); dialogs are now confirm → (mqr-fail | done) only; the /complete your profile/i server-gate catch (race safety) now toasts + navigates to profile instead of entering fast-track; ApplyDialogs dropped the initialStep prop (hook is its only consumer)
+   501→- profile-view.tsx: removed the AI-assisted chip + now-unused pdsLocked, EXTRACTABLE_DOC_CATEGORIES constant, and Sparkles import — identity row shows only the Complete/Incomplete pill
+   502→- pds-upload-card.tsx: removed the "· AI Auto-Fill ✨" tag (visible AI branding, Sparkles aria-label "AI-assisted") from the card header — the card itself and the whole upload → extract → auto-apply pipeline stay fully functional, header now reads "PDS Upload"
+   503→- Kept: server routes (/api/applicant/profile/complete, auto-apply, extract) untouched as API surface; profile-completeness.ts contract comment updated (client now routes /complete your profile/i to the profile builder); public-landing.tsx fast-track comments updated; public frontpage "Quick apply" BUTTON kept (Task 19 reference-design label) — anonymous visitors still get the sign-in prompt, complete applicants get the normal confirm dialog
+   504→- Verified (1440×900, testapplicant): mocked /api/session via agent-browser network route (isProfileComplete:false — zero DB changes) → Apply now on #/jobs → NO dialog, toast "Complete your profile to apply" with "Go to profile" action rendered, hash → #/profile (screenshot /tmp/task25-incomplete-apply.png); unrouted mock → real session (complete) → Apply now opens the normal confirm dialog (title, Item No./Deadline, "Submit Application") → Cancelled cleanly, zero data mutation (screenshot /tmp/task25-confirm-dialog.png); profile page contains zero "AI-assisted"/"AI Auto-Fill" text with the PDS Upload card intact
+   505→- Mobile 390: no horizontal overflow; errors clean (empty "✗" exit-0 quirk); lint clean; dev.log all 200s
+   506→
+   507→Stage Summary:
+   508→- Applying with an incomplete profile no longer offers the AI quick-apply: the applicant is told to complete their profile and lands in the profile builder; the apply dialogs are confirm/MQR/done only
+   509→- The applicant profile page carries no AI branding (identity chip and PDS card tag removed) while PDS upload + extraction functionality remains fully available
+   510→- 4 files changed (apply-dialogs.tsx rewritten, profile-view.tsx, pds-upload-card.tsx, comment-only updates in public-landing.tsx + profile-completeness.ts — 5 total); DB untouched; server API surface unchanged
+   511→
