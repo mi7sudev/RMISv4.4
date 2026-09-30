@@ -50,9 +50,9 @@ export function AppShell({
               aria-label="Go to my workspace"
             >
               {/* Official two-logo lockup — the emblems' art carries transparent
-                  backgrounds, so it floats directly on the dark rail strip. */}
-              <BrandLogo logoSize={22} tone="dark" />
-              <span className="text-sm font-semibold text-white">RMIS</span>
+                  backgrounds, so it floats directly on the light rail strip. */}
+              <BrandLogo logoSize={22} tone="light" />
+              <span className="text-sm font-semibold text-ink">RMIS</span>
             </button>
           </div>
 

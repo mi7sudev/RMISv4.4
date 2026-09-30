@@ -4,11 +4,11 @@
 // RMIS — Registration view (spec §3.4, §7.2): first/last name, email,
 // password (≥6, show/hide) + confirmation, mandatory RA 10173 consent.
 // Success → auto-login → session refresh → profile builder.
-// Wave-3 "Ink & Ember" pass: same split-screen as sign-in — dark brand panel
-// (ember glow, "M" watermark, glass trust rows) on lg+. Rendered inside
-// PublicShell (sticky header + footer), so the root flexes to fill the
-// viewport between them. Every field, validation, and behavior is preserved
-// exactly.
+// Bevel pass: same split-screen as sign-in — LIGHT brand panel (Hero Sky
+// gradient, ink display heading, white trust tiles) on lg+, editorial form
+// directly on the white canvas. Rendered inside PublicShell (sticky header
+// + footer), so the root flexes to fill the viewport between them. Every
+// field, validation, and behavior is preserved exactly.
 // ============================================================================
 
 import { useState } from "react";
@@ -31,38 +31,31 @@ const TRUST_POINTS: ReadonlyArray<{ icon: LucideIcon; tone: ChipTone; text: stri
   { icon: ShieldCheck, tone: "plum", text: "Data Privacy Act compliant" },
 ];
 
-/** Dark brand panel — lg+ only. Decorative glows are pointer-events-none. */
+/** Light brand panel — lg+ only. Hero Sky gradient with ink display type;
+ *  the watermark is decorative and pointer-events-none. */
 function AuthBrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-[linear-gradient(180deg,#1b1b28_0%,#14141d_100%)] lg:flex lg:w-[42%] xl:w-[46%]">
-      {/* Blue glow (RMIS electric) + watermark (decorative) */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-32 -top-32 h-[480px] w-[480px] rounded-full bg-[rgba(21,145,220,0.16)] blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-24 -right-16 h-[360px] w-[360px] rounded-full bg-[rgba(21,145,220,0.07)] blur-3xl"
-      />
+    <aside className="relative hidden overflow-hidden bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] lg:flex lg:w-[42%] xl:w-[46%]">
+      {/* Ink watermark (decorative) */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[130px] -right-8 select-none font-display text-[400px] leading-none text-white/[0.04]"
+        className="pointer-events-none absolute -bottom-[130px] -right-8 select-none font-display text-[400px] leading-none text-ink/[0.05]"
       >
         M
       </span>
 
       <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
-        <div className="inline-flex w-fit items-center gap-3 bg-white/[0.06] py-2 pl-2 pr-4 ring-1 ring-white/10 backdrop-blur">
+        <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white py-2 pl-2 pr-4 shadow-e1">
           {/* Official two-logo lockup — the emblems' art carries transparent
-              backgrounds, so it floats directly on the dark aside. */}
-          <BrandLogo logoSize={22} tone="dark" />
-          <span className="text-sm font-semibold text-white/90">RMIS</span>
+              backgrounds, so it floats directly on the white capsule. */}
+          <BrandLogo logoSize={22} />
+          <span className="text-sm font-semibold text-ink">RMIS</span>
         </div>
 
-        <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] tracking-[-0.01em] text-white">
+        <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] text-ink">
           Build a career that moves the nation forward.
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-white/55">
+        <p className="mt-4 text-sm leading-relaxed text-body-gray">
           The official hiring portal of the Metals Industry Research and Development Center.
         </p>
 
@@ -70,10 +63,10 @@ function AuthBrandPanel() {
           {TRUST_POINTS.map((point) => (
             <li
               key={point.text}
-              className="flex items-center gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 ring-1 ring-white/10 backdrop-blur-sm"
+              className="flex items-center gap-3.5 rounded-xl bg-white p-3.5 shadow-e1"
             >
               <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} />
-              <span className="text-[13px] font-medium text-white/85">{point.text}</span>
+              <span className="text-[13px] font-medium text-ink">{point.text}</span>
             </li>
           ))}
         </ul>
@@ -151,17 +144,17 @@ export default function SignUpView() {
     <div className="flex w-full flex-1 flex-col lg:flex-row">
       <AuthBrandPanel />
 
-      {/* Form column */}
+      {/* Form column — editorial form directly on the white canvas */}
       <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="dlg-card-plain shadow-e3 ring-1 ring-black/[0.06] p-6 sm:p-8 lg:p-10">
+          <div>
             {/* Card header — mobile/tablet only; the lg+ brand panel carries brand + heading */}
             <div className="lg:hidden">
-              <h2 className="text-center font-display text-3xl text-carbon">
+              <h2 className="text-center font-display text-3xl text-ink">
                 Create your account
               </h2>
             </div>
-            <p className="mt-2 text-center text-sm text-stone lg:mt-0 lg:text-left">
+            <p className="mt-2 text-center text-sm text-body-gray lg:mt-0 lg:text-left">
               Register to apply for positions at DOST-MIRDC.
             </p>
 
@@ -213,7 +206,7 @@ export default function SignUpView() {
 
               <div>
                 <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
-                  Password * <span className="font-normal text-pebble">(minimum 6 characters)</span>
+                  Password * <span className="font-normal text-stone">(minimum 6 characters)</span>
                 </label>
                 <div className="relative">
                   <Input
@@ -229,7 +222,7 @@ export default function SignUpView() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-0.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center text-stone hover:bg-fog hover:text-ink"
+                    className="absolute right-0.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-stone hover:bg-cloud hover:text-ink"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -255,8 +248,8 @@ export default function SignUpView() {
                 />
               </div>
 
-              {/* Mandatory data-privacy consent (RA 10173) */}
-              <label className="flex cursor-pointer items-start gap-3 rounded-none bg-fog p-4 ring-1 ring-black/[0.04]">
+              {/* Mandatory data-privacy consent (RA 10173) — cloud tint tile */}
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-cloud p-4">
                 <Checkbox
                   checked={consent}
                   onCheckedChange={(v) => setConsent(v === true)}
@@ -272,17 +265,17 @@ export default function SignUpView() {
               <button
                 type="submit"
                 disabled={busy}
-                className="dlg-cta min-h-[44px] w-full text-sm disabled:opacity-50"
+                className="dlg-cta min-h-[44px] w-full text-sm font-medium disabled:opacity-50"
               >
                 {busy ? "Creating account…" : "Create account"}
               </button>
             </form>
           </div>
 
-          <div className="mt-5 flex justify-center">
+          <div className="mt-8 flex justify-center">
             <button
               onClick={() => navigate("signin")}
-              className="min-h-[44px] text-sm text-stone underline underline-offset-4 hover:text-ink"
+              className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
             >
               Sign in
             </button>

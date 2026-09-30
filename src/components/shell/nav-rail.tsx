@@ -189,13 +189,13 @@ export function NavRail({ view }: { view: string }) {
           >
             {/* Official two-logo lockup — see brand-logo (tone adapts the divider). */}
             {expanded ? (
-              <BrandLogo logoSize={22} tone="dark" />
+              <BrandLogo logoSize={22} tone="light" />
             ) : (
-              <BrandLogo logoSize={16} tone="dark" />
+              <BrandLogo logoSize={16} tone="light" />
             )}
             {expanded && (
               <span className="min-w-0 text-left">
-                <span className="block truncate text-sm font-semibold text-white">RMIS</span>
+                <span className="block truncate text-sm font-semibold text-ink">RMIS</span>
               </span>
             )}
           </button>
@@ -204,7 +204,7 @@ export function NavRail({ view }: { view: string }) {
           {expanded && (
             <button
               onClick={toggleExpanded}
-              className="grid h-9 w-9 shrink-0 place-items-center text-[var(--rail-text-dim)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-white"
+              className="grid h-9 w-9 shrink-0 place-items-center text-[var(--rail-text-dim)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink"
               aria-label="Collapse navigation"
               title="Collapse navigation"
             >
@@ -222,7 +222,7 @@ export function NavRail({ view }: { view: string }) {
                   {g.group}
                 </p>
               ) : (
-                <div className="mx-auto mb-2 h-px w-6 bg-white/10" aria-hidden="true" />
+                <div className="mx-auto mb-2 h-px w-6 bg-[var(--rail-border)]" aria-hidden="true" />
               )}
               <ul className="space-y-1">
                 {g.items.map((item) => {
@@ -235,26 +235,23 @@ export function NavRail({ view }: { view: string }) {
                         expanded ? "px-3.5" : "justify-center px-0"
                       } ${
                         active
-                          ? "bg-[var(--rail-active-bg)] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                          : "text-[var(--rail-text)] hover:bg-[var(--rail-hover-bg)] hover:text-white"
+                          ? "bg-[var(--rail-active-bg)] font-medium text-ink"
+                          : "text-[var(--rail-text)] hover:bg-[var(--rail-hover-bg)] hover:text-ink"
                       }`}
                     >
-                      {/* Blue active indicator (RMIS electric blue) */}
+                      {/* Metric Blue active indicator — small Bevel accent */}
                       <span
                         aria-hidden="true"
-                        className={`absolute -left-2.5 top-1/2 h-5 w-[3px] -translate-y-1/2 transition-opacity duration-200 ${
+                        className={`absolute -left-2.5 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-opacity duration-200 ${
                           active ? "opacity-100" : "opacity-0"
                         }`}
-                        style={{
-                          background: "linear-gradient(180deg, #3aa9e4, #1591dc)",
-                          boxShadow: "0 0 8px rgba(21,145,220,0.7)",
-                        }}
+                        style={{ background: "#415eee" }}
                       />
                       <item.icon
                         className={`h-[18px] w-[18px] shrink-0 transition-colors ${
                           active
-                            ? "text-[#3aa9e4]"
-                            : "text-[var(--rail-text-dim)] group-hover:text-white"
+                            ? "text-ink"
+                            : "text-[var(--rail-text-dim)] group-hover:text-ink"
                         }`}
                         aria-hidden="true"
                       />
@@ -292,17 +289,14 @@ export function NavRail({ view }: { view: string }) {
                 aria-label="Account menu"
               >
                 <span
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-white"
-                  style={{
-                    background: "linear-gradient(145deg, #3aa9e4 0%, #1591dc 100%)",
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 6px rgba(21,145,220,0.35)",
-                  }}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-[#ebf0f8]"
+                  style={{ background: "#1f2025" }}
                 >
                   {initialsOf(user)}
                 </span>
                 {expanded && (
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-white">
+                    <span className="block truncate text-sm font-medium text-ink">
                       {displayNameOf(user)}
                     </span>
                     <span className="block truncate text-xs text-[var(--rail-text-dim)]">{user.role}</span>

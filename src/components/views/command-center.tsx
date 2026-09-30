@@ -10,10 +10,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, Briefcase, CalendarClock, ChartColumn, ClipboardCheck, Clock,
-  Inbox, LayoutDashboard, RefreshCw, ShieldAlert, UserRound, UserX,
+  Inbox, LayoutDashboard, RefreshCw, ShieldAlert, UserRound, UserX, type LucideIcon,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, KpiCard, Monogram, PageHeader, SkeletonKpis, SkeletonRows, StatusPill,
+  EmptyState, IconChip, Monogram, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, deadlineState, formatDate, fullName } from "@/lib/client";
@@ -82,7 +82,7 @@ const STAGE_SPARK: Record<StageKey, string> = {
   "Rejected": "var(--bad)",
 };
 
-/** Tiny stacked pipeline bar for the KpiCard aside — built only from byStatus wire data. */
+/** Tiny stacked pipeline bar for the stat card aside — built only from byStatus wire data. */
 function PipelineSpark({ byStatus }: { byStatus: { status: string; count: number }[] }) {
   const buckets = PIPELINE_STAGES.map((stage) => ({
     stage,
@@ -113,6 +113,67 @@ const SUMMARY_TONE_TEXT: Record<"ok" | "warn" | "bad", string> = {
 /** Icon tint for the aside summary lines: green when clear, tone when flagged. */
 function summaryTone(count: number, alertTone: "warn" | "bad"): "ok" | "warn" | "bad" {
   return count === 0 ? "ok" : alertTone;
+}
+
+/** Stat card tone → Bevel chip tone. */
+const TONE_CHIP: Record<"ok" | "warn" | "bad" | "info" | "neutral", ChipTone> = {
+  ok: "emerald",
+  warn: "gold",
+  bad: "rose",
+  info: "plum",
+  neutral: "slate",
+};
+
+/**
+ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+ * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
+ * Clickable variant keeps the same surface (no borders, no shadows).
+ */
+function StatTile({
+  label,
+  value,
+  icon,
+  tone = "neutral",
+  hint,
+  aside,
+  onClick,
+  ariaLabel,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: LucideIcon;
+  tone?: "ok" | "warn" | "bad" | "info" | "neutral";
+  hint?: string;
+  aside?: React.ReactNode;
+  onClick?: () => void;
+  ariaLabel?: string;
+}) {
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <IconChip icon={icon} tone={TONE_CHIP[tone]} size={40} />
+      </div>
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <p className="num text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+        {aside}
+      </div>
+      {hint ? <p className="mt-2 text-xs text-body-gray">{hint}</p> : null}
+    </>
+  );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel ?? label}
+        className="dlg-card lift focus-ring block w-full p-6 text-left"
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className="dlg-card p-6">{body}</div>;
 }
 
 export default function CommandCenter() {
@@ -175,13 +236,26 @@ export default function CommandCenter() {
     </button>
   );
 
+  // Shared Bevel page header — identical anatomy on every admin workspace view.
+  const header = (
+    <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Command Center</h1>
+        <p className="mt-1 text-sm text-body-gray">
+          Live operational snapshot of recruitment, pipeline health, and system activity.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">{refreshButton}</div>
+    </header>
+  );
+
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Command Center" description="Live operational snapshot of recruitment, pipeline health, and system activity." actions={refreshButton} />
+        {header}
         <div className="dlg-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-stone">{error}</p>
+          <p className="text-sm text-body-gray">{error}</p>
           <button type="button" className={ghostBtn} onClick={() => void load()}>
             Retry
           </button>
@@ -193,16 +267,26 @@ export default function CommandCenter() {
   if (!stats || jobs === null) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Command Center" description="Live operational snapshot of recruitment, pipeline health, and system activity." actions={refreshButton} />
-        <SkeletonKpis count={4} />
+        {header}
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="dlg-card p-6">
+              <div className="flex items-start justify-between">
+                <div className="skel h-3 w-20" />
+                <div className="skel h-10 w-10" />
+              </div>
+              <div className="skel mt-4 h-8 w-16" />
+            </div>
+          ))}
+        </div>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <SkeletonRows rows={2} rowClassName="h-6 w-40" />
-            <SkeletonRows rows={5} rowClassName="h-[72px] rounded-none" />
-            <SkeletonRows rows={5} rowClassName="h-[64px] rounded-none" />
+            <SkeletonRows rows={5} rowClassName="h-[72px] rounded-lg" />
+            <SkeletonRows rows={5} rowClassName="h-[64px] rounded-lg" />
           </div>
           <div>
-            <Skeleton className="h-72 w-full rounded-none" />
+            <Skeleton className="h-72 w-full rounded-lg" />
           </div>
         </div>
       </div>
@@ -211,11 +295,7 @@ export default function CommandCenter() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Command Center"
-        description="Live operational snapshot of recruitment, pipeline health, and system activity."
-        actions={refreshButton}
-      />
+      {header}
 
       <div className="grid gap-6 lg:grid-cols-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* min-w-0: activity rows' truncate meta text must not widen the auto track
@@ -224,13 +304,13 @@ export default function CommandCenter() {
           {/* Needs attention */}
           <section className="space-y-3">
             <div className="flex flex-wrap items-baseline gap-3">
-              <h2 className="text-[15px] font-medium leading-6 text-ink">Needs attention</h2>
-              <span className="text-sm text-stone">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Needs attention</h2>
+              <span className="text-xs text-body-gray">
                 <span className="num">{attentionTotal}</span> item{attentionTotal === 1 ? "" : "s"} across the board
               </span>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard
+              <StatTile
                 label="Awaiting review"
                 value={stats.pendingReview}
                 icon={ClipboardCheck}
@@ -239,7 +319,7 @@ export default function CommandCenter() {
                 onClick={() => navigate("review-queue")}
                 aside={<PipelineSpark byStatus={stats.byStatus} />}
               />
-              <KpiCard
+              <StatTile
                 label="Deadlines this week"
                 value={stats.needsAttention.deadlinesThisWeek}
                 icon={CalendarClock}
@@ -247,7 +327,7 @@ export default function CommandCenter() {
                 hint="Open →"
                 onClick={() => navigate("recruitment")}
               />
-              <KpiCard
+              <StatTile
                 label="Incomplete profiles"
                 value={stats.needsAttention.incompleteProfiles}
                 icon={UserRound}
@@ -255,7 +335,7 @@ export default function CommandCenter() {
                 hint="Open →"
                 onClick={() => navigate("candidates", { status: "incomplete" })}
               />
-              <KpiCard
+              <StatTile
                 label="Failed logins"
                 value={stats.needsAttention.failedLogins24h}
                 icon={ShieldAlert}
@@ -269,13 +349,13 @@ export default function CommandCenter() {
           {/* Active recruitment */}
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-[15px] font-medium leading-6 text-ink">Active recruitment</h2>
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Active recruitment</h2>
               <button type="button" className={ghostBtn} onClick={() => navigate("recruitment")}>
                 View all
               </button>
             </div>
             {activeJobs.length === 0 ? (
-              <div className="dlg-card p-6">
+              <div className="dlg-card p-6 sm:p-10">
                 <EmptyState
                   icon={Briefcase}
                   title="No active job postings right now."
@@ -292,7 +372,7 @@ export default function CommandCenter() {
                 />
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="dlg-card-plain overflow-hidden">
                 {activeJobs.map((j) => {
                   const dl = deadlineState(j.deadlineDate);
                   const urgent = !dl.overdue && dl.closingSoon;
@@ -300,7 +380,7 @@ export default function CommandCenter() {
                     <button
                       key={j.id}
                       type="button"
-                      className="dlg-card lift flex min-h-[44px] w-full flex-wrap items-center gap-x-3 gap-y-2 p-3.5 text-left focus-ring"
+                      className="flex min-h-[44px] w-full flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--border)] px-4 py-3 text-left transition-colors last:border-0 hover:bg-fog/60 focus-ring"
                       onClick={() => navigate("job", { id: String(j.id) })}
                     >
                       <IconChip icon={Briefcase} tone="amber" size={36} iconSize={16} />
@@ -331,9 +411,9 @@ export default function CommandCenter() {
 
           {/* Recent activity */}
           <section className="space-y-3">
-            <h2 className="text-[15px] font-medium leading-6 text-ink">Recent activity</h2>
+            <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Recent activity</h2>
             {stats.recent.length === 0 ? (
-              <div className="dlg-card p-6">
+              <div className="dlg-card p-6 sm:p-10">
                 <EmptyState
                   icon={Inbox}
                   title="No applications yet."
@@ -342,12 +422,12 @@ export default function CommandCenter() {
                 />
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="dlg-card-plain overflow-hidden">
                 {stats.recent.map((r) => (
                   <button
                     key={r.id}
                     type="button"
-                    className="dlg-card lift flex min-h-[44px] w-full flex-wrap items-center gap-x-3 gap-y-2 p-3.5 text-left focus-ring"
+                    className="flex min-h-[44px] w-full flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--border)] px-4 py-3 text-left transition-colors last:border-0 hover:bg-fog/60 focus-ring"
                     onClick={() => navigate("candidate", { id: String(r.applicant.id) })}
                   >
                     <span aria-hidden="true" className="contents">
@@ -372,7 +452,7 @@ export default function CommandCenter() {
           <div className="dlg-card p-5">
             <div className="flex items-center gap-3">
               <IconChip icon={LayoutDashboard} tone="slate" size={36} iconSize={16} />
-              <h2 className="text-[15px] font-semibold leading-6 text-ink">Overview</h2>
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Overview</h2>
             </div>
             <dl className="mt-3">
               {(
@@ -385,9 +465,9 @@ export default function CommandCenter() {
               ).map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex items-center justify-between gap-3 border-b border-[#ececec] py-2.5 last:border-0"
+                  className="flex items-center justify-between gap-3 border-b border-[var(--border)] py-2.5 last:border-0"
                 >
-                  <dt className="text-xs text-stone">{label}</dt>
+                  <dt className="text-xs text-body-gray">{label}</dt>
                   <dd className="num text-sm font-medium text-ink">{value}</dd>
                 </div>
               ))}
@@ -401,7 +481,7 @@ export default function CommandCenter() {
               Open Analytics
             </button>
           </div>
-          <div className="space-y-2.5 rounded-none bg-fog p-4">
+          <div className="space-y-2.5 rounded-lg bg-white/70 p-4">
             {(
               [
                 [CalendarClock, stats.needsAttention.deadlinesThisWeek, "posting deadline(s) within 7 days", "warn"],
@@ -409,7 +489,7 @@ export default function CommandCenter() {
                 [AlertTriangle, stats.needsAttention.failedLogins24h, "failed login(s) in the last 24 h", "bad"],
               ] as [typeof CalendarClock, number, string, "warn" | "bad"][]
             ).map(([Icon, count, label, alertTone]) => (
-              <p key={label} className="flex items-center gap-2 text-xs text-stone">
+              <p key={label} className="flex items-center gap-2 text-xs text-body-gray">
                 <Icon
                   className={`h-3.5 w-3.5 shrink-0 ${SUMMARY_TONE_TEXT[summaryTone(count, alertTone)]}`}
                   aria-hidden

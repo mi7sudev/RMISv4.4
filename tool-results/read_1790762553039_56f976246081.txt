@@ -1,0 +1,1019 @@
+     1→"use client";
+     2→
+     3→// ============================================================================
+     4→// RMIS — Jobs board + in-flow detail (spec §7.1 items 2–4, §8.7 deadline
+     5→// rules, §13 polling cadence). LIST: sticky search rail, division facets,
+     6→// sort, 8-per-page pagination, expandable quick view with 6 QuickFacts.
+     7→// DETAIL (#/jobs?job=<id>): hero, MQR ledger, sections, vitals, sticky
+     8→// summary rail with Apply / applied-state / Cancel. 20s silent poll + focus
+     9→// refetch (silent = swap state only when the JSON changed).
+    10→// ============================================================================
+    11→
+    12→import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+    13→import {
+    14→  ArrowLeft,
+    15→  ChevronDown,
+    16→  ChevronLeft,
+    17→  ChevronRight,
+    18→  Minus,
+    19→  Plus,
+    20→  Search,
+    21→  SlidersHorizontal,
+    22→  X,
+    23→} from "lucide-react";
+    24→import { toast } from "sonner";
+    25→import { useApplyFlow } from "@/components/apply/apply-dialogs";
+    26→import { useSession } from "@/components/session-provider";
+    27→import { Checkbox } from "@/components/ui/checkbox";
+    28→import {
+    29→  AlertDialog,
+    30→  AlertDialogAction,
+    31→  AlertDialogCancel,
+    32→  AlertDialogContent,
+    33→  AlertDialogDescription,
+    34→  AlertDialogFooter,
+    35→  AlertDialogHeader,
+    36→  AlertDialogTitle,
+    37→  AlertDialogTrigger,
+    38→} from "@/components/ui/alert-dialog";
+    39→import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+    40→import { Input } from "@/components/ui/input";
+    41→import {
+    42→  Select,
+    43→  SelectContent,
+    44→  SelectItem,
+    45→  SelectTrigger,
+    46→  SelectValue,
+    47→} from "@/components/ui/select";
+    48→import { apiFetch, deadlineState, formatCurrency, formatDate, humanize } from "@/lib/client";
+    49→import { BrandLogo } from "@/components/brand-logo";
+    50→import { divisionName } from "@/lib/constants";
+    51→import { navigate, useHashRoute } from "@/lib/router";
+    52→import type { JobWire } from "@/lib/router";
+    53→
+    54→const PAGE_SIZE = 8;
+    55→type SortKey = "newest" | "deadline" | "salary";
+    56→
+    57→// ── Helpers ─────────────────────────────────────────────────────────────────
+    58→
+    59→function divisionShort(code: string | null | undefined): string {
+    60→  if (!code) return "—";
+    61→  return divisionName(code).split(" — ")[0] || code;
+    62→}
+    63→
+    64→function stripHtml(html: string): string {
+    65→  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    66→}
+    67→
+    68→function sgLabel(grade: string | null | undefined, step: string | null | undefined): string {
+    69→  if (!grade) return "—";
+    70→  return step ? `SG${grade}/${step}` : `SG${grade}`;
+    71→}
+    72→
+    73→function pageWindow(current: number, total: number): (number | "…")[] {
+    74→  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    75→  const out: (number | "…")[] = [1];
+    76→  const lo = Math.max(2, current - 1);
+    77→  const hi = Math.min(total - 1, current + 1);
+    78→  if (lo > 2) out.push("…");
+    79→  for (let i = lo; i <= hi; i++) out.push(i);
+    80→  if (hi < total - 1) out.push("…");
+    81→  out.push(total);
+    82→  return out;
+    83→}
+    84→
+    85→/** % of the application window elapsed between publish and deadline (0–100). */
+    86→function deadlineProgress(job: JobWire): number {
+    87→  const start = new Date(job.publishDate ?? job.publishedAt).getTime();
+    88→  const end = job.deadlineDate ? new Date(job.deadlineDate).getTime() : Number.NaN;
+    89→  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return job.deadlineDate ? 100 : 0;
+    90→  const pct = ((Date.now() - start) / (end - start)) * 100;
+    91→  return Math.min(100, Math.max(0, pct));
+    92→}
+    93→
+    94→function DeadlinePill({ job, className }: { job: JobWire; className?: string }) {
+    95→  const dl = deadlineState(job.deadlineDate);
+    96→  return (
+    97→    <span
+    98→      className={`status-pill num ${
+    99→        dl.overdue
+   100→          ? "status-bad"
+   101→          : dl.closingSoon
+   102→            ? "status-warn"
+   103→            : "status-neutral"
+   104→      } ${className ?? ""}`}
+   105→    >
+   106→      {dl.label}
+   107→    </span>
+   108→  );
+   109→}
+   110→
+   111→function RichOrPlain({ html, text }: { html?: string | null; text?: string | null }) {
+   112→  if (html && html.trim()) {
+   113→    return (
+   114→      <div
+   115→        className="rich-text text-sm leading-relaxed text-stone"
+   116→        dangerouslySetInnerHTML={{ __html: html }}
+   117→      />
+   118→    );
+   119→  }
+   120→  if (text && text.trim()) {
+   121→    return <p className="whitespace-pre-line text-sm leading-relaxed text-stone">{text}</p>;
+   122→  }
+   123→  return <p className="text-sm text-pebble">Not provided.</p>;
+   124→}
+   125→
+   126→function Skeleton({ className }: { className?: string }) {
+   127→  return <div className={`animate-pulse rounded-none bg-fog ${className ?? ""}`} />;
+   128→}
+   129→
+   130→function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
+   131→  return (
+   132→    <div className="dlg-card p-8 text-center">
+   133→      <p className="font-display text-xl text-carbon">Something went wrong</p>
+   134→      <p className="mt-2 text-sm text-stone">{message}</p>
+   135→      <button onClick={onRetry} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
+   136→        Try again
+   137→      </button>
+   138→    </div>
+   139→  );
+   140→}
+   141→
+   142→// ── Quick view (6 QuickFacts + actions) ─────────────────────────────────────
+   143→
+   144→function QuickView({
+   145→  job,
+   146→  onApply,
+   147→  onDetail,
+   148→}: {
+   149→  job: JobWire;
+   150→  onApply: (job: JobWire) => void;
+   151→  onDetail: (job: JobWire) => void;
+   152→}) {
+   153→  const pos = job.position;
+   154→  const dl = deadlineState(job.deadlineDate);
+   155→  const brief = job.briefDescription?.trim()
+   156→    ? job.briefDescription
+   157→    : job.briefDescriptionHtml
+   158→      ? stripHtml(job.briefDescriptionHtml)
+   159→      : "";
+   160→  const facts: [string, string][] = [
+   161→    ["Item No.", pos?.itemNumber || "—"],
+   162→    ["Vacancies", String(job.numberOfVacancy)],
+   163→    ["Salary Grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
+   164→    ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
+   165→    ["Published", formatDate(job.publishDate ?? job.publishedAt)],
+   166→    ["Deadline", formatDate(job.deadlineDate)],
+   167→  ];
+   168→  return (
+   169→    <div className="mt-4 space-y-4 border-t border-border pt-4">
+   170→      {brief ? (
+   171→        <p className="line-clamp-4 text-sm leading-relaxed text-stone">{brief}</p>
+   172→      ) : (
+   173→        <p className="text-sm text-pebble">No brief description provided.</p>
+   174→      )}
+   175→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+   176→        {facts.map(([label, value]) => (
+   177→          <div key={label} className="rounded-none bg-fog p-3">
+   178→            <p className="text-xs text-pebble">{label}</p>
+   179→            <p className="mt-0.5 truncate text-sm text-ink" title={value}>
+   180→              {value}
+   181→            </p>
+   182→          </div>
+   183→        ))}
+   184→      </div>
+   185→      <div className="flex flex-wrap gap-3">
+   186→        <button
+   187→          onClick={() => onApply(job)}
+   188→          disabled={dl.overdue}
+   189→          className="dlg-cta min-h-[44px] px-6 text-sm disabled:pointer-events-none disabled:opacity-50"
+   190→        >
+   191→          Apply now
+   192→        </button>
+   193→        <button onClick={() => onDetail(job)} className="dlg-ghost min-h-[44px] px-6 text-sm">
+   194→          Read full description
+   195→        </button>
+   196→      </div>
+   197→    </div>
+   198→  );
+   199→}
+   200→
+   201→// ── Board row card ──────────────────────────────────────────────────────────
+   202→
+   203→function JobCard({
+   204→  job,
+   205→  expanded,
+   206→  onToggle,
+   207→  onApply,
+   208→  onDetail,
+   209→}: {
+   210→  job: JobWire;
+   211→  expanded: boolean;
+   212→  onToggle: (id: number) => void;
+   213→  onApply: (job: JobWire) => void;
+   214→  onDetail: (job: JobWire) => void;
+   215→}) {
+   216→  const pos = job.position;
+   217→  const salary = pos?.salaryAmount ?? null;
+   218→  const applied = (job.applications?.length ?? 0) > 0;
+   219→  const dl = deadlineState(job.deadlineDate);
+   220→  return (
+   221→    <article className="dlg-card p-4 transition-shadow duration-200 hover:shadow-dialog-subtle sm:p-6">
+   222→      <div className="flex items-start gap-4">
+   223→        {/* Official two-logo lockup — anchors the card the way a company
+   224→            logo does on every top-ranked job-board design */}
+   225→        <BrandLogo logoSize={36} className="hidden sm:inline-flex" />
+   226→        <div className="min-w-0 flex-1">
+   227→          <div className="flex flex-wrap items-center gap-2">
+   228→            <DeadlinePill job={job} />
+   229→            {applied && (
+   230→              <span className="dlg-pill bg-ink px-3 py-1 text-xs font-medium text-white">
+   231→                Applied
+   232→              </span>
+   233→            )}
+   234→          </div>
+   235→          <h3 className="mt-2 font-display text-xl text-carbon">{humanize(job.title)}</h3>
+   236→          <p className="mt-1 text-sm text-stone">
+   237→            {pos?.placeOfAssignment || "—"} ·{" "}
+   238→            {job.positionType ? humanize(job.positionType) : "—"}
+   239→            {pos?.salaryGrade ? <span className="num"> · SG {pos.salaryGrade}</span> : null}
+   240→            <span className={dl.overdue ? "text-[var(--bad)]" : undefined}>
+   241→              {" "}
+   242→              ·{" "}
+   243→              {job.deadlineDate ? `Closes ${formatDate(job.deadlineDate)}` : "Open until filled"}
+   244→            </span>
+   245→          </p>
+   246→          <p className="num mt-1.5 text-[15px] font-medium text-ink">
+   247→            {salary != null ? formatCurrency(salary) : "Competitive"}
+   248→            {salary != null && <span className="font-normal text-stone">/mo</span>}
+   249→          </p>
+   250→        </div>
+   251→        <button
+   252→          onClick={() => onToggle(job.id)}
+   253→          aria-label={expanded ? "Collapse quick view" : "Expand quick view"}
+   254→          aria-expanded={expanded}
+   255→          className="dlg-ghost grid h-11 w-11 shrink-0 place-items-center text-ink"
+   256→        >
+   257→          {expanded ? (
+   258→            <Minus className="h-4 w-4" aria-hidden="true" />
+   259→          ) : (
+   260→            <Plus className="h-4 w-4" aria-hidden="true" />
+   261→          )}
+   262→        </button>
+   263→      </div>
+   264→      {expanded && <QuickView job={job} onApply={onApply} onDetail={onDetail} />}
+   265→    </article>
+   266→  );
+   267→}
+   268→
+   269→// ── Detail: summary rail ────────────────────────────────────────────────────
+   270→
+   271→function SummaryCard({
+   272→  job,
+   273→  onApply,
+   274→  onCancel,
+   275→  cancelling,
+   276→}: {
+   277→  job: JobWire;
+   278→  onApply: (job: JobWire) => void;
+   279→  onCancel: () => void;
+   280→  cancelling: boolean;
+   281→}) {
+   282→  const pos = job.position;
+   283→  const dl = deadlineState(job.deadlineDate);
+   284→  const applied = (job.applications?.length ?? 0) > 0;
+   285→  const rows: [string, string][] = [
+   286→    ["Vacancies", String(job.numberOfVacancy)],
+   287→    ["Monthly salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
+   288→    ["Salary grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
+   289→    ["Applications", String(job.applicationCount ?? 0)],
+   290→    ["Published", formatDate(job.publishDate ?? job.publishedAt)],
+   291→    ["Deadline", formatDate(job.deadlineDate)],
+   292→    ["Processing", formatDate(job.processingDate)],
+   293→  ];
+   294→  return (
+   295→    <div className="dlg-card p-6">
+   296→      <p className="text-sm font-medium text-ink">Position Summary</p>
+   297→      <dl className="mt-4 space-y-3 text-sm">
+   298→        {rows.map(([label, value]) => (
+   299→          <div key={label} className="flex items-start justify-between gap-3">
+   300→            <dt className="shrink-0 text-stone">{label}</dt>
+   301→            <dd
+   302→              className={`text-right text-ink ${
+   303→                label === "Deadline" && dl.overdue ? "text-dusty-rose" : ""
+   304→              }`}
+   305→            >
+   306→              {value}
+   307→            </dd>
+   308→          </div>
+   309→        ))}
+   310→      </dl>
+   311→
+   312→      {/* Application-window progress — visualizes the publish→deadline span */}
+   313→      {job.deadlineDate && (
+   314→        <div className="mt-4 border-t border-border pt-4">
+   315→          <div className="flex items-center justify-between gap-3 text-xs">
+   316→            <span className="text-stone">
+   317→              Posted <span className="num">{formatDate(job.publishDate ?? job.publishedAt)}</span>
+   318→            </span>
+   319→            <span className={dl.overdue ? "text-[var(--bad)]" : "text-stone"}>
+   320→              Closes <span className="num">{formatDate(job.deadlineDate)}</span>
+   321→            </span>
+   322→          </div>
+   323→          <div className="mt-2 h-1.5 overflow-hidden bg-fog" role="presentation">
+   324→            <div
+   325→              className={`h-full transition-[width] duration-500 ${
+   326→                dl.overdue ? "bg-[var(--bad)]" : dl.closingSoon ? "bg-[var(--warn)]" : "bg-ink"
+   327→              }`}
+   328→              style={{ width: `${deadlineProgress(job)}%` }}
+   329→            />
+   330→          </div>
+   331→        </div>
+   332→      )}
+   333→
+   334→      <div className="mt-5">
+   335→        {applied ? (
+   336→          <div className="space-y-3">
+   337→            <div className="flex items-center gap-3 rounded-none bg-fog p-3">
+   338→              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-sm text-white">
+   339→                ✓
+   340→              </span>
+   341→              <div className="min-w-0">
+   342→                <p className="text-sm font-medium text-ink">Successfully Applied</p>
+   343→                <p className="text-xs text-pebble">Your application is in the pipeline.</p>
+   344→              </div>
+   345→            </div>
+   346→            <AlertDialog>
+   347→              <AlertDialogTrigger asChild>
+   348→                <button className="dlg-ghost min-h-[44px] w-full text-sm" disabled={cancelling}>
+   349→                  Cancel Application
+   350→                </button>
+   351→              </AlertDialogTrigger>
+   352→              <AlertDialogContent className="dlg-card-plain rounded-none">
+   353→                <AlertDialogHeader>
+   354→                  <AlertDialogTitle className="font-display text-2xl text-carbon">
+   355→                    Cancel this application?
+   356→                  </AlertDialogTitle>
+   357→                  <AlertDialogDescription className="text-sm text-stone">
+   358→                    Your application for {humanize(job.title)} will be withdrawn. You can apply
+   359→                    again while the position is open.
+   360→                  </AlertDialogDescription>
+   361→                </AlertDialogHeader>
+   362→                <AlertDialogFooter>
+   363→                  <AlertDialogCancel className="dlg-ghost min-h-[44px] px-6 text-sm">
+   364→                    Keep application
+   365→                  </AlertDialogCancel>
+   366→                  <AlertDialogAction
+   367→                    onClick={onCancel}
+   368→                    className="min-h-[44px] border border-dusty-rose/30 bg-dusty-rose/10 px-6 text-sm font-medium text-dusty-rose hover:bg-dusty-rose/20"
+   369→                  >
+   370→                    Cancel application
+   371→                  </AlertDialogAction>
+   372→                </AlertDialogFooter>
+   373→              </AlertDialogContent>
+   374→            </AlertDialog>
+   375→          </div>
+   376→        ) : (
+   377→          <>
+   378→            <button
+   379→              onClick={() => onApply(job)}
+   380→              disabled={dl.overdue}
+   381→              className="dlg-cta min-h-[44px] w-full text-sm disabled:pointer-events-none disabled:opacity-50"
+   382→            >
+   383→              Submit Application
+   384→            </button>
+   385→            {dl.overdue && (
+   386→              <p className="mt-2 text-center text-xs text-pebble">
+   387→                The deadline for this position has passed.
+   388→              </p>
+   389→            )}
+   390→          </>
+   391→        )}
+   392→      </div>
+   393→    </div>
+   394→  );
+   395→}
+   396→
+   397→// ── Detail: body ────────────────────────────────────────────────────────────
+   398→
+   399→function DetailBody({ job }: { job: JobWire }) {
+   400→  const pos = job.position;
+   401→  const dl = deadlineState(job.deadlineDate);
+   402→
+   403→  const mqrRows: [string, string | null | undefined][] = [
+   404→    ["Education", pos?.cscEducation],
+   405→    ["Work Experience", pos?.cscWorkExperience],
+   406→    ["Training", pos?.cscTraining],
+   407→    ["Eligibility", pos?.cscEligibilityGroup],
+   408→    ["License / Certification", pos?.license],
+   409→  ];
+   410→  const visibleMqr = mqrRows.filter(([, v]) => v && !/^(n\/?a|none|na)\.?$/i.test(v.trim()));
+   411→
+   412→  const vitals: [string, string][] = [
+   413→    ["Division", divisionShort(pos?.division)],
+   414→    ["Item No.", pos?.itemNumber || "—"],
+   415→    ["Vacancies", String(job.numberOfVacancy)],
+   416→    ["Position Type", job.positionType ? humanize(job.positionType) : "—"],
+   417→    ["Salary Grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
+   418→    ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
+   419→  ];
+   420→
+   421→  return (
+   422→    <div className="min-w-0 space-y-6">
+   423→      {/* Hero */}
+   424→      <section className="dlg-card p-6 sm:p-8">
+   425→        <div className="flex flex-wrap items-center gap-2">
+   426→          <DeadlinePill job={job} />
+   427→          {(job.applications?.length ?? 0) > 0 && (
+   428→            <span className="dlg-pill bg-ink px-3 py-1 text-xs font-medium text-white">Applied</span>
+   429→          )}
+   430→        </div>
+   431→        <h1 className="text-heading-md mt-3">{humanize(job.title)}</h1>
+   432→        <p className="mt-2 text-sm text-stone">
+   433→          {pos?.placeOfAssignment || "—"} · {divisionName(pos?.division)} ·{" "}
+   434→          {job.positionType ? humanize(job.positionType) : "—"}
+   435→        </p>
+   436→      </section>
+   437→
+   438→      {/* Sections */}
+   439→      <section className="dlg-card space-y-8 p-6 sm:p-8">
+   440→        <div>
+   441→          <h2 className="text-lg font-medium text-ink">Brief Description</h2>
+   442→          <div className="mt-3">
+   443→            <RichOrPlain html={job.briefDescriptionHtml} text={job.briefDescription} />
+   444→          </div>
+   445→        </div>
+   446→
+   447→        <div>
+   448→          <h2 className="text-lg font-medium text-ink">Minimum Qualification Requirements</h2>
+   449→          <div className="mt-3 overflow-hidden rounded-none border border-border">
+   450→            {visibleMqr.length > 0 ? (
+   451→              visibleMqr.map(([label, value], i) => (
+   452→                <div
+   453→                  key={label}
+   454→                  className={`grid gap-1 p-4 sm:grid-cols-[200px_1fr] sm:gap-4 ${
+   455→                    i > 0 ? "border-t border-border" : ""
+   456→                  }`}
+   457→                >
+   458→                  <p className="text-sm font-medium text-ink">{label}</p>
+   459→                  <p className="text-sm leading-relaxed text-stone">{value}</p>
+   460→                </div>
+   461→              ))
+   462→            ) : (
+   463→              <p className="p-4 text-sm text-pebble">
+   464→                No minimum requirements published for this position.
+   465→              </p>
+   466→            )}
+   467→          </div>
+   468→        </div>
+   469→
+   470→        <div>
+   471→          <h2 className="text-lg font-medium text-ink">Duties &amp; Responsibilities</h2>
+   472→          <div className="mt-3">
+   473→            <RichOrPlain
+   474→              html={job.dutiesHtml}
+   475→              text={job.dutiesResponsibilities}
+   476→            />
+   477→          </div>
+   478→        </div>
+   479→
+   480→        <div>
+   481→          <h2 className="text-lg font-medium text-ink">Compensation Package</h2>
+   482→          <div className="mt-3">
+   483→            <RichOrPlain html={job.compensationHtml} text={job.compensationPackage} />
+   484→          </div>
+   485→        </div>
+   486→
+   487→        <div>
+   488→          <h2 className="text-lg font-medium text-ink">Other Qualifications</h2>
+   489→          <div className="mt-3">
+   490→            <RichOrPlain
+   491→              html={job.otherQualificationsHtml}
+   492→              text={job.otherQualifications}
+   493→            />
+   494→          </div>
+   495→        </div>
+   496→
+   497→        {/* Vitals + dates */}
+   498→        <div>
+   499→          <h2 className="text-lg font-medium text-ink">Position Details</h2>
+   500→          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+   501→            {vitals.map(([label, value]) => (
+   502→              <div key={label} className="rounded-none bg-fog p-3">
+   503→                <p className="text-xs text-pebble">{label}</p>
+   504→                <p className="mt-0.5 truncate text-sm text-ink" title={value}>
+   505→                  {value}
+   506→                </p>
+   507→              </div>
+   508→            ))}
+   509→          </div>
+   510→          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+   511→            <div className="rounded-none bg-fog p-3">
+   512→              <p className="text-xs text-pebble">Published</p>
+   513→              <p className="mt-0.5 text-sm text-ink">{formatDate(job.publishDate ?? job.publishedAt)}</p>
+   514→            </div>
+   515→            <div className="rounded-none bg-fog p-3">
+   516→              <p className="text-xs text-pebble">Deadline</p>
+   517→              <p className={`mt-0.5 text-sm ${dl.overdue ? "text-dusty-rose" : "text-ink"}`}>
+   518→                {formatDate(job.deadlineDate)}
+   519→                {job.deadlineDate ? ` — ${dl.label}` : ""}
+   520→              </p>
+   521→            </div>
+   522→            <div className="rounded-none bg-fog p-3">
+   523→              <p className="text-xs text-pebble">Processing</p>
+   524→              <p className="mt-0.5 text-sm text-ink">{formatDate(job.processingDate)}</p>
+   525→            </div>
+   526→          </div>
+   527→        </div>
+   528→      </section>
+   529→    </div>
+   530→  );
+   531→}
+   532→
+   533→// ── View ────────────────────────────────────────────────────────────────────
+   534→
+   535→export default function JobsView() {
+   536→  const route = useHashRoute();
+   537→  const detailParam = route.params.job ?? null;
+   538→  const { user } = useSession();
+   539→
+   540→  // Shell contract (responsive fix 3-a): PublicShell's <main> is a bare flex
+   541→  // column (no padding), so the anonymous board paints its own 1600px container
+   542→  // + gutters + vertical rhythm. AppShell's <main> already carries the exact
+   543→  // same container (px-4 py-6 sm:px-6 sm:py-8 lg:px-8), so signed-in views must
+   544→  // not repeat it (double gutters ~128px at lg) — a plain w-full wrapper keeps
+   545→  // identical spacing since AppShell main provides the same py.
+   546→  const shellPad = user
+   547→    ? "w-full"
+   548→    : "mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8";
+   549→
+   550→  const [jobs, setJobs] = useState<JobWire[] | null>(null);
+   551→  const [error, setError] = useState<string | null>(null);
+   552→  const [query, setQuery] = useState("");
+   553→  const [divisionFilter, setDivisionFilter] = useState<string[]>([]);
+   554→  const [sort, setSort] = useState<SortKey>("newest");
+   555→  const [page, setPage] = useState(1);
+   556→  const [expandedId, setExpandedId] = useState<number | null>(null);
+   557→  const [filtersOpen, setFiltersOpen] = useState(false);
+   558→  const [cancelling, setCancelling] = useState(false);
+   559→  const lastJson = useRef("");
+   560→
+   561→  const { requestApply, dialogs } = useApplyFlow();
+   562→
+   563→  const load = useCallback(async (silent: boolean) => {
+   564→    try {
+   565→      const data = await apiFetch<JobWire[]>("/api/jobs?limit=200");
+   566→      const json = JSON.stringify(data);
+   567→      if (!silent || json !== lastJson.current) {
+   568→        lastJson.current = json;
+   569→        setJobs(data);
+   570→      }
+   571→      setError(null);
+   572→    } catch (e) {
+   573→      if (!silent) setError(e instanceof Error ? e.message : "Failed to load positions");
+   574→    }
+   575→  }, []);
+   576→
+   577→  // Mount + 20s silent poll + refetch on focus (spec §13 cadence).
+   578→  useEffect(() => {
+   579→    void load(false);
+   580→    const timer = setInterval(() => {
+   581→      if (!document.hidden) void load(true);
+   582→    }, 20_000);
+   583→    const onFocus = () => void load(true);
+   584→    window.addEventListener("focus", onFocus);
+   585→    return () => {
+   586→      clearInterval(timer);
+   587→      window.removeEventListener("focus", onFocus);
+   588→    };
+   589→  }, [load]);
+   590→
+   591→  // Facet counts over the full corpus.
+   592→  const facets = useMemo(() => {
+   593→    const map = new Map<string, number>();
+   594→    for (const j of jobs ?? []) {
+   595→      const code = j.position?.division;
+   596→      if (!code) continue;
+   597→      map.set(code, (map.get(code) ?? 0) + 1);
+   598→    }
+   599→    return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+   600→  }, [jobs]);
+   601→
+   602→  // Filtering + sorting.
+   603→  const filtered = useMemo(() => {
+   604→    let list = jobs ?? [];
+   605→    const needle = query.trim().toLowerCase();
+   606→    if (needle) {
+   607→      list = list.filter((j) =>
+   608→        `${j.title} ${j.position?.positionTitle ?? ""} ${j.position?.itemNumber ?? ""}`
+   609→          .toLowerCase()
+   610→          .includes(needle)
+   611→      );
+   612→    }
+   613→    if (divisionFilter.length > 0) {
+   614→      list = list.filter((j) => divisionFilter.includes(j.position?.division ?? ""));
+   615→    }
+   616→    const deadlineTime = (j: JobWire) =>
+   617→      j.deadlineDate ? new Date(j.deadlineDate).getTime() : Number.POSITIVE_INFINITY;
+   618→    const sorted = [...list];
+   619→    if (sort === "newest") {
+   620→      sorted.sort(
+   621→        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+   622→      );
+   623→    } else if (sort === "deadline") {
+   624→      sorted.sort((a, b) => deadlineTime(a) - deadlineTime(b));
+   625→    } else {
+   626→      sorted.sort((a, b) => (b.position?.salaryAmount ?? -1) - (a.position?.salaryAmount ?? -1));
+   627→    }
+   628→    return sorted;
+   629→  }, [jobs, query, divisionFilter, sort]);
+   630→
+   631→  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+   632→  const current = Math.min(page, totalPages);
+   633→  const pageItems = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+   634→
+   635→  const changeQuery = (v: string) => {
+   636→    setQuery(v);
+   637→    setPage(1);
+   638→  };
+   639→  const toggleDivision = (code: string) => {
+   640→    setDivisionFilter((prev) =>
+   641→      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+   642→    );
+   643→    setPage(1);
+   644→  };
+   645→  const clearFilters = () => {
+   646→    setQuery("");
+   647→    setDivisionFilter([]);
+   648→    setPage(1);
+   649→  };
+   650→  const toggleExpanded = (id: number) => setExpandedId((prev) => (prev === id ? null : id));
+   651→  const openDetail = (job: JobWire) => navigate("jobs", { job: String(job.id) });
+   652→
+   653→  const applyTo = useCallback(
+   654→    (job: JobWire) => {
+   655→      requestApply(job);
+   656→    },
+   657→    [requestApply]
+   658→  );
+   659→
+   660→  // Cancel application (only while status "Applied" — spec §7.7).
+   661→  const appliedId = useMemo(() => {
+   662→    const detail = detailParam ? (jobs ?? []).find((j) => j.id === Number(detailParam)) : null;
+   663→    return detail?.applications?.[0]?.id ?? null;
+   664→  }, [detailParam, jobs]);
+   665→
+   666→  const cancelApplication = useCallback(async () => {
+   667→    if (appliedId == null) return;
+   668→    setCancelling(true);
+   669→    try {
+   670→      await apiFetch(`/api/applications/${appliedId}`, { method: "DELETE" });
+   671→      toast.success("Application cancelled", {
+   672→        description: "Your application was withdrawn. You can apply again while the position is open.",
+   673→      });
+   674→      await load(false);
+   675→    } catch (e) {
+   676→      toast.error(e instanceof Error ? e.message : "Could not cancel the application");
+   677→    } finally {
+   678→      setCancelling(false);
+   679→    }
+   680→  }, [appliedId, load]);
+   681→
+   682→  // ── Detail mode ───────────────────────────────────────────────────────────
+   683→  if (detailParam && /^\d+$/.test(detailParam)) {
+   684→    const detailId = Number(detailParam);
+   685→    const detail = jobs?.find((j) => j.id === detailId) ?? null;
+   686→
+   687→    return (
+   688→      <div className={shellPad}>
+   689→        <button
+   690→          onClick={() => navigate("jobs")}
+   691→          className="mb-5 flex min-h-[44px] items-center gap-2 text-sm text-stone hover:text-ink"
+   692→        >
+   693→          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+   694→          Back to Positions
+   695→        </button>
+   696→
+   697→        {jobs === null && error === null ? (
+   698→          <div className="space-y-6">
+   699→            <div className="dlg-card space-y-4 p-8">
+   700→              <Skeleton className="h-6 w-32" />
+   701→              <Skeleton className="h-10 w-2/3" />
+   702→              <Skeleton className="h-4 w-1/2" />
+   703→            </div>
+   704→            <div className="dlg-card space-y-3 p-8">
+   705→              <Skeleton className="h-5 w-48" />
+   706→              <Skeleton className="h-4 w-full" />
+   707→              <Skeleton className="h-4 w-full" />
+   708→              <Skeleton className="h-4 w-3/4" />
+   709→            </div>
+   710→          </div>
+   711→        ) : error !== null ? (
+   712→          <ErrorCard message={error} onRetry={() => void load(false)} />
+   713→        ) : detail === null ? (
+   714→          <div className="dlg-card p-10 text-center">
+   715→            <p className="font-display text-xl text-carbon">Position not found</p>
+   716→            <p className="mt-2 text-sm text-stone">
+   717→              This position may have closed or is no longer published.
+   718→            </p>
+   719→            <button onClick={() => navigate("jobs")} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
+   720→              Back to Positions
+   721→            </button>
+   722→          </div>
+   723→        ) : (
+   724→          // Two-column from lg (matches the filter rail breakpoint): below
+   725→          // xl the sticky summary used to render AFTER the whole long
+   726→          // description, pushing the primary Apply CTA a full scroll away
+   727→          // on exactly-lg desktops.
+   728→          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_340px]">
+   729→            <DetailBody job={detail} />
+   730→            {/* Session-aware sticky offset: the public SiteHeader is sticky
+   731→                h-16, the signed-in shell has no sticky chrome at lg+. */}
+   732→            <aside className={`lg:sticky ${user ? "lg:top-6" : "lg:top-20"}`}>
+   733→              <SummaryCard
+   734→                job={detail}
+   735→                onApply={applyTo}
+   736→                onCancel={() => void cancelApplication()}
+   737→                cancelling={cancelling}
+   738→              />
+   739→            </aside>
+   740→          </div>
+   741→        )}
+   742→
+   743→        {dialogs}
+   744→      </div>
+   745→    );
+   746→  }
+   747→
+   748→  // ── List mode ─────────────────────────────────────────────────────────────
+   749→  const activeFilterCount = (query.trim() ? 1 : 0) + divisionFilter.length;
+   750→
+   751→  // One rail definition, two mount points (mobile collapsible + lg sidebar).
+   752→  // The id suffix keeps the duplicate DOM valid — two inputs must never share
+   753→  // one id (label htmlFor / a11y lookups would hit the hidden copy).
+   754→  const filterRail = (sfx: string) => (
+   755→    <div className="dlg-card p-4">
+   756→      <label htmlFor={`job-search-${sfx}`} className="sr-only">
+   757→        Search positions
+   758→      </label>
+   759→      <div className="relative">
+   760→        <Search
+   761→          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble"
+   762→          aria-hidden="true"
+   763→        />
+   764→        <Input
+   765→          id={`job-search-${sfx}`}
+   766→          value={query}
+   767→          onChange={(e) => changeQuery(e.target.value)}
+   768→          placeholder="Search positions…"
+   769→          className="dlg-input min-h-[44px] pl-9"
+   770→        />
+   771→      </div>
+   772→
+   773→      <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-pebble">Division</p>
+   774→      <div className="mt-2 space-y-0.5">
+   775→        {facets.map(([code, count]) => (
+   776→          <label
+   777→            key={code}
+   778→            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-none px-2 hover:bg-fog"
+   779→          >
+   780→            <Checkbox
+   781→              checked={divisionFilter.includes(code)}
+   782→              onCheckedChange={() => toggleDivision(code)}
+   783→            />
+   784→            <span className="min-w-0 flex-1 truncate text-sm text-stone" title={divisionName(code)}>
+   785→              {divisionShort(code)}
+   786→            </span>
+   787→            <span className="text-xs text-pebble">{count}</span>
+   788→          </label>
+   789→        ))}
+   790→        {facets.length === 0 && <p className="px-2 py-2 text-sm text-pebble">No divisions on file</p>}
+   791→      </div>
+   792→
+   793→      {(query.trim() || divisionFilter.length > 0) && (
+   794→        <button
+   795→          onClick={clearFilters}
+   796→          className="min-h-[44px] px-2 text-sm text-stone underline underline-offset-4 hover:text-ink"
+   797→        >
+   798→          Clear filters
+   799→        </button>
+   800→      )}
+   801→    </div>
+   802→  );
+   803→
+   804→  let content: React.ReactNode;
+   805→  if (jobs === null && error === null) {
+   806→    content = (
+   807→      <div className="space-y-4">
+   808→        {[0, 1, 2, 3].map((i) => (
+   809→          <div key={i} className="dlg-card p-6">
+   810→            <Skeleton className="h-5 w-24" />
+   811→            <Skeleton className="mt-3 h-6 w-2/3" />
+   812→            <Skeleton className="mt-2 h-4 w-full" />
+   813→          </div>
+   814→        ))}
+   815→      </div>
+   816→    );
+   817→  } else if (error !== null && jobs === null) {
+   818→    content = <ErrorCard message={error} onRetry={() => void load(false)} />;
+   819→  } else if ((jobs ?? []).length === 0) {
+   820→    content = (
+   821→      <div className="dlg-card p-10 text-center">
+   822→        <p className="font-display text-xl text-carbon">No open positions</p>
+   823→        <p className="mt-2 text-sm text-stone">
+   824→          There are no published postings at the moment — check back soon.
+   825→        </p>
+   826→      </div>
+   827→    );
+   828→  } else if (filtered.length === 0) {
+   829→    content = (
+   830→      <div className="dlg-card p-10 text-center">
+   831→        <p className="font-display text-xl text-carbon">No positions match your filters</p>
+   832→        <p className="mt-2 text-sm text-stone">Try a different search term or clear the filters.</p>
+   833→        <button onClick={clearFilters} className="dlg-ghost mt-5 min-h-[44px] px-6 text-sm">
+   834→          Clear filters
+   835→        </button>
+   836→      </div>
+   837→    );
+   838→  } else {
+   839→    content = (
+   840→      <>
+   841→        <div className="space-y-4">
+   842→          {pageItems.map((job) => (
+   843→            <JobCard
+   844→              key={job.id}
+   845→              job={job}
+   846→              expanded={expandedId === job.id}
+   847→              onToggle={toggleExpanded}
+   848→              onApply={applyTo}
+   849→              onDetail={openDetail}
+   850→            />
+   851→          ))}
+   852→        </div>
+   853→
+   854→        {totalPages > 1 && (
+   855→          <nav
+   856→            className="mt-6 flex flex-wrap items-center justify-center gap-1 sm:gap-1.5"
+   857→            aria-label="Pagination"
+   858→          >
+   859→            <button
+   860→              onClick={() => setPage((p) => Math.max(1, p - 1))}
+   861→              disabled={current === 1}
+   862→              aria-label="Previous page"
+   863→              className="dlg-ghost grid h-11 w-11 place-items-center disabled:opacity-40"
+   864→            >
+   865→              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+   866→            </button>
+   867→            {pageWindow(current, totalPages).map((p, i) =>
+   868→              p === "…" ? (
+   869→                <span key={`ellipsis-${i}`} className="grid h-11 w-8 place-items-center text-sm text-pebble">
+   870→                  …
+   871→                </span>
+   872→              ) : (
+   873→                <button
+   874→                  key={p}
+   875→                  onClick={() => setPage(p)}
+   876→                  aria-current={p === current ? "page" : undefined}
+   877→                  className={
+   878→                    p === current
+   879→                      ? "grid h-11 min-w-11 place-items-center bg-ink px-3 text-sm font-medium text-white"
+   880→                      : "grid h-11 min-w-11 place-items-center px-3 text-sm text-stone hover:bg-fog hover:text-ink"
+   881→                  }
+   882→                >
+   883→                  {p}
+   884→                </button>
+   885→              )
+   886→            )}
+   887→            <button
+   888→              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   889→              disabled={current === totalPages}
+   890→              aria-label="Next page"
+   891→              className="dlg-ghost grid h-11 w-11 place-items-center disabled:opacity-40"
+   892→            >
+   893→              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+   894→            </button>
+   895→          </nav>
+   896→        )}
+   897→      </>
+   898→    );
+   899→  }
+   900→
+   901→  return (
+   902→    <div className={shellPad}>
+   903→      <div className="mb-5 max-w-2xl">
+   904→        <h1 className="text-heading-lg">Positions</h1>
+   905→        <p className="mt-2 text-sm leading-relaxed text-stone">
+   906→          Browse published vacancies at DOST-MIRDC and submit your application online.
+   907→        </p>
+   908→      </div>
+   909→
+   910→      <div className="items-start lg:flex lg:gap-6">
+   911→        {/* Search rail — sticky on desktop, collapsible on mobile */}
+   912→        <aside
+   913→          className={`mb-4 w-full lg:sticky ${user ? "lg:top-6" : "lg:top-20"} lg:mb-0 lg:w-72 lg:shrink-0`}
+   914→        >
+   915→          <div className="lg:hidden">
+   916→            <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+   917→              <CollapsibleTrigger asChild>
+   918→                <button className="dlg-ghost flex min-h-[44px] w-full items-center justify-between px-5 text-sm">
+   919→                  <span className="flex items-center gap-2">
+   920→                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+   921→                    Filters
+   922→                    {activeFilterCount > 0 && (
+   923→                      <span className="grid h-5 min-w-5 place-items-center bg-ink px-1.5 text-[11px] font-medium text-white">
+   924→                        {activeFilterCount}
+   925→                      </span>
+   926→                    )}
+   927→                  </span>
+   928→                  <ChevronDown
+   929→                    className={`h-4 w-4 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+   930→                    aria-hidden="true"
+   931→                  />
+   932→                </button>
+   933→              </CollapsibleTrigger>
+   934→              <CollapsibleContent>
+   935→                <div className="pt-3">{filterRail("m")}</div>
+   936→              </CollapsibleContent>
+   937→            </Collapsible>
+   938→          </div>
+   939→          <div className="hidden lg:block">{filterRail("d")}</div>
+   940→        </aside>
+   941→
+   942→        {/* Results */}
+   943→        <div className="min-w-0 flex-1">
+   944→          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+   945→            <p className="text-sm text-stone">
+   946→              {filtered.length} Result{filtered.length === 1 ? "" : "s"}
+   947→            </p>
+   948→            <div className="flex items-center gap-2">
+   949→              <span className="hidden text-sm text-stone sm:inline">Sort</span>
+   950→              <Select
+   951→                value={sort}
+   952→                onValueChange={(v) => {
+   953→                  setSort(v as SortKey);
+   954→                  setPage(1);
+   955→                }}
+   956→              >
+   957→                <SelectTrigger
+   958→                  className="dlg-input min-h-[44px] w-[140px] sm:w-[170px]"
+   959→                  aria-label="Sort results"
+   960→                >
+   961→                  <SelectValue />
+   962→                </SelectTrigger>
+   963→                <SelectContent className="rounded-none">
+   964→                  <SelectItem value="newest">Newest</SelectItem>
+   965→                  <SelectItem value="deadline">Deadline</SelectItem>
+   966→                  <SelectItem value="salary">Salary desc</SelectItem>
+   967→                </SelectContent>
+   968→              </Select>
+   969→            </div>
+   970→          </div>
+   971→
+   972→          {/* Active-filter chips — presentation of existing filter state */}
+   973→          {activeFilterCount > 0 && (
+   974→            <div className="mb-4 flex flex-wrap items-center gap-2">
+   975→              {query.trim() && (
+   976→                <span className="dlg-pill inline-flex items-center gap-1.5 bg-white py-1.5 pl-3 pr-2 text-xs font-medium text-graphite">
+   977→                  &ldquo;{query.trim()}&rdquo;
+   978→                  <button
+   979→                    onClick={() => changeQuery("")}
+   980→                    aria-label="Clear search filter"
+   981→                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center text-stone hover:bg-fog hover:text-ink"
+   982→                  >
+   983→                    <X className="h-3 w-3" aria-hidden="true" />
+   984→                  </button>
+   985→                </span>
+   986→              )}
+   987→              {divisionFilter.map((code) => (
+   988→                <span
+   989→                  key={code}
+   990→                  className="dlg-pill inline-flex items-center gap-1.5 bg-white py-1.5 pl-3 pr-2 text-xs font-medium text-graphite"
+   991→                >
+   992→                  {divisionShort(code)}
+   993→                  <button
+   994→                    onClick={() => toggleDivision(code)}
+   995→                    aria-label={`Remove ${divisionShort(code)} filter`}
+   996→                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center text-stone hover:bg-fog hover:text-ink"
+   997→                  >
+   998→                    <X className="h-3 w-3" aria-hidden="true" />
+   999→                  </button>
+  1000→                </span>
+  1001→              ))}
+  1002→              <button
+  1003→                onClick={clearFilters}
+  1004→                className="text-xs text-stone underline underline-offset-4 hover:text-ink"
+  1005→              >
+  1006→                Clear all
+  1007→              </button>
+  1008→            </div>
+  1009→          )}
+  1010→
+  1011→          {content}
+  1012→        </div>
+  1013→      </div>
+  1014→
+  1015→      {dialogs}
+  1016→    </div>
+  1017→  );
+  1018→}
+  1019→

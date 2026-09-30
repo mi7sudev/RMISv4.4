@@ -7,13 +7,14 @@
 // toasts; rows show name / size / category / date (+ status pill for
 // extractable categories, extraction error via tooltip) with single and
 // checkbox batch delete.
-// Presentation pass: SectionCard shell, StatusPill document statuses, .num
-// metrics, functional --bad destructive styling. All behavior unchanged.
+// Bevel pass: local white section panel, cloud/60 tiles, StatusPill document
+// statuses, .num metrics, functional --bad destructive styling. All behavior
+// unchanged.
 // ============================================================================
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileText, FileUp, Loader2, Paperclip, Trash2 } from "lucide-react";
+import { FileText, FileUp, Loader2, Paperclip, Trash2, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,13 +33,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmptyState, SectionCard, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, StatusPill, type ChipTone } from "@/components/ui/shell";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiFetch, formatDate, humanize } from "@/lib/client";
 import { DOCUMENT_CATEGORIES, EXTRACTABLE_CATEGORIES } from "@/lib/validation";
 import type { DocumentWire } from "@/lib/router";
 import { SaveHint, useSavedFlash } from "./save-hint";
 import type { StatusVariant } from "@/lib/status-ui";
+
+/**
+ * Bevel section panel (shared workspace layout system): white surface, 24px,
+ * icon-chip heading row with a body-gray caption — local stand-in for the
+ * old-theme ui/shell SectionCard.
+ */
+function SectionPanel({
+  icon,
+  chipTone,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  icon: LucideIcon;
+  chipTone: ChipTone;
+  title: string;
+  description: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="dlg-card-plain min-w-0 p-5 sm:p-6" aria-label={title}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} />
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
+            {description && <p className="mt-0.5 text-xs text-body-gray">{description}</p>}
+          </div>
+        </div>
+        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
+      <div>{children}</div>
+    </section>
+  );
+}
 
 const CATEGORY_NONE = "__select__";
 const EXTRACTABLE = EXTRACTABLE_CATEGORIES as readonly string[];
@@ -157,7 +195,7 @@ export default function DocumentsSection({
   };
 
   return (
-    <SectionCard
+    <SectionPanel
       icon={FileText}
       chipTone="slate"
       title="Supporting Documents"
@@ -165,10 +203,10 @@ export default function DocumentsSection({
       actions={<SaveHint saving={uploading} saved={savedFlash} />}
     >
       {/* Upload rail — category REQUIRED before any file is accepted (§7.4) */}
-      <div className="rounded-none bg-fog p-4">
+      <div className="rounded-lg bg-cloud/60 p-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)] sm:items-end">
           <div>
-            <p className="mb-1.5 text-xs font-medium text-graphite">
+            <p className="mb-1.5 text-xs font-medium text-stone">
               Category<span className="text-[var(--bad)]"> *</span>
             </p>
             <Select
@@ -205,10 +243,10 @@ export default function DocumentsSection({
               inputRef.current?.click();
             }}
             disabled={uploading}
-            className={`flex min-h-[44px] items-center justify-center gap-2 rounded-none border border-dashed px-5 py-3 text-sm font-medium transition-colors ${
+            className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-dashed px-5 py-3 text-sm font-medium transition-colors ${
               categoryError
                 ? "border-[var(--bad)]/40 bg-white text-[var(--bad)]"
-                : "border-divider bg-white text-ink hover:bg-[radial-gradient(420px_160px_at_50%_0%,rgba(21,145,220,0.055),transparent_70%)]"
+                : "border-divider bg-white text-ink hover:bg-[radial-gradient(420px_160px_at_50%_0%,rgba(65,94,238,0.055),transparent_70%)]"
             } disabled:opacity-50`}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
@@ -230,7 +268,7 @@ export default function DocumentsSection({
 
       {/* Batch action bar */}
       {selected.size > 0 && (
-        <div className="mt-4 flex items-center justify-between rounded-none border border-border px-4 py-2">
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-cloud/60 px-4 py-2">
           <span className="num text-xs text-stone">{selected.size} selected</span>
           <button
             type="button"
@@ -257,7 +295,7 @@ export default function DocumentsSection({
               return (
                 <div
                   key={doc.id}
-                  className="flex items-center gap-3 rounded-none border border-border bg-white px-3 py-2.5 transition-colors hover:bg-fog/60"
+                  className="flex items-center gap-3 rounded-lg bg-cloud/60 px-3 py-2.5 transition-colors hover:bg-cloud"
                 >
                   <Checkbox
                     checked={selected.has(doc.id)}
@@ -272,7 +310,7 @@ export default function DocumentsSection({
                     <p className="truncate text-sm font-medium text-ink" title={doc.originalName}>
                       {doc.originalName}
                     </p>
-                    <p className="num text-xs text-pebble">
+                    <p className="num text-xs text-stone">
                       {humanize(doc.category)} · {Math.max(1, Math.round(doc.size / 1024))} KB · {formatDate(doc.createdAt)}
                     </p>
                   </div>
@@ -290,7 +328,7 @@ export default function DocumentsSection({
                     type="button"
                     onClick={() => setDeleteTargets([doc.id])}
                     aria-label={`Delete ${doc.originalName}`}
-                    className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center text-pebble transition-colors hover:bg-[var(--bad)]/10 hover:text-[var(--bad)]"
+                    className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-full text-stone transition-colors hover:bg-[var(--bad-bg)] hover:text-[var(--bad)]"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -307,7 +345,7 @@ export default function DocumentsSection({
             <AlertDialogTitle className="font-display text-xl text-ink">
               {deleteTargets !== null && deleteTargets.length > 1 ? `Delete ${deleteTargets.length} documents?` : "Delete this document?"}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm leading-relaxed text-stone">
+            <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               The file will be permanently removed from your records.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -319,13 +357,13 @@ export default function DocumentsSection({
                 if (deleteTargets) void runDelete(deleteTargets);
               }}
               disabled={deleting}
-              className="min-h-[44px] border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-fog disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
             >
               {deleting ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SectionCard>
+    </SectionPanel>
   );
 }

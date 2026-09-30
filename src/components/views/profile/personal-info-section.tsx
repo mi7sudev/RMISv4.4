@@ -8,15 +8,17 @@
 // AUTOSAVE: every change re-arms a 1.2 s debounce → PUT /api/applicant/profile
 // with a live save-state indicator; an explicit "Save Changes" button also
 // exists (toast + session refresh). birthDate is sent as YYYY-MM-DD directly.
+// Bevel pass: white section panel + cloud/60 disclosure groups, quiet save
+// indicator; autosave behavior unchanged.
 // ============================================================================
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Loader2, MapPin, Scale, UserRound, Users } from "lucide-react";
+import { ChevronDown, Loader2, MapPin, Scale, UserRound, Users, type LucideIcon } from "lucide-react";
 import { apiFetch } from "@/lib/client";
 import { CIVIL_STATUS_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { SectionCard } from "@/components/ui/shell";
+import { IconChip, type ChipTone } from "@/components/ui/shell";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +32,43 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ApplicantProfile, CharacterReference } from "./section-types";
+
+/**
+ * Bevel section panel (shared workspace layout system): white surface, 24px,
+ * icon-chip heading row with a body-gray caption — local stand-in for the
+ * old-theme ui/shell SectionCard.
+ */
+function SectionPanel({
+  icon,
+  chipTone,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  icon: LucideIcon;
+  chipTone: ChipTone;
+  title: string;
+  description: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="dlg-card-plain min-w-0 p-5 sm:p-6" aria-label={title}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} />
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
+            {description && <p className="mt-0.5 text-xs text-body-gray">{description}</p>}
+          </div>
+        </div>
+        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
+      <div>{children}</div>
+    </section>
+  );
+}
 
 // ── Draft model ─────────────────────────────────────────────────────────────
 
@@ -127,7 +166,7 @@ function filledCount(form: PersonalForm, keys: (keyof PersonalForm)[]): number {
 
 // ── Small field primitives ──────────────────────────────────────────────────
 
-const labelCls = "mb-1.5 block text-xs font-medium text-graphite";
+const labelCls = "mb-1.5 block text-xs font-medium text-stone";
 const inputCls = "dlg-input min-h-[44px]";
 const NONE = "__none__";
 
@@ -144,7 +183,7 @@ function TextField({
         {required && <span className="text-dusty-rose"> *</span>}
       </Label>
       <Input type={type} className={inputCls} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-      {helper && <p className="mt-1 text-xs text-pebble">{helper}</p>}
+      {helper && <p className="mt-1 text-xs text-body-gray">{helper}</p>}
     </div>
   );
 }
@@ -172,17 +211,17 @@ function SelectField({
             </SelectItem>
           ))}
           <SelectItem value={NONE}>
-            <span className="text-pebble">Not specified</span>
+            <span className="text-stone">Not specified</span>
           </SelectItem>
         </SelectContent>
       </Select>
-      {helper && <p className="mt-1 text-xs text-pebble">{helper}</p>}
+      {helper && <p className="mt-1 text-xs text-body-gray">{helper}</p>}
     </div>
   );
 }
 
 /** Collapsible disclosure group — icon + title + "X of N" count + chevron,
- *  content in a sharp-corner bordered card. Compact default: all open. */
+ *  content in a cloud-tint sub-panel. Compact default: all open. */
 function CollapsibleGroup({
   icon: Icon,
   title,
@@ -200,26 +239,26 @@ function CollapsibleGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="rounded-none border border-border bg-white">
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-lg bg-cloud/60">
       <CollapsibleTrigger asChild>
         <button
           type="button"
           aria-expanded={open}
-          className="flex min-h-[44px] w-full items-center gap-2.5 p-3.5 text-left transition-colors hover:bg-fog/60"
+          className="flex min-h-[44px] w-full items-center gap-2.5 p-3.5 text-left transition-colors hover:bg-white/60"
         >
           <Icon className="h-4 w-4 shrink-0 text-stone" aria-hidden="true" />
-          <span className="min-w-0 flex-1 truncate font-display text-base text-ink">{title}</span>
-          <span className="shrink-0 bg-fog px-2.5 py-1 text-xs font-medium text-graphite">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{title}</span>
+          <span className="shrink-0 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-stone">
             <span className="num">{done}</span>/<span className="num">{total}</span>
           </span>
           <ChevronDown
-            className={cn("h-4 w-4 shrink-0 text-pebble transition-transform duration-200", open && "rotate-180")}
+            className={cn("h-4 w-4 shrink-0 text-stone transition-transform duration-200", open && "rotate-180")}
             aria-hidden="true"
           />
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="border-t border-border p-4">{children}</div>
+        <div className="border-t border-divider p-4">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -240,9 +279,9 @@ function RefRow({
     { key: "contact", label: "Contact No." },
   ];
   return (
-    <div className="dlg-card-plain rounded-none border border-border p-4">
+    <div className="rounded-lg bg-white/80 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-medium text-graphite">Reference <span className="num">{index + 1}</span></p>
+        <p className="text-xs font-medium text-stone">Reference <span className="num">{index + 1}</span></p>
         <button
           type="button"
           onClick={onRemove}
@@ -380,7 +419,7 @@ export default function PersonalInfoSection({
 
   const saveIndicator =
     saveState === "saving" ? (
-      <span className="inline-flex items-center gap-1.5 text-xs leading-none text-stone">
+      <span className="inline-flex items-center gap-1.5 text-xs leading-none text-body-gray">
         <Loader2 className="h-3 w-3 animate-spin" /> Saving…
       </span>
     ) : saveState === "saved" ? (
@@ -390,11 +429,11 @@ export default function PersonalInfoSection({
     ) : saveState === "error" ? (
       <span className="text-xs leading-none text-[var(--bad)]">Save failed — click Save Changes</span>
     ) : saveState === "dirty" ? (
-      <span className="text-xs leading-none text-pebble">Unsaved changes</span>
+      <span className="text-xs leading-none text-stone">Unsaved changes</span>
     ) : null;
 
   return (
-    <SectionCard
+    <SectionPanel
       icon={UserRound}
       chipTone="slate"
       title="Personal Information"
@@ -542,6 +581,6 @@ export default function PersonalInfoSection({
           </button>
         </CollapsibleGroup>
       </div>
-    </SectionCard>
+    </SectionPanel>
   );
 }

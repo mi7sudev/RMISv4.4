@@ -15,10 +15,10 @@ import {
 } from "recharts";
 import {
   AlertTriangle, Filter, History, Inbox, ChartPie as ChartPieIcon,
-  RefreshCw, TrendingUp, UsersRound,
+  RefreshCw, TrendingUp, UsersRound, type LucideIcon,
 } from "lucide-react";
 import {
-  EmptyState, Monogram, PageHeader, SectionCard, SkeletonKpis, SkeletonRows, StatusPill,
+  EmptyState, IconChip, Monogram, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -27,6 +27,7 @@ import { apiFetch, formatDate, fullName, humanize, timeAgo } from "@/lib/client"
 import { PIPELINE_STAGES, stageForStatus, getStatusMeta, type StageKey } from "@/lib/status";
 import { navigate } from "@/lib/router";
 import { dotClass, pillClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { cn } from "@/lib/utils";
 import { ghostBtn } from "@/components/views/recruitment";
 
 type Stats = {
@@ -59,18 +60,18 @@ type AuditRow = {
 
 type Drill = "All" | StageKey;
 
-// ── Data-viz tokens (globals.css --viz-1..5) & shared chart chrome ──────────
+// ── Data-viz tokens (Bevel viz series — globals.css --viz-1..5) & chrome ────
 
-const GRID = "#ececec";
-const TICK = { fontSize: 11, fill: "#949494" };
-const VIZ_1 = "#1591dc";
+const GRID = "#e6ebf3";
+const TICK = { fontSize: 11, fill: "#9aa0ab" };
+const VIZ_1 = "#415eee"; // Metric Blue
 
-/** Funnel bar fill per stage (functional status tokens from globals.css). */
+/** Funnel bar fill per stage — Bevel metric accents (blue/gold/green/coral). */
 const STAGE_BAR: Record<StageKey, string> = {
-  "Applied": "#484758",
-  "Under Review": "#a16207",
-  "Shortlisted": "#2e7d4f",
-  "Rejected": "#b3556a",
+  "Applied": "#415eee", // Metric Blue
+  "Under Review": "#ffca00", // Signal Gold
+  "Shortlisted": "#31ce01", // Recovery Green
+  "Rejected": "#ffab94", // Coral Signal
 };
 
 /** Stage-dot variant per stage (mirrors STAGE_BAR). */
@@ -84,7 +85,50 @@ const STAGE_VARIANT: Record<StageKey, StatusVariant> = {
 /** Donut slice fill for a stored status spelling (stage tokens + fallback). */
 function statusSliceColor(status: string): string {
   const key = STAGE_BAR[stageForStatus(status) as StageKey];
-  return key ?? "#8b8b8b";
+  return key ?? "#d5dce8";
+}
+
+/**
+ * Bevel content panel (shared workspace layout system): white 24px card,
+ * p-5 → sm:p-6, ink section heading with body-gray caption and trailing
+ * actions. Chart containers re-skin to this card; series keep the viz palette.
+ */
+function Panel({
+  title,
+  description,
+  actions,
+  icon,
+  chipTone = "slate",
+  className,
+  bodyClassName,
+  children,
+}: {
+  title?: string;
+  description?: string;
+  actions?: React.ReactNode;
+  icon?: LucideIcon;
+  chipTone?: ChipTone;
+  className?: string;
+  bodyClassName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+      {title || actions ? (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {icon ? <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} /> : null}
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
+              {description ? <p className="mt-0.5 text-xs text-body-gray">{description}</p> : null}
+            </div>
+          </div>
+          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+      ) : null}
+      <div className={bodyClassName}>{children}</div>
+    </section>
+  );
 }
 
 /** First-letter monogram text ("?" when empty). */
@@ -197,10 +241,15 @@ export default function Analytics() {
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Analytics" description="Pipeline health, application volume, and audit activity." />
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Analytics</h1>
+            <p className="mt-1 text-sm text-body-gray">Pipeline health, application volume, and audit activity.</p>
+          </div>
+        </header>
         <div className="dlg-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-stone">{error}</p>
+          <p className="text-sm text-body-gray">{error}</p>
           <button type="button" className={ghostBtn} onClick={() => void load()}>
             Retry
           </button>
@@ -212,34 +261,49 @@ export default function Analytics() {
   if (!stats || queue === null || audit === null) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Analytics" description="Pipeline health, application volume, and audit activity." />
-        <SkeletonKpis count={4} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SkeletonRows rows={5} rowClassName="h-16" />
-          <SkeletonRows rows={5} rowClassName="h-16" />
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Analytics</h1>
+            <p className="mt-1 text-sm text-body-gray">Pipeline health, application volume, and audit activity.</p>
+          </div>
+        </header>
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="dlg-card p-6">
+              <div className="skel h-3 w-20" />
+              <div className="skel mt-4 h-8 w-16" />
+            </div>
+          ))}
         </div>
-        <SkeletonRows rows={4} rowClassName="h-16" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SkeletonRows rows={5} rowClassName="h-16 rounded-lg" />
+          <SkeletonRows rows={5} rowClassName="h-16 rounded-lg" />
+        </div>
+        <SkeletonRows rows={4} rowClassName="h-16 rounded-lg" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Analytics"
-        description="Pipeline health, application volume, and audit activity."
-        actions={
+      {/* Bevel page header — shared anatomy across all workspace views */}
+      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Analytics</h1>
+          <p className="mt-1 text-sm text-body-gray">Pipeline health, application volume, and audit activity.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={ghostBtn} onClick={manualRefresh}>
             <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
             Refresh
           </button>
-        }
-      />
+        </div>
+      </header>
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* 1. Pipeline funnel + 3. Status distribution */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <SectionCard
+          <Panel
             title="Pipeline conversion"
             description="Click a stage to drill into its applicants. Percentages are of Applied."
             icon={Filter}
@@ -252,8 +316,8 @@ export default function Analytics() {
                   <button
                     key={f.stage}
                     type="button"
-                    className={`focus-ring w-full rounded-none px-3 py-3 text-left transition-colors min-h-[44px] ${
-                      active ? "bg-fog ring-1 ring-ink/20" : "hover:bg-fog/60"
+                    className={`focus-ring min-h-[44px] w-full rounded-lg px-3 py-3 text-left transition-colors ${
+                      active ? "bg-cloud" : "hover:bg-fog/60"
                     }`}
                     onClick={() => setDrill(drill === f.stage ? "All" : f.stage)}
                     aria-pressed={active}
@@ -264,22 +328,22 @@ export default function Analytics() {
                       <span className="num text-sm font-medium text-ink">{f.count}</span>
                     </div>
                     <div className="mt-2 flex items-center gap-2.5">
-                      <div className="h-1.5 flex-1 overflow-hidden bg-fog shadow-[inset_0_1px_2px_rgba(24,24,37,0.08)]">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fog">
                         <div
-                          className="h-full"
+                          className="h-full rounded-full"
                           style={{ width: `${Math.min(100, f.pct)}%`, background: STAGE_BAR[f.stage] }}
                         />
                       </div>
-                      <span className="num w-10 shrink-0 text-right text-xs text-stone">{f.pct}%</span>
+                      <span className="num w-10 shrink-0 text-right text-xs text-body-gray">{f.pct}%</span>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </SectionCard>
+          </Panel>
 
           <div className="space-y-6">
-            <SectionCard
+            <Panel
               title="Applications per day"
               description="Last 30 days, from the review queue."
               icon={TrendingUp}
@@ -310,9 +374,9 @@ export default function Analytics() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </SectionCard>
+            </Panel>
 
-            <SectionCard
+            <Panel
               title="Status distribution"
               description="All applications by stored status."
               icon={ChartPieIcon}
@@ -326,10 +390,6 @@ export default function Analytics() {
                 <div className="mt-2 grid grid-cols-1 items-center gap-6 sm:grid-cols-[200px_minmax(0,1fr)]">
                   {/* Donut with centered total — the award-dash staple */}
                   <div className="relative mx-auto h-[200px] w-[200px]">
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_0_0_1px_rgba(24,24,37,0.05)]"
-                    />
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <RTooltip />
@@ -353,10 +413,10 @@ export default function Analytics() {
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute inset-0 grid place-items-center">
                       <div className="text-center">
-                        <p className="num font-display text-[32px] font-semibold leading-none tracking-[-0.02em] text-carbon">
+                        <p className="num font-display text-[32px] font-semibold leading-none tracking-[-0.02em] text-ink">
                           {donutTotal}
                         </p>
-                        <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.08em] text-pebble">
+                        <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">
                           Applications
                         </p>
                       </div>
@@ -372,9 +432,9 @@ export default function Analytics() {
                           className="h-2 w-2 shrink-0 rounded-full"
                           style={{ backgroundColor: statusSliceColor(d.status) }}
                         />
-                        <span className="min-w-0 flex-1 truncate text-stone">{d.status}</span>
+                        <span className="min-w-0 flex-1 truncate text-body-gray">{d.status}</span>
                         <span className="num font-medium text-ink">{d.count}</span>
-                        <span className="num w-12 text-right text-xs text-pebble">
+                        <span className="num w-12 text-right text-xs text-body-gray">
                           {donutTotal > 0 ? `${Math.round((d.count / donutTotal) * 100)}%` : "0%"}
                         </span>
                       </li>
@@ -382,12 +442,12 @@ export default function Analytics() {
                   </ul>
                 </div>
               )}
-            </SectionCard>
+            </Panel>
           </div>
         </div>
 
         {/* 4. Drill-down */}
-        <SectionCard
+        <Panel
           title="Drill-down"
           description={drill === "All" ? "All stages." : `Filtered to ${drill}.`}
           icon={UsersRound}
@@ -426,7 +486,7 @@ export default function Analytics() {
                 <button
                   key={r.id}
                   type="button"
-                  className="flex min-h-[44px] w-full items-center gap-3 rounded-none p-3 text-left transition-colors hover:bg-fog/60 focus-ring"
+                  className="flex min-h-[44px] w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-fog/60 focus-ring"
                   onClick={() => navigate("candidate", { id: String(r.applicantId) })}
                 >
                   <span aria-hidden="true" className="contents">
@@ -434,7 +494,7 @@ export default function Analytics() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{fullName(r.applicant)}</p>
-                    <p className="truncate text-xs text-stone">
+                    <p className="truncate text-xs text-body-gray">
                       {r.job.title} · Applied {formatDate(r.dateApplied)}
                     </p>
                   </div>
@@ -443,10 +503,10 @@ export default function Analytics() {
               ))}
             </div>
           )}
-        </SectionCard>
+        </Panel>
 
         {/* 5. Recent activity (audit feed) */}
-        <SectionCard
+        <Panel
           title="Recent activity"
           description={`${auditTotal} logged event${auditTotal === 1 ? "" : "s"}`}
           icon={History}
@@ -459,7 +519,7 @@ export default function Analytics() {
               {audit.map((a) => (
                 <div
                   key={a.id}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-none px-3 py-2.5 transition-colors hover:bg-fog/60"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-fog/60"
                 >
                   <span
                     className={`${pillClass("neutral")} shrink-0 uppercase tracking-[0.06em]`}
@@ -470,15 +530,15 @@ export default function Analytics() {
                   <span className="max-w-[240px] truncate text-[13px] font-medium text-ink">
                     {a.userLabel || "System"}
                   </span>
-                  <span className="min-w-[160px] flex-1 truncate text-[13px] text-stone">
+                  <span className="min-w-[160px] flex-1 truncate text-[13px] text-body-gray">
                     {a.description || "—"}
                   </span>
-                  <span className="num shrink-0 text-xs text-pebble">{timeAgo(a.timestamp)}</span>
+                  <span className="num shrink-0 text-xs text-body-gray">{timeAgo(a.timestamp)}</span>
                 </div>
               ))}
             </div>
           )}
-        </SectionCard>
+        </Panel>
       </div>
     </div>
   );

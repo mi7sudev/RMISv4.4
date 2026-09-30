@@ -23,7 +23,7 @@ export function SiteHeader() {
   const onSignInView = view === "signin";
 
   return (
-    <header className="glass sticky top-0 z-40 border-b border-black/[0.07] shadow-e1">
+    <header className="glass sticky top-0 z-40 border-b border-divider/70 shadow-e1">
       <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <button

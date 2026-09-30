@@ -5,7 +5,8 @@
 // presentation. The PDS quick-apply fast-track for incomplete profiles was
 // retired — applicants are sent to finish their profile in the profile
 // builder first, then apply through the normal confirm step.
-// Used by the jobs view. RMIS electric blue #1591DC strictly on the primary CTA.
+// Used by the jobs view. Bevel pass: white 24px dialog surface, cloud/60
+// tiles, charcoal capsule CTAs, functional --bad tints for MQR failures.
 // ============================================================================
 
 import { useCallback, useState } from "react";
@@ -84,21 +85,21 @@ function MqrFailure({ mqr, onGoProfile }: { mqr: MqrResults; onGoProfile: () => 
   ];
   return (
     <div className="space-y-4">
-      <div className="rounded-none bg-dusty-rose/10 border border-dusty-rose/30 p-4">
+      <div className="rounded-lg bg-[var(--bad-bg)] p-4">
         <p className="text-sm font-medium text-ink">Requirements Not Met</p>
-        <p className="text-sm text-stone mt-1">
+        <p className="text-sm text-body-gray mt-1">
           Your credentials do not satisfy every minimum qualification for this position. Nothing was submitted.
         </p>
       </div>
       <ul className="space-y-2">
         {dims.map(([label, verdict]) => (
-          <li key={label} className="flex items-start gap-3 rounded-none bg-fog p-3">
-            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${verdict === MQR_MEETS ? "bg-ink text-white" : "bg-dusty-rose/20 text-dusty-rose"}`}>
+          <li key={label} className="flex items-start gap-3 rounded-lg bg-cloud/60 p-3">
+            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${verdict === MQR_MEETS ? "bg-charcoal text-[#ebf0f8]" : "bg-[var(--bad-bg)] text-[var(--bad)]"}`}>
               {verdict === MQR_MEETS ? "✓" : "✕"}
             </span>
             <div className="min-w-0">
               <p className="text-sm font-medium text-ink">{label}</p>
-              <p className="text-xs text-stone break-words">{verdict}</p>
+              <p className="text-xs text-body-gray break-words">{verdict}</p>
             </div>
           </li>
         ))}
@@ -178,23 +179,23 @@ export function ApplyDialogs({
         {step === "confirm" && (
           <div className="p-6">
             <DialogHeader className="text-left space-y-2">
-              <div className="dlg-pill inline-flex w-fit items-center bg-fog px-3 py-1 text-xs font-medium text-graphite">Application</div>
-              <DialogTitle className="font-display text-2xl text-carbon">{jobTitle}</DialogTitle>
-              <DialogDescription className="text-sm text-stone">
+              <div className="dlg-pill inline-flex w-fit items-center rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">Application</div>
+              <DialogTitle className="font-display text-2xl tracking-[-0.02em] text-ink">{jobTitle}</DialogTitle>
+              <DialogDescription className="text-sm text-body-gray">
                 {place} · {job.positionType ? humanize(job.positionType) : "—"} · {job.numberOfVacancy} vacanc{job.numberOfVacancy === 1 ? "y" : "ies"}
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-none bg-fog p-3">
-                <p className="text-xs text-pebble">Item No.</p>
+              <div className="rounded-lg bg-cloud/60 p-3">
+                <p className="text-xs text-stone">Item No.</p>
                 <p className="text-ink">{job.position?.itemNumber || "—"}</p>
               </div>
-              <div className="rounded-none bg-fog p-3">
-                <p className="text-xs text-pebble">Deadline</p>
-                <p className={`text-ink ${dl.overdue ? "text-dusty-rose" : ""}`}>{dl.label}</p>
+              <div className="rounded-lg bg-cloud/60 p-3">
+                <p className="text-xs text-stone">Deadline</p>
+                <p className={`text-ink ${dl.overdue ? "text-[var(--bad)]" : ""}`}>{dl.label}</p>
               </div>
             </div>
-            <p className="mt-4 text-sm text-stone">
+            <p className="mt-4 text-sm text-body-gray">
               Your profile will be submitted for evaluation against the minimum qualification requirements. HR verifies all credentials at the next stage.
             </p>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -210,8 +211,8 @@ export function ApplyDialogs({
         {step === "mqr-fail" && mqr && (
           <div className="p-6">
             <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="font-display text-2xl text-carbon">Minimum Qualifications</DialogTitle>
-              <DialogDescription className="text-sm text-stone">Automated evaluation for {jobTitle}</DialogDescription>
+              <DialogTitle className="font-display text-2xl tracking-[-0.02em] text-ink">Minimum Qualifications</DialogTitle>
+              <DialogDescription className="text-sm text-body-gray">Automated evaluation for {jobTitle}</DialogDescription>
             </DialogHeader>
             <div className="mt-4">
               <MqrFailure mqr={mqr} onGoProfile={() => { navigate("profile"); onClose(); }} />
@@ -222,9 +223,9 @@ export function ApplyDialogs({
         {/* Done */}
         {step === "done" && (
           <div className="p-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white text-xl">✓</div>
-            <h3 className="mt-4 font-display text-2xl text-carbon">Application submitted</h3>
-            <p className="mt-2 text-sm text-stone">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-charcoal text-xl text-[#ebf0f8]">✓</div>
+            <h3 className="mt-4 font-display text-2xl tracking-[-0.02em] text-ink">Application submitted</h3>
+            <p className="mt-2 text-sm text-body-gray">
               We received your application for {jobTitle}. You will receive an SMS confirmation shortly.
             </p>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">

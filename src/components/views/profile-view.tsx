@@ -1,16 +1,17 @@
 "use client";
 
 // ============================================================================
-// RMIS — Profile builder (layout ported from rmis-main-ui, sharp-edge finish):
-// ONE cohesive record card — identity (avatar · name · status pill · document
-// count) with the completion ring pinned right on phones and a hairline-
-// separated completion lockup (ring · "N of 7 sections" · Mark Complete CTA)
-// on desktop — above the quiet completion note and the PDS import strip.
-// Section navigation is breakpoint-split: desktop (lg+) pins a premium
-// numbered workflow band (check/current/ahead squares joined by hairline
-// connectors, two-line labels with time estimates); phones get a sticky
-// 7-cell segmented strip with a sliding active cell plus a prev/next caption
-// bar. Sections render in one full-width column.
+// RMIS — Profile builder (Bevel edition):
+// ONE cohesive record panel — identity (monogram · name · status pill ·
+// document count) with the completion ring pinned right on phones and a
+// hairline-separated completion lockup (ring · "N of 7 sections" · Mark
+// Complete CTA) on desktop — above the quiet completion note and the cloud
+// PDS import card. Section navigation is breakpoint-split: desktop (lg+)
+// pins a numbered workflow band (capsule done/current/ahead chips joined by
+// hairline connectors, two-line labels with time estimates); phones get a
+// sticky 7-cell segmented strip with a sliding active cell plus a prev/next
+// caption bar. Sections render as white dlg-card-plain panels in one
+// full-width column.
 // Data logic unchanged: parallel loads, silent reloads, session refresh.
 // ============================================================================
 
@@ -68,34 +69,27 @@ function hasText(v: string | null | undefined): boolean {
   return typeof v === "string" && v.trim() !== "";
 }
 
-/** Circular completion ring — square line caps, sanctioned ember gradient. */
+/** Circular completion ring — Metric Blue progress on a cloud track. */
 function CompletionRing({ pct }: { pct: number }) {
   const R = 30;
   const C = 2 * Math.PI * R;
   return (
     <div className="relative h-[72px] w-[72px] shrink-0" role="img" aria-label={`${pct}% profile complete`}>
       <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90">
-        <defs>
-          <linearGradient id="profileRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1591dc" />
-            <stop offset="100%" stopColor="#0e7abf" />
-          </linearGradient>
-        </defs>
-        <circle cx="36" cy="36" r={R} fill="none" className="stroke-fog" strokeWidth="7" />
+        <circle cx="36" cy="36" r={R} fill="none" className="stroke-cloud" strokeWidth="7" />
         <circle
           cx="36"
           cy="36"
           r={R}
           fill="none"
-          stroke="url(#profileRingGrad)"
+          className="stroke-metric-blue motion-safe:transition-[stroke-dasharray] duration-700 ease-out"
           strokeWidth="7"
           strokeDasharray={`${(pct / 100) * C} ${C}`}
           strokeLinecap="butt"
-          className="motion-safe:transition-[stroke-dasharray] duration-700 ease-out"
         />
       </svg>
       <span className="absolute inset-0 grid place-items-center">
-        <span className="num font-display text-lg leading-none text-ink">
+        <span className="num text-lg font-semibold leading-none text-ink">
           {pct}
           <span className="text-[10px]">%</span>
         </span>
@@ -242,35 +236,35 @@ export default function ProfileView() {
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) {
     return (
-      <div>
-        {/* Record card skeleton */}
-        <div className="dlg-card p-4 sm:p-6">
+      <div className="space-y-6">
+        {/* Record panel skeleton */}
+        <div className="dlg-card-plain p-5 sm:p-6">
           <div className="flex items-center gap-4">
-            <div className="skel h-14 w-14 shrink-0" />
+            <div className="skel h-14 w-14 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="skel h-5 w-48" />
               <div className="skel h-3 w-36" />
             </div>
-            <div className="skel h-[72px] w-[72px] shrink-0 lg:hidden" />
+            <div className="skel h-[72px] w-[72px] shrink-0 rounded-full lg:hidden" />
           </div>
           <div className="skel mt-5 h-16 w-full" />
         </div>
         {/* Section nav skeleton — desktop band / mobile strip */}
-        <div className="glass mt-6 hidden border-b border-divider px-8 py-4 lg:block">
+        <div className="glass hidden border-b border-border px-8 py-4 lg:block">
           <div className="flex gap-6 overflow-hidden">
             {SECTIONS.map((s) => (
               <div key={s.n} className="skel h-9 w-24 shrink-0" />
             ))}
           </div>
         </div>
-        <div className="dlg-card mt-6 p-2 lg:hidden">
+        <div className="dlg-card-plain p-2 lg:hidden">
           <div className="flex gap-2 overflow-hidden">
             {SECTIONS.map((s) => (
               <div key={s.n} className="skel h-11 w-12 shrink-0" />
             ))}
           </div>
         </div>
-        <div className="mt-6">
+        <div>
           <SkeletonRows rows={4} rowClassName="h-20" />
         </div>
       </div>
@@ -279,10 +273,10 @@ export default function ProfileView() {
 
   if (error && !profile) {
     return (
-      <div>
-        <div className="dlg-card flex flex-col items-center gap-3 p-10 text-center">
+      <div className="space-y-6">
+        <div className="dlg-card flex flex-col items-center gap-3 p-6 text-center sm:p-10">
           <AlertCircle className="h-6 w-6 text-[var(--bad)]" />
-          <p className="text-sm text-stone">{error}</p>
+          <p className="text-sm text-body-gray">{error}</p>
           <button type="button" onClick={() => void loadAll(false)} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
             <RefreshCw className="mr-2 inline h-3.5 w-3.5" /> Retry
           </button>
@@ -292,11 +286,11 @@ export default function ProfileView() {
   }
 
   return (
-    <div>
-      {/* ── A–C. Employee record — ONE cohesive card: identity + completion
+    <div className="space-y-6">
+      {/* ── A–C. Employee record — ONE cohesive panel: identity + completion
               indicator, the quiet completion note, and the PDS import
-              workspace. Flat sharp surfaces, no floating card stack. ── */}
-      <section aria-label="Profile record" className="dlg-card p-4 sm:p-6">
+              card. ── */}
+      <section aria-label="Profile record" className="dlg-card-plain p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
           {/* Identity — avatar + name/status/documents. The completion ring
               is pinned to the RIGHT of this row on phones (shrink-0, and
@@ -309,14 +303,14 @@ export default function ProfileView() {
                 <img
                   src={`/api/files/${pictureDoc.filePath}`}
                   alt="Profile picture"
-                  className="h-14 w-14 rounded-none object-cover shadow-e1"
+                  className="h-14 w-14 rounded-full object-cover"
                 />
               ) : (
                 <Monogram size={56}>{initials}</Monogram>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate font-display text-xl text-ink sm:text-2xl" title={applicantName}>
+              <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]" title={applicantName}>
                 {applicantName}
               </h1>
               {/* Status BELOW the name — never squeezed beside it. */}
@@ -327,7 +321,7 @@ export default function ProfileView() {
                   <span className="status-pill status-neutral">Incomplete</span>
                 )}
               </div>
-              <p className="mt-1.5 flex items-center gap-1.5 text-[13px] text-stone">
+              <p className="mt-1.5 flex items-center gap-1.5 text-[13px] text-body-gray">
                 <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span className="num">{docs.length}</span> document{docs.length === 1 ? "" : "s"}
               </p>
@@ -343,7 +337,7 @@ export default function ProfileView() {
               right (hairline-separated). Phones: the ring is already in
               the identity row, so this row carries the readout + CTA only
               under a hairline. Exactly one ring is visible per viewport. */}
-          <div className="flex items-center justify-between gap-4 border-t border-divider pt-4 lg:shrink-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+          <div className="flex items-center justify-between gap-4 border-t border-border pt-4 lg:shrink-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
             <div className="flex items-center gap-4">
               <div className="hidden lg:block">
                 <CompletionRing pct={pct} />
@@ -352,7 +346,7 @@ export default function ProfileView() {
                 <p className="text-sm font-semibold leading-tight text-ink">
                   <span className="num">{completedCount}</span> of <span className="num">7</span> sections
                 </p>
-                <p className="mt-0.5 text-[13px] leading-tight text-stone">
+                <p className="mt-0.5 text-[13px] leading-tight text-body-gray">
                   {isComplete ? "All sections complete" : `${remaining} to go`}
                 </p>
               </div>
@@ -372,9 +366,9 @@ export default function ProfileView() {
 
         {/* ── B. Completion note — quiet informational banner (never an alert). ── */}
         {!isComplete && (
-          <div className="mt-5 flex items-start gap-3 bg-fog px-4 py-3">
+          <div className="mt-5 flex items-start gap-3 rounded-lg bg-cloud/60 px-4 py-3">
             <Info className="h-4 w-4 shrink-0 text-stone" aria-hidden="true" />
-            <p className="min-w-0 flex-1 text-sm leading-relaxed text-stone">
+            <p className="min-w-0 flex-1 text-sm leading-relaxed text-body-gray">
               Profile completion requires your Personal Information (first name, last name, and email) and at least one
               entry each in Education and Work Experiences.
             </p>
@@ -397,7 +391,7 @@ export default function ProfileView() {
               flex-1 so they absorb any leftover width. ── */}
       <nav
         aria-label="Profile section steps"
-        className="glass sticky top-0 z-20 -mx-4 mt-6 hidden border-b border-divider px-4 py-3 sm:-mx-6 sm:px-6 lg:block lg:-mx-8 lg:px-8"
+        className="glass sticky top-0 z-20 -mx-4 hidden border-b border-border px-4 py-3 sm:-mx-6 sm:px-6 lg:block lg:-mx-8 lg:px-8"
       >
         <ol className="flex items-center">
           {SECTIONS.map((s, i) => {
@@ -419,10 +413,10 @@ export default function ProfileView() {
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "grid h-7 w-7 shrink-0 place-items-center border text-[11px] font-semibold tabular-nums transition-colors duration-200 xl:h-8 xl:w-8 xl:text-[12px]",
+                        "grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition-colors duration-200 xl:h-8 xl:w-8 xl:text-[12px]",
                         reached
-                          ? "border-transparent bg-gradient-to-b from-[#1591dc] to-[#0e7abf] text-white shadow-e1"
-                          : "border-divider bg-white text-stone group-hover:border-[#1591dc]/40 group-hover:text-ink"
+                          ? "border-transparent bg-charcoal text-[#ebf0f8]"
+                          : "border-divider bg-white text-stone group-hover:border-metric-blue/40 group-hover:text-ink"
                       )}
                     >
                       {done ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : s.num}
@@ -437,7 +431,7 @@ export default function ProfileView() {
                         {s.short}
                       </span>
                       {approx && (
-                        <span className="mt-0.5 hidden whitespace-nowrap text-[11px] leading-none text-pebble xl:block">
+                        <span className="mt-0.5 hidden whitespace-nowrap text-[11px] leading-none text-stone xl:block">
                           {approx}
                         </span>
                       )}
@@ -451,14 +445,14 @@ export default function ProfileView() {
       </nav>
 
       {/* MOBILE (< lg) — sticky segmented strip + caption + prev/next.
-          The active cell is a sliding ember block (motion layoutId) —
-          one saturated element, no double borders. The strip is a DIRECT
+          The active cell is a sliding charcoal block (motion layoutId) —
+          one filled element, no double borders. The strip is a DIRECT
           child of the tall view root, NOT a grid item: a sticky element
           can never travel past its containing block, and a grid item's
           containing block is its own grid area (exactly the strip's own
           height), which left it zero stick range. As a root sibling it
           pins under the mobile top bar (top-16) for the whole scroll. */}
-      <nav ref={mobileNavRef} aria-label="Profile sections" className="dlg-card-plain sticky top-16 z-30 mt-4 p-1.5 shadow-e2 lg:hidden">
+      <nav ref={mobileNavRef} aria-label="Profile sections" className="dlg-card-plain sticky top-16 z-30 p-1.5 shadow-e2 lg:hidden">
         <div className="grid grid-cols-7 gap-0.5">
           {SECTIONS.map((s, i) => {
             const isActive = active === s.n;
@@ -472,7 +466,7 @@ export default function ProfileView() {
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "relative isolate flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                  isActive ? "text-white" : "text-ink hover:bg-fog"
+                  isActive ? "text-[#ebf0f8]" : "text-ink hover:bg-fog"
                 )}
               >
                 {/* Sliding block — rendered INSIDE the active cell so
@@ -482,30 +476,30 @@ export default function ProfileView() {
                   <motion.span
                     aria-hidden="true"
                     layoutId="profile-mobile-seg"
-                    className="absolute inset-0 -z-10 bg-gradient-to-b from-[#1591dc] to-[#0e7abf]"
+                    className="absolute inset-0 -z-10 bg-charcoal"
                     transition={{ type: "spring", stiffness: 500, damping: 42 }}
                   />
                 )}
                 <span
                   className={cn(
                     "num text-[10px] font-semibold leading-none",
-                    isActive ? "text-white/85" : "text-stone"
+                    isActive ? "text-[#ebf0f8]/85" : "text-stone"
                   )}
                 >
                   {s.num}
                 </span>
                 {filled ? (
                   <CheckCircle2
-                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white" : "text-[var(--ok)]")}
+                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#ebf0f8]" : "text-[var(--ok)]")}
                     strokeWidth={2}
                     aria-hidden="true"
                   />
                 ) : (
-                  /* Not filled yet — red ring, same size/weight as the green
-                     check so both states read at a glance (white ring on the
-                     ember active cell, where red would clash). */
+                  /* Not filled yet — soft ring, same size/weight as the green
+                     check so both states read at a glance (light ring on the
+                     charcoal active cell, where red would clash). */
                   <Circle
-                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white/90" : "text-[var(--bad)]")}
+                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#ebf0f8]/90" : "text-[var(--bad)]")}
                     strokeWidth={2}
                     aria-hidden="true"
                   />
@@ -514,9 +508,9 @@ export default function ProfileView() {
             );
           })}
         </div>
-        {/* Caption + sequential stepping — hairline footer bar with ghost
+        {/* Caption + sequential stepping — hairline footer bar with quiet
             chevrons and an aria-live position readout. */}
-        <div className="mt-1.5 flex items-stretch border-t border-divider">
+        <div className="mt-1.5 flex items-stretch border-t border-border">
           <button
             type="button"
             onClick={() => activeIdx > 0 && handleMobileSectionChange(SECTIONS[activeIdx - 1].n)}
@@ -557,7 +551,7 @@ export default function ProfileView() {
       <div
         ref={sectionsRef}
         className={cn(
-          "scroll-thin mt-4 min-h-[360px] lg:mt-5 lg:min-h-[420px]",
+          "scroll-thin min-h-[360px] lg:min-h-[420px]",
           active === 1 ? "overflow-visible" : "max-h-[65dvh] overflow-y-auto lg:max-h-[72dvh]"
         )}
         style={{ overflowAnchor: "none" }}

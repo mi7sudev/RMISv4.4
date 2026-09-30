@@ -1,20 +1,21 @@
 "use client";
 
 // ============================================================================
-// RMIS — Applicant home (layout ported from rmis-main-ui, sharp-edge finish):
-// Editorial welcome header (eyebrow · display title · standfirst) over a
+// RMIS — Applicant home ("My Application"): editorial welcome header over a
 // two-pane workspace grid (lg:grid-cols-12):
-//   LEFT  · Open Positions — full-width stacked list rows (momentum rule,
-//           humanized title, pipe-separated vitals, square +/− quick-view
-//           toggle, in-place quick view with six QuickFacts).
+//   LEFT  · Open Positions — full-width stacked list rows (metric-blue hover
+//           rule, humanized title, pipe-separated vitals, capsule +/−
+//           quick-view toggle, in-place quick view with six QuickFacts).
 //   RIGHT · Your Applications — sticky rail with its own overflow scroll;
 //           journey cards (No. kicker · status pill · chevron · 3-checkpoint
-//           timeline · next-step hint). The rail stacks FIRST on mobile.
+//           .stage-dot timeline · next-step hint). The rail stacks FIRST on
+//           mobile.
 // Clicking a journey card opens the full Application detail modal (§7.7)
 // with Cancel Application while the journey is still at "Submitted".
 // Data: parallel /api/applications + /api/jobs — 15 s silent poll + refetch on
 // focus (never flips skeletons or clobbers good data on transient failure).
-// Styling stays in-house: dlg-card sharp surfaces, ember CTAs, hairlines.
+// Bevel pass: shared page-header anatomy, cloud journey/position cards, white
+// interior tiles inside the detail modal, capsule CTAs, body-gray copy.
 // ============================================================================
 
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
@@ -65,10 +66,10 @@ function notRequired(v: string | null | undefined): boolean {
   return s === "" || s === "n/a" || s === "na" || s === "none" || s === "none required" || s === "not required";
 }
 
-/** Section label (eyebrow) — quiet uppercase kicker above display headings. */
+/** Section label (eyebrow) — quiet uppercase kicker above headings. */
 function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn("text-[11px] font-semibold uppercase tracking-[0.16em] text-stone", className)}>{children}</p>
+    <p className={cn("text-xs font-medium uppercase tracking-[0.08em] text-stone", className)}>{children}</p>
   );
 }
 
@@ -209,7 +210,7 @@ function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; 
       {/* Header — the chevron is the whole-card affordance: the card opens
           the full posting in the detail modal. */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-pebble">
+        <span className="num text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">
           No. {String(index + 1).padStart(2, "0")}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
@@ -220,13 +221,13 @@ function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; 
           />
         </span>
       </div>
-      <h3 className="mt-3 font-display text-lg leading-snug text-ink">{app.job?.title ?? "Position"}</h3>
+      <h3 className="mt-3 text-base font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-lg">{app.job?.title ?? "Position"}</h3>
       {place && (
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-stone">
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-body-gray">
           <MapPin className="h-4 w-4" aria-hidden="true" /> {place}
         </p>
       )}
-      <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-body-gray">
         <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Applied{" "}
         <span className="num">{formatDate(app.dateApplied)}</span>
       </p>
@@ -236,8 +237,8 @@ function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; 
       {/* Next hint — the card's closing block (the full posting lives one
           click away, in the application detail modal). */}
       <div className="mt-3 border-t border-divider pt-2.5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-pebble">Next Step</p>
-        <p className="mt-1 text-xs leading-relaxed text-stone">{nextStepHint(stage)}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">Next Step</p>
+        <p className="mt-1 text-xs leading-relaxed text-body-gray">{nextStepHint(stage)}</p>
       </div>
     </button>
   );
@@ -249,16 +250,16 @@ function RichSection({ title, text, html }: { title: string; text?: string | nul
   if (html && html.trim()) {
     return (
       <section className="space-y-2">
-        <h4 className="font-display text-lg text-ink">{title}</h4>
-        <div className="rich-text text-sm leading-relaxed text-stone" dangerouslySetInnerHTML={{ __html: html }} />
+        <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h4>
+        <div className="rich-text text-sm leading-relaxed text-body-gray" dangerouslySetInnerHTML={{ __html: html }} />
       </section>
     );
   }
   if (text && text.trim()) {
     return (
       <section className="space-y-2">
-        <h4 className="font-display text-lg text-ink">{title}</h4>
-        <p className="whitespace-pre-line text-sm leading-relaxed text-stone">{text}</p>
+        <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h4>
+        <p className="whitespace-pre-line text-sm leading-relaxed text-body-gray">{text}</p>
       </section>
     );
   }
@@ -278,12 +279,12 @@ function MqrLedger({ position }: { position: PositionWire | null }) {
   if (visible.length === 0) return null;
   return (
     <section className="space-y-2">
-      <h4 className="font-display text-lg text-ink">Minimum Qualification Requirements</h4>
+      <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Minimum Qualification Requirements</h4>
       <div className="space-y-2">
         {visible.map((r) => (
-          <div key={r.label} className="rounded-none bg-fog p-3">
-            <p className="text-xs font-medium text-graphite">{r.label}</p>
-            <p className="mt-0.5 whitespace-pre-line text-sm text-stone">{r.value}</p>
+          <div key={r.label} className="rounded-lg bg-cloud/60 p-3">
+            <p className="text-xs font-medium text-stone">{r.label}</p>
+            <p className="mt-0.5 whitespace-pre-line text-sm text-body-gray">{r.value}</p>
           </div>
         ))}
       </div>
@@ -338,26 +339,26 @@ function ApplicationDetailModal({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="dlg-card-plain max-h-[90dvh] w-full overflow-y-auto scroll-thin p-0 shadow-e4 sm:max-w-3xl">
+      <DialogContent className="dlg-card-plain max-h-[90dvh] w-full overflow-y-auto scroll-thin p-0 sm:max-w-3xl">
         <div className="p-6">
           <DialogHeader className="space-y-2 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <StatusPill status={label} variant={stageVariant(label)} />
-              <span className="num bg-fog px-3 py-1 text-xs font-medium text-graphite">
+              <span className="dlg-pill num rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">
                 Application #{application.id}
               </span>
             </div>
-            <DialogTitle className="font-display text-2xl leading-tight text-ink">
+            <DialogTitle className="font-display text-2xl leading-tight tracking-[-0.02em] text-ink">
               {job?.title ?? "Application"}
             </DialogTitle>
           </DialogHeader>
 
           {/* Successfully-applied strip (§7.7) */}
-          <div className="mt-4 flex items-center gap-3 rounded-none bg-fog p-3">
+          <div className="mt-4 flex items-center gap-3 rounded-lg bg-cloud/60 p-3">
             <IconChip icon={BadgeCheck} tone="emerald" size={36} iconSize={17} />
             <div>
               <p className="text-sm font-medium text-ink">Successfully Applied</p>
-              <p className="text-xs text-stone">
+              <p className="text-xs text-body-gray">
                 Applied <span className="num">{formatDate(application.dateApplied)}</span>
               </p>
             </div>
@@ -366,8 +367,8 @@ function ApplicationDetailModal({
           {/* Vitals summary grid */}
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {facts.map(([k, v]) => (
-              <div key={k} className="rounded-none bg-fog p-3">
-                <p className="text-[11px] text-pebble">{k}</p>
+              <div key={k} className="rounded-lg bg-cloud/60 p-3">
+                <p className="text-[11px] text-stone">{k}</p>
                 <p className="num mt-0.5 truncate text-sm text-ink" title={v}>
                   {v}
                 </p>
@@ -389,7 +390,7 @@ function ApplicationDetailModal({
                 type="button"
                 onClick={() => setConfirmOpen(true)}
                 disabled={cancelling}
-                className="min-h-[44px] border border-[var(--bad)]/30 bg-white px-6 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-fog disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-6 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
               >
                 Cancel Application
               </button>
@@ -405,7 +406,7 @@ function ApplicationDetailModal({
           <AlertDialogContent className="dlg-card-plain">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-display text-xl text-ink">Cancel this application?</AlertDialogTitle>
-              <AlertDialogDescription className="text-sm leading-relaxed text-stone">
+              <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
                 Your application for {job?.title ?? "this position"} will be withdrawn. You may apply again while the
                 position is still open. Once review has started, applications can no longer be cancelled.
               </AlertDialogDescription>
@@ -418,7 +419,7 @@ function ApplicationDetailModal({
                   void cancelApplication();
                 }}
                 disabled={cancelling}
-                className="min-h-[44px] border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-fog disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
               >
                 {cancelling ? "Cancelling…" : "Cancel Application"}
               </AlertDialogAction>
@@ -437,7 +438,7 @@ function ApplicationDetailModal({
 function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pebble">{label}</dt>
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone">{label}</dt>
       <dd
         className={cn(
           "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",
@@ -488,10 +489,10 @@ function JobListCard({
 
   return (
     <div className="dlg-card lift group relative overflow-hidden">
-      {/* Momentum rule — RMIS blue bar wipes in across the card on hover */}
+      {/* Metric-blue rule — wipes in across the card on hover */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-[#3aa9e4] to-[#1591dc] transition-transform duration-500 ease-out group-hover:scale-x-100"
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 origin-left scale-x-0 bg-metric-blue transition-transform duration-500 ease-out group-hover:scale-x-100"
       />
       <div className="flex items-stretch">
         <button
@@ -502,10 +503,10 @@ function JobListCard({
           className="focus-ring min-w-0 flex-1 px-5 py-6 text-left sm:px-8 sm:py-7"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <h3 className="min-w-0 font-display text-xl leading-snug text-ink sm:text-2xl">{humanize(title)}</h3>
+            <h3 className="min-w-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-ink sm:text-2xl">{humanize(title)}</h3>
             {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-stone">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-body-gray">
             {meta.map((m, idx) => (
               <Fragment key={idx}>
                 {idx > 0 && (
@@ -548,8 +549,8 @@ function JobListCard({
             <div className="border-t border-divider px-5 pb-7 pt-5 sm:px-8 sm:pb-8 sm:pt-6">
               {job.briefDescription && (
                 <div>
-                  <h4 className="font-display text-lg text-ink">Job description</h4>
-                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
+                  <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Job description</h4>
+                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-body-gray">{job.briefDescription}</p>
                 </div>
               )}
               {/* 3-up everywhere: a 6-up row inside the 7/12 pane leaves
@@ -583,7 +584,7 @@ function JobListCard({
                 <button
                   type="button"
                   onClick={onOpen}
-                  className="focus-ring group/link inline-flex min-h-[44px] items-center gap-3 text-sm font-medium text-ink transition-colors hover:text-[#0e7abf]"
+                  className="focus-ring group/link inline-flex min-h-[44px] items-center gap-3 text-sm font-medium text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
                 >
                   Read full description
                   <span className="dlg-cta grid h-8 w-8 place-items-center">
@@ -612,17 +613,17 @@ function JobListCard({
 
 function HomeSkeleton() {
   return (
-    <div>
-      <div className="border-b border-divider pb-8">
+    <div className="space-y-6">
+      <div>
         <div className="skel h-3 w-32" />
-        <div className="skel mt-4 h-12 w-3/4 sm:h-14" />
-        <div className="skel mt-4 h-4 w-1/2" />
+        <div className="skel mt-3 h-8 w-72 sm:h-9" />
+        <div className="skel mt-3 h-4 w-1/2" />
       </div>
       {/* Two-pane skeleton — positions (left, register rows) · applications (right) */}
-      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
         <div className="space-y-4 lg:order-1 lg:col-span-7">
           <div className="skel h-3 w-44" />
-          <div className="skel h-9 w-36" />
+          <div className="skel h-6 w-36" />
           <div className="space-y-4 sm:space-y-5">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="dlg-card flex items-center gap-5 px-6 py-7 sm:px-8">
@@ -637,7 +638,7 @@ function HomeSkeleton() {
         </div>
         <div className="space-y-4 lg:order-2 lg:col-span-5">
           <div className="skel h-3 w-40" />
-          <div className="skel h-9 w-32" />
+          <div className="skel h-6 w-32" />
           {[0, 1, 2].map((i) => (
             <div key={i} className="skel h-64" />
           ))}
@@ -710,45 +711,54 @@ export default function ApplicantHome() {
 
   if (error && apps === null) {
     return (
-      <div>
-        <Eyebrow>Applicant Portal</Eyebrow>
-        <h1 className="mt-3 font-display text-4xl font-medium leading-[1.05] tracking-[-0.02em] text-ink sm:text-5xl">
-          My Application
-        </h1>
-        <div className="dlg-card mt-8 flex flex-col items-center gap-3 p-8 text-center">
-          <IconChip icon={AlertCircle} tone="rose" size={44} />
-          <p className="text-sm text-stone">{error}</p>
-          <button type="button" onClick={() => void reload(false)} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
-            <RefreshCw className="mr-2 inline h-3.5 w-3.5" /> Retry
-          </button>
+      <div className="space-y-6">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <Eyebrow>Applicant Portal</Eyebrow>
+            <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">My Application</h1>
+          </div>
+        </header>
+        <div className="dlg-card p-6 sm:p-10">
+          <EmptyState
+            icon={AlertCircle}
+            tone="rose"
+            title="Couldn't load your workspace"
+            description={error}
+            action={
+              <button type="button" onClick={() => void reload(false)} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
+                <RefreshCw className="mr-2 inline h-3.5 w-3.5" /> Retry
+              </button>
+            }
+          />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* ===== Header — greeting ===== */}
-      <header className="border-b border-divider pb-8">
-        <Eyebrow>Applicant Portal</Eyebrow>
-        <h1 className="mt-3 font-display text-4xl font-medium leading-[1.05] tracking-[-0.02em] text-ink sm:text-5xl">
-          Welcome Back, {firstName}
-        </h1>
-        <p className="mt-3 max-w-2xl text-base text-stone">
-          Track your applications and discover new opportunities at DOST-MIRDC.
-        </p>
-        {/* The one editorial moment — standfirst line */}
-        <p className="mt-4 text-lg italic text-stone">Your recruitment journey, structured and transparent.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* ===== Header — shared Bevel anatomy ===== */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <Eyebrow>Applicant Portal</Eyebrow>
+          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
+            Welcome Back, {firstName}
+          </h1>
+          <p className="mt-1 text-sm text-body-gray">
+            Track your applications and discover new opportunities at DOST-MIRDC.
+          </p>
+          <p className="mt-1 text-sm italic text-body-gray">Your recruitment journey, structured and transparent.</p>
+        </div>
       </header>
 
       {/* ===== Profile completion banner ===== */}
       {!profileComplete && (
-        <div className="dlg-card mt-8 flex flex-col gap-3 border border-dashed border-divider p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="dlg-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="flex items-start gap-3">
             <IconChip icon={AlertCircle} tone="gold" size={36} iconSize={17} className="mt-0.5" />
             <div>
-              <p className="font-display text-lg leading-tight text-ink">Complete Your Profile</p>
-              <p className="mt-0.5 text-sm text-stone">
+              <p className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Complete Your Profile</p>
+              <p className="mt-0.5 text-sm text-body-gray">
                 Finish your applicant profile to apply for positions and speed up processing.
               </p>
             </div>
@@ -769,15 +779,15 @@ export default function ApplicantHome() {
            with its own overflow scroll, so statuses stay in view while the
            applicant browses. Mobile: stacks Your Applications first, then
            Open Positions. ============================================== */}
-      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
         {/* ---- Right rail · Your Applications (first on mobile) ---- */}
         <aside className="order-1 min-w-0 lg:order-2 lg:col-span-5">
           <div className="flex flex-col lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)]">
             {/* Rail header — pinned above the scrolling cards */}
-            <div className="flex shrink-0 items-end justify-between gap-2 border-b border-divider pb-4">
+            <div className="flex shrink-0 items-end justify-between gap-2 border-b border-border pb-4">
               <div>
                 <Eyebrow>Your Applications</Eyebrow>
-                <h2 className="mt-2 font-display text-2xl font-medium tracking-[-0.02em] text-ink sm:text-3xl">
+                <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
                   In Progress
                 </h2>
               </div>
@@ -817,10 +827,10 @@ export default function ApplicantHome() {
 
         {/* ---- Left pane · Open Positions (browsing surface) ---- */}
         <section className="order-2 min-w-0 lg:order-1 lg:col-span-7">
-          <div className="flex items-end justify-between border-b border-divider pb-4">
+          <div className="flex items-end justify-between border-b border-border pb-4">
             <div>
               <Eyebrow>Open Positions</Eyebrow>
-              <h2 className="mt-2 font-display text-2xl font-medium tracking-[-0.02em] text-ink sm:text-3xl">
+              <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
                 Apply Now
               </h2>
             </div>

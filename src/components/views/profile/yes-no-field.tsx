@@ -10,10 +10,11 @@
 // form-fields.tsx): an inline radio pair — round size-4 radios, No first /
 // Yes second (government-form convention), horizontal with gap-6 — rendered
 // with the shared Radix RadioGroup primitives. Only differences from the
-// source: our token palette (ink/graphite/dusty-rose/divider) and min-h-[44px]
-// label rows so the control keeps the mandated touch target while looking
-// identical. Radio semantics come from Radix (radiogroup / radio +
-// aria-checked), so assistive tech announces the group and each state.
+// source: our token palette (ink/stone/divider + the required-star accent)
+// and min-h-[44px] label rows so the control keeps the mandated touch target
+// while looking identical. Radio semantics come from Radix (radiogroup /
+// radio + aria-checked), so assistive tech announces the group and each
+// state. Bevel pass: quiet stone micro-labels, unchanged radio grammar.
 // ============================================================================
 
 import { useId } from "react";
@@ -43,7 +44,7 @@ export function YesNoField({
   return (
     <div>
       {/* Same label grammar as every other field in the profile forms. */}
-      <span className="mb-1.5 block text-xs font-medium text-graphite">
+      <span className="mb-1.5 block text-xs font-medium text-stone">
         {label}
         {required && <span className="text-dusty-rose"> *</span>}
       </span>

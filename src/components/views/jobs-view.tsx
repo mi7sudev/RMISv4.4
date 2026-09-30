@@ -112,25 +112,25 @@ function RichOrPlain({ html, text }: { html?: string | null; text?: string | nul
   if (html && html.trim()) {
     return (
       <div
-        className="rich-text text-sm leading-relaxed text-stone"
+        className="rich-text text-sm leading-relaxed text-body-gray"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
   }
   if (text && text.trim()) {
-    return <p className="whitespace-pre-line text-sm leading-relaxed text-stone">{text}</p>;
+    return <p className="whitespace-pre-line text-sm leading-relaxed text-body-gray">{text}</p>;
   }
-  return <p className="text-sm text-pebble">Not provided.</p>;
+  return <p className="text-sm text-stone">Not provided.</p>;
 }
 
 function Skeleton({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-none bg-fog ${className ?? ""}`} />;
+  return <div className={`skel ${className ?? ""}`} />;
 }
 
 function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="dlg-card p-8 text-center">
-      <p className="font-display text-xl text-carbon">Something went wrong</p>
+      <p className="font-display text-xl text-ink">Something went wrong</p>
       <p className="mt-2 text-sm text-stone">{message}</p>
       <button onClick={onRetry} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
         Try again
@@ -166,16 +166,16 @@ function QuickView({
     ["Deadline", formatDate(job.deadlineDate)],
   ];
   return (
-    <div className="mt-4 space-y-4 border-t border-border pt-4">
+    <div className="mt-4 space-y-4 border-t border-divider pt-4">
       {brief ? (
-        <p className="line-clamp-4 text-sm leading-relaxed text-stone">{brief}</p>
+        <p className="line-clamp-4 text-sm leading-relaxed text-body-gray">{brief}</p>
       ) : (
-        <p className="text-sm text-pebble">No brief description provided.</p>
+        <p className="text-sm text-stone">No brief description provided.</p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {facts.map(([label, value]) => (
-          <div key={label} className="rounded-none bg-fog p-3">
-            <p className="text-xs text-pebble">{label}</p>
+          <div key={label} className="rounded-xl bg-white p-3">
+            <p className="text-xs text-stone">{label}</p>
             <p className="mt-0.5 truncate text-sm text-ink" title={value}>
               {value}
             </p>
@@ -218,7 +218,7 @@ function JobCard({
   const applied = (job.applications?.length ?? 0) > 0;
   const dl = deadlineState(job.deadlineDate);
   return (
-    <article className="dlg-card p-4 transition-shadow duration-200 hover:shadow-dialog-subtle sm:p-6">
+    <article className="dlg-card lift p-4 sm:p-6">
       <div className="flex items-start gap-4">
         {/* Official two-logo lockup — anchors the card the way a company
             logo does on every top-ranked job-board design */}
@@ -226,14 +226,10 @@ function JobCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <DeadlinePill job={job} />
-            {applied && (
-              <span className="dlg-pill bg-ink px-3 py-1 text-xs font-medium text-white">
-                Applied
-              </span>
-            )}
+            {applied && <span className="status-pill status-ok">Applied</span>}
           </div>
-          <h3 className="mt-2 font-display text-xl text-carbon">{humanize(job.title)}</h3>
-          <p className="mt-1 text-sm text-stone">
+          <h3 className="mt-2 font-display text-xl text-ink">{humanize(job.title)}</h3>
+          <p className="mt-1 text-sm text-body-gray">
             {pos?.placeOfAssignment || "—"} ·{" "}
             {job.positionType ? humanize(job.positionType) : "—"}
             {pos?.salaryGrade ? <span className="num"> · SG {pos.salaryGrade}</span> : null}
@@ -245,7 +241,7 @@ function JobCard({
           </p>
           <p className="num mt-1.5 text-[15px] font-medium text-ink">
             {salary != null ? formatCurrency(salary) : "Competitive"}
-            {salary != null && <span className="font-normal text-stone">/mo</span>}
+            {salary != null && <span className="font-normal text-body-gray">/mo</span>}
           </p>
         </div>
         <button
@@ -297,10 +293,10 @@ function SummaryCard({
       <dl className="mt-4 space-y-3 text-sm">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-start justify-between gap-3">
-            <dt className="shrink-0 text-stone">{label}</dt>
+            <dt className="shrink-0 text-body-gray">{label}</dt>
             <dd
               className={`text-right text-ink ${
-                label === "Deadline" && dl.overdue ? "text-dusty-rose" : ""
+                label === "Deadline" && dl.overdue ? "text-[var(--bad)]" : ""
               }`}
             >
               {value}
@@ -313,17 +309,17 @@ function SummaryCard({
       {job.deadlineDate && (
         <div className="mt-4 border-t border-border pt-4">
           <div className="flex items-center justify-between gap-3 text-xs">
-            <span className="text-stone">
+            <span className="text-body-gray">
               Posted <span className="num">{formatDate(job.publishDate ?? job.publishedAt)}</span>
             </span>
-            <span className={dl.overdue ? "text-[var(--bad)]" : "text-stone"}>
+            <span className={dl.overdue ? "text-[var(--bad)]" : "text-body-gray"}>
               Closes <span className="num">{formatDate(job.deadlineDate)}</span>
             </span>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden bg-fog" role="presentation">
+          <div className="mt-2 h-1.5 overflow-hidden bg-white" role="presentation">
             <div
               className={`h-full transition-[width] duration-500 ${
-                dl.overdue ? "bg-[var(--bad)]" : dl.closingSoon ? "bg-[var(--warn)]" : "bg-ink"
+                dl.overdue ? "bg-[var(--bad)]" : dl.closingSoon ? "bg-[var(--warn)]" : "bg-metric-blue"
               }`}
               style={{ width: `${deadlineProgress(job)}%` }}
             />
@@ -334,13 +330,13 @@ function SummaryCard({
       <div className="mt-5">
         {applied ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-none bg-fog p-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-sm text-white">
+            <div className="flex items-center gap-3 rounded-2xl bg-white p-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--ok-bg)] text-sm text-[var(--ok)]">
                 ✓
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-ink">Successfully Applied</p>
-                <p className="text-xs text-pebble">Your application is in the pipeline.</p>
+                <p className="text-xs text-stone">Your application is in the pipeline.</p>
               </div>
             </div>
             <AlertDialog>
@@ -349,12 +345,12 @@ function SummaryCard({
                   Cancel Application
                 </button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="dlg-card-plain rounded-none">
+              <AlertDialogContent className="dlg-card-plain">
                 <AlertDialogHeader>
-                  <AlertDialogTitle className="font-display text-2xl text-carbon">
+                  <AlertDialogTitle className="font-display text-2xl text-ink">
                     Cancel this application?
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm text-stone">
+                  <AlertDialogDescription className="text-sm text-body-gray">
                     Your application for {humanize(job.title)} will be withdrawn. You can apply
                     again while the position is open.
                   </AlertDialogDescription>
@@ -365,7 +361,7 @@ function SummaryCard({
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={onCancel}
-                    className="min-h-[44px] border border-dusty-rose/30 bg-dusty-rose/10 px-6 text-sm font-medium text-dusty-rose hover:bg-dusty-rose/20"
+                    className="min-h-[44px] bg-[var(--bad-bg)] px-6 text-sm font-medium text-[var(--bad)] hover:bg-[#f8ddd6]"
                   >
                     Cancel application
                   </AlertDialogAction>
@@ -383,7 +379,7 @@ function SummaryCard({
               Submit Application
             </button>
             {dl.overdue && (
-              <p className="mt-2 text-center text-xs text-pebble">
+              <p className="mt-2 text-center text-xs text-stone">
                 The deadline for this position has passed.
               </p>
             )}
@@ -424,12 +420,10 @@ function DetailBody({ job }: { job: JobWire }) {
       <section className="dlg-card p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
           <DeadlinePill job={job} />
-          {(job.applications?.length ?? 0) > 0 && (
-            <span className="dlg-pill bg-ink px-3 py-1 text-xs font-medium text-white">Applied</span>
-          )}
+          {(job.applications?.length ?? 0) > 0 && <span className="status-pill status-ok">Applied</span>}
         </div>
         <h1 className="text-heading-md mt-3">{humanize(job.title)}</h1>
-        <p className="mt-2 text-sm text-stone">
+        <p className="mt-2 text-sm text-body-gray">
           {pos?.placeOfAssignment || "—"} · {divisionName(pos?.division)} ·{" "}
           {job.positionType ? humanize(job.positionType) : "—"}
         </p>
@@ -438,15 +432,15 @@ function DetailBody({ job }: { job: JobWire }) {
       {/* Sections */}
       <section className="dlg-card space-y-8 p-6 sm:p-8">
         <div>
-          <h2 className="text-lg font-medium text-ink">Brief Description</h2>
+          <h2 className="text-lg font-semibold text-ink">Brief Description</h2>
           <div className="mt-3">
             <RichOrPlain html={job.briefDescriptionHtml} text={job.briefDescription} />
           </div>
         </div>
 
         <div>
-          <h2 className="text-lg font-medium text-ink">Minimum Qualification Requirements</h2>
-          <div className="mt-3 overflow-hidden rounded-none border border-border">
+          <h2 className="text-lg font-semibold text-ink">Minimum Qualification Requirements</h2>
+          <div className="mt-3 overflow-hidden rounded-2xl bg-white">
             {visibleMqr.length > 0 ? (
               visibleMqr.map(([label, value], i) => (
                 <div
@@ -460,7 +454,7 @@ function DetailBody({ job }: { job: JobWire }) {
                 </div>
               ))
             ) : (
-              <p className="p-4 text-sm text-pebble">
+              <p className="p-4 text-sm text-stone">
                 No minimum requirements published for this position.
               </p>
             )}
@@ -468,7 +462,7 @@ function DetailBody({ job }: { job: JobWire }) {
         </div>
 
         <div>
-          <h2 className="text-lg font-medium text-ink">Duties &amp; Responsibilities</h2>
+          <h2 className="text-lg font-semibold text-ink">Duties &amp; Responsibilities</h2>
           <div className="mt-3">
             <RichOrPlain
               html={job.dutiesHtml}
@@ -478,14 +472,14 @@ function DetailBody({ job }: { job: JobWire }) {
         </div>
 
         <div>
-          <h2 className="text-lg font-medium text-ink">Compensation Package</h2>
+          <h2 className="text-lg font-semibold text-ink">Compensation Package</h2>
           <div className="mt-3">
             <RichOrPlain html={job.compensationHtml} text={job.compensationPackage} />
           </div>
         </div>
 
         <div>
-          <h2 className="text-lg font-medium text-ink">Other Qualifications</h2>
+          <h2 className="text-lg font-semibold text-ink">Other Qualifications</h2>
           <div className="mt-3">
             <RichOrPlain
               html={job.otherQualificationsHtml}
@@ -496,11 +490,11 @@ function DetailBody({ job }: { job: JobWire }) {
 
         {/* Vitals + dates */}
         <div>
-          <h2 className="text-lg font-medium text-ink">Position Details</h2>
+          <h2 className="text-lg font-semibold text-ink">Position Details</h2>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {vitals.map(([label, value]) => (
-              <div key={label} className="rounded-none bg-fog p-3">
-                <p className="text-xs text-pebble">{label}</p>
+              <div key={label} className="rounded-xl bg-white p-4">
+                <p className="text-xs text-stone">{label}</p>
                 <p className="mt-0.5 truncate text-sm text-ink" title={value}>
                   {value}
                 </p>
@@ -508,19 +502,19 @@ function DetailBody({ job }: { job: JobWire }) {
             ))}
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-none bg-fog p-3">
-              <p className="text-xs text-pebble">Published</p>
+            <div className="rounded-xl bg-white p-4">
+              <p className="text-xs text-stone">Published</p>
               <p className="mt-0.5 text-sm text-ink">{formatDate(job.publishDate ?? job.publishedAt)}</p>
             </div>
-            <div className="rounded-none bg-fog p-3">
-              <p className="text-xs text-pebble">Deadline</p>
-              <p className={`mt-0.5 text-sm ${dl.overdue ? "text-dusty-rose" : "text-ink"}`}>
+            <div className="rounded-xl bg-white p-4">
+              <p className="text-xs text-stone">Deadline</p>
+              <p className={`mt-0.5 text-sm ${dl.overdue ? "text-[var(--bad)]" : "text-ink"}`}>
                 {formatDate(job.deadlineDate)}
                 {job.deadlineDate ? ` — ${dl.label}` : ""}
               </p>
             </div>
-            <div className="rounded-none bg-fog p-3">
-              <p className="text-xs text-pebble">Processing</p>
+            <div className="rounded-xl bg-white p-4">
+              <p className="text-xs text-stone">Processing</p>
               <p className="mt-0.5 text-sm text-ink">{formatDate(job.processingDate)}</p>
             </div>
           </div>
@@ -688,7 +682,7 @@ export default function JobsView() {
       <div className={shellPad}>
         <button
           onClick={() => navigate("jobs")}
-          className="mb-5 flex min-h-[44px] items-center gap-2 text-sm text-stone hover:text-ink"
+          className="mb-5 flex min-h-[44px] items-center gap-2 text-sm text-body-gray hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to Positions
@@ -712,8 +706,8 @@ export default function JobsView() {
           <ErrorCard message={error} onRetry={() => void load(false)} />
         ) : detail === null ? (
           <div className="dlg-card p-10 text-center">
-            <p className="font-display text-xl text-carbon">Position not found</p>
-            <p className="mt-2 text-sm text-stone">
+            <p className="font-display text-xl text-ink">Position not found</p>
+            <p className="mt-2 text-sm text-body-gray">
               This position may have closed or is no longer published.
             </p>
             <button onClick={() => navigate("jobs")} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
@@ -752,13 +746,13 @@ export default function JobsView() {
   // The id suffix keeps the duplicate DOM valid — two inputs must never share
   // one id (label htmlFor / a11y lookups would hit the hidden copy).
   const filterRail = (sfx: string) => (
-    <div className="dlg-card p-4">
+    <div className="dlg-card p-5">
       <label htmlFor={`job-search-${sfx}`} className="sr-only">
         Search positions
       </label>
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone"
           aria-hidden="true"
         />
         <Input
@@ -770,30 +764,30 @@ export default function JobsView() {
         />
       </div>
 
-      <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-pebble">Division</p>
+      <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-stone">Division</p>
       <div className="mt-2 space-y-0.5">
         {facets.map(([code, count]) => (
           <label
             key={code}
-            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-none px-2 hover:bg-fog"
+            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-white/70"
           >
             <Checkbox
               checked={divisionFilter.includes(code)}
               onCheckedChange={() => toggleDivision(code)}
             />
-            <span className="min-w-0 flex-1 truncate text-sm text-stone" title={divisionName(code)}>
+            <span className="min-w-0 flex-1 truncate text-sm text-body-gray" title={divisionName(code)}>
               {divisionShort(code)}
             </span>
-            <span className="text-xs text-pebble">{count}</span>
+            <span className="num text-xs text-stone">{count}</span>
           </label>
         ))}
-        {facets.length === 0 && <p className="px-2 py-2 text-sm text-pebble">No divisions on file</p>}
+        {facets.length === 0 && <p className="px-2 py-2 text-sm text-stone">No divisions on file</p>}
       </div>
 
       {(query.trim() || divisionFilter.length > 0) && (
         <button
           onClick={clearFilters}
-          className="min-h-[44px] px-2 text-sm text-stone underline underline-offset-4 hover:text-ink"
+          className="min-h-[44px] px-2 text-sm text-body-gray underline underline-offset-2 hover:text-ink"
         >
           Clear filters
         </button>
@@ -819,8 +813,8 @@ export default function JobsView() {
   } else if ((jobs ?? []).length === 0) {
     content = (
       <div className="dlg-card p-10 text-center">
-        <p className="font-display text-xl text-carbon">No open positions</p>
-        <p className="mt-2 text-sm text-stone">
+        <p className="font-display text-xl text-ink">No open positions</p>
+        <p className="mt-2 text-sm text-body-gray">
           There are no published postings at the moment — check back soon.
         </p>
       </div>
@@ -828,8 +822,8 @@ export default function JobsView() {
   } else if (filtered.length === 0) {
     content = (
       <div className="dlg-card p-10 text-center">
-        <p className="font-display text-xl text-carbon">No positions match your filters</p>
-        <p className="mt-2 text-sm text-stone">Try a different search term or clear the filters.</p>
+        <p className="font-display text-xl text-ink">No positions match your filters</p>
+        <p className="mt-2 text-sm text-body-gray">Try a different search term or clear the filters.</p>
         <button onClick={clearFilters} className="dlg-ghost mt-5 min-h-[44px] px-6 text-sm">
           Clear filters
         </button>
@@ -866,7 +860,7 @@ export default function JobsView() {
             </button>
             {pageWindow(current, totalPages).map((p, i) =>
               p === "…" ? (
-                <span key={`ellipsis-${i}`} className="grid h-11 w-8 place-items-center text-sm text-pebble">
+                <span key={`ellipsis-${i}`} className="grid h-11 w-8 place-items-center text-sm text-stone">
                   …
                 </span>
               ) : (
@@ -876,8 +870,8 @@ export default function JobsView() {
                   aria-current={p === current ? "page" : undefined}
                   className={
                     p === current
-                      ? "grid h-11 min-w-11 place-items-center bg-ink px-3 text-sm font-medium text-white"
-                      : "grid h-11 min-w-11 place-items-center px-3 text-sm text-stone hover:bg-fog hover:text-ink"
+                      ? "grid h-11 min-w-11 place-items-center rounded-full bg-charcoal px-3 text-sm font-medium text-[#ebf0f8]"
+                      : "grid h-11 min-w-11 place-items-center rounded-full px-3 text-sm text-body-gray transition-colors hover:bg-cloud hover:text-ink"
                   }
                 >
                   {p}
@@ -900,11 +894,40 @@ export default function JobsView() {
 
   return (
     <div className={shellPad}>
-      <div className="mb-5 max-w-2xl">
-        <h1 className="text-heading-lg">Positions</h1>
-        <p className="mt-2 text-sm leading-relaxed text-stone">
-          Browse published vacancies at DOST-MIRDC and submit your application online.
-        </p>
+      {/* Board header — Bevel pattern: title + supporting copy on the left,
+          result count + sort action right-aligned on the same row. */}
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-2xl">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-3xl">Positions</h1>
+          <p className="mt-2 text-sm leading-relaxed text-body-gray">
+            Browse published vacancies at DOST-MIRDC and submit your application online.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <p className="num mr-1 text-sm text-body-gray">
+            {filtered.length} Result{filtered.length === 1 ? "" : "s"}
+          </p>
+          <span className="hidden text-sm text-body-gray sm:inline">Sort</span>
+          <Select
+            value={sort}
+            onValueChange={(v) => {
+              setSort(v as SortKey);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger
+              className="dlg-input min-h-[44px] w-[140px] sm:w-[170px]"
+              aria-label="Sort results"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="deadline">Deadline</SelectItem>
+              <SelectItem value="salary">Salary desc</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="items-start lg:flex lg:gap-6">
@@ -920,7 +943,7 @@ export default function JobsView() {
                     <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                     Filters
                     {activeFilterCount > 0 && (
-                      <span className="grid h-5 min-w-5 place-items-center bg-ink px-1.5 text-[11px] font-medium text-white">
+                      <span className="grid h-5 min-w-5 place-items-center rounded-full bg-charcoal px-1.5 text-[11px] font-medium text-[#ebf0f8]">
                         {activeFilterCount}
                       </span>
                     )}
@@ -941,44 +964,16 @@ export default function JobsView() {
 
         {/* Results */}
         <div className="min-w-0 flex-1">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-stone">
-              {filtered.length} Result{filtered.length === 1 ? "" : "s"}
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="hidden text-sm text-stone sm:inline">Sort</span>
-              <Select
-                value={sort}
-                onValueChange={(v) => {
-                  setSort(v as SortKey);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger
-                  className="dlg-input min-h-[44px] w-[140px] sm:w-[170px]"
-                  aria-label="Sort results"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="deadline">Deadline</SelectItem>
-                  <SelectItem value="salary">Salary desc</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           {/* Active-filter chips — presentation of existing filter state */}
           {activeFilterCount > 0 && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {query.trim() && (
-                <span className="dlg-pill inline-flex items-center gap-1.5 bg-white py-1.5 pl-3 pr-2 text-xs font-medium text-graphite">
+                <span className="dlg-pill inline-flex items-center gap-1.5 bg-cloud py-1.5 pl-3 pr-2 text-xs font-medium text-ink">
                   &ldquo;{query.trim()}&rdquo;
                   <button
                     onClick={() => changeQuery("")}
                     aria-label="Clear search filter"
-                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center text-stone hover:bg-fog hover:text-ink"
+                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>
@@ -987,13 +982,13 @@ export default function JobsView() {
               {divisionFilter.map((code) => (
                 <span
                   key={code}
-                  className="dlg-pill inline-flex items-center gap-1.5 bg-white py-1.5 pl-3 pr-2 text-xs font-medium text-graphite"
+                  className="dlg-pill inline-flex items-center gap-1.5 bg-cloud py-1.5 pl-3 pr-2 text-xs font-medium text-ink"
                 >
                   {divisionShort(code)}
                   <button
                     onClick={() => toggleDivision(code)}
                     aria-label={`Remove ${divisionShort(code)} filter`}
-                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center text-stone hover:bg-fog hover:text-ink"
+                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>
@@ -1001,7 +996,7 @@ export default function JobsView() {
               ))}
               <button
                 onClick={clearFilters}
-                className="text-xs text-stone underline underline-offset-4 hover:text-ink"
+                className="text-xs text-body-gray underline underline-offset-2 hover:text-ink"
               >
                 Clear all
               </button>

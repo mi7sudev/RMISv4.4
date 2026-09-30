@@ -6,10 +6,11 @@
 // datalist inputs, with conditional visibility (showIf) + conditional
 // disabling (disabledIf, e.g. "currently employed" clearing Date to).
 // Binary questions (type "switch" / "checkbox" — both are yes/no
-// declarations) render the shared sharp-edge YesNoField instead of toggle
-// switches. Submit normalizes: number → number|null, yes/no → boolean,
-// everything else → string. SAVE = delete + recreate is handled by the
-// calling section; this dialog only collects values.
+// declarations) render the shared YesNoField instead of toggle switches.
+// Submit normalizes: number → number|null, yes/no → boolean, everything else
+// → string. SAVE = delete + recreate is handled by the calling section; this
+// dialog only collects values. Bevel pass: white 24px dialog surface, stone
+// micro-labels, body-gray helpers.
 // ============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -57,7 +58,7 @@ const NONE = "__none__";
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <Label className="mb-1.5 block text-xs font-medium text-graphite">
+    <Label className="mb-1.5 block text-xs font-medium text-stone">
       {label}
       {required && <span className="text-dusty-rose"> *</span>}
     </Label>
@@ -130,7 +131,7 @@ export default function FormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dlg-card-plain max-h-[90dvh] w-full overflow-y-auto scroll-thin shadow-e4 sm:max-w-2xl">
+      <DialogContent className="dlg-card-plain max-h-[90dvh] w-full overflow-y-auto scroll-thin sm:max-w-2xl">
         <DialogHeader className="space-y-1 text-left">
           <DialogTitle className="font-display text-2xl text-ink">{title}</DialogTitle>
           {description && <DialogDescription className="text-sm text-stone">{description}</DialogDescription>}
@@ -201,7 +202,7 @@ export default function FormDialog({
                         </SelectItem>
                       ))}
                       <SelectItem value={NONE}>
-                        <span className="text-pebble">Not specified</span>
+                        <span className="text-stone">Not specified</span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -217,7 +218,7 @@ export default function FormDialog({
                   />
                 )}
 
-                {f.helper && <p className="mt-1 text-xs text-pebble">{f.helper}</p>}
+                {f.helper && <p className="mt-1 text-xs text-body-gray">{f.helper}</p>}
               </div>
             );
           })}

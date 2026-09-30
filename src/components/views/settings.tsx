@@ -22,7 +22,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, Monogram, SkeletonRows, StatusPill } from "@/components/ui/shell";
 import { apiFetch, formatDateTime, humanize, timeAgo } from "@/lib/client";
 import { useHashRoute, navigate } from "@/lib/router";
 import { pillClass } from "@/lib/status-ui";
@@ -38,7 +38,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 function labelCls() {
-  return "mb-1.5 block text-xs font-medium text-graphite";
+  return "mb-1.5 block text-xs font-medium text-stone";
 }
 
 /** First-letter monogram text ("?" when empty). */
@@ -149,15 +149,15 @@ function UsersPanel() {
       <div className="flex flex-wrap items-center gap-3">
         <IconChip icon={UsersRound} tone="slate" size={36} iconSize={16} />
         <div className="min-w-0 flex-1">
-          <h2 className="text-[15px] font-semibold leading-6 text-ink">Users &amp; Roles</h2>
-          <p className="text-xs text-stone">
+          <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Users &amp; Roles</h2>
+          <p className="text-xs text-body-gray">
             <span className="num">{total}</span> account{total === 1 ? "" : "s"}
           </p>
         </div>
         <button type="button" className={ctaBtn} onClick={() => setCreateOpen(true)}>Create User</button>
       </div>
 
-      <div className="dlg-card p-4 flex flex-col gap-3 sm:flex-row">
+      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
           <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search name, email or username…" className="dlg-input min-h-[44px] pl-9" />
@@ -173,7 +173,7 @@ function UsersPanel() {
         </Select>
       </div>
 
-      <div className="dlg-card overflow-hidden">
+      <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
@@ -196,7 +196,7 @@ function UsersPanel() {
                 </tr>
               )}
               {rows?.map((u) => (
-                <tr key={u.id} className="group/row border-t border-border transition-colors hover:bg-fog/60">
+                <tr key={u.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <span aria-hidden="true" className="contents">
@@ -280,7 +280,7 @@ function UsersPanel() {
           <AlertDialogFooter>
             <AlertDialogCancel className="dlg-ghost">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="border border-[var(--bad)]/30 bg-white text-[var(--bad)] hover:bg-[var(--bad-bg)]"
+              className="rounded-full border border-[var(--bad)]/30 bg-white text-[var(--bad)] hover:bg-[var(--bad-bg)]"
               onClick={() => void confirmHardDelete()}
             >
               Delete forever
@@ -479,23 +479,23 @@ function AuditPanel() {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <IconChip icon={ScrollText} tone="plum" size={36} iconSize={16} />
-        <h2 className="text-[15px] font-semibold leading-6 text-ink">Audit Log</h2>
+        <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Audit Log</h2>
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {(
           [
             ["Total events", summary?.totalEvents],
             ...(["ADMIN", "EVALUATOR", "APPLICANT"] as const).map((r) => [humanize(r), summary?.byRole?.[r] ?? 0] as const),
           ] as [string, number | undefined][]
         ).map(([label, value]) => (
-          <div key={label} className="dlg-card p-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
-            <p className="num mt-2 text-[28px] font-semibold leading-none text-ink">{value ?? "—"}</p>
+          <div key={label} className="dlg-card p-6">
+            <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+            <p className="num mt-4 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "—"}</p>
           </div>
         ))}
       </div>
 
-      <div className="dlg-card p-4 flex flex-col gap-3 sm:flex-row">
+      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
           <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search descriptions and actors…" className="dlg-input min-h-[44px] pl-9" />
@@ -509,23 +509,23 @@ function AuditPanel() {
         </Select>
       </div>
 
-      <div className="dlg-card overflow-hidden">
+      <div className="dlg-card-plain overflow-hidden">
         <div className="max-h-96 overflow-y-auto scroll-thin p-2">
           {rows === null && <div className="p-2"><SkeletonRows rows={6} rowClassName="h-11" /></div>}
           {rows?.length === 0 && <EmptyState icon={ScrollText} tone="plum" title="No audit events match." compact />}
           {rows?.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-none px-3 py-2.5 transition-colors hover:bg-fog/60">
-              <span className="num w-24 shrink-0 text-xs text-pebble" title={formatDateTime(r.timestamp)}>
+            <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-fog/60">
+              <span className="num w-24 shrink-0 text-xs text-body-gray" title={formatDateTime(r.timestamp)}>
                 {timeAgo(r.timestamp)}
               </span>
               <span className="w-44 shrink-0 truncate">
                 <span className="text-[13px] font-medium text-ink">{r.userLabel ?? "System"}</span>
-                {r.userRole ? <span className="num ml-1.5 text-[11px] text-pebble">{r.userRole}</span> : null}
+                {r.userRole ? <span className="num ml-1.5 text-[11px] text-body-gray">{r.userRole}</span> : null}
               </span>
               <span className={`${pillClass("neutral")} shrink-0 uppercase tracking-[0.04em]`} style={{ fontSize: "10px" }}>
                 {humanize(r.action)}
               </span>
-              <span className="min-w-[200px] flex-1 truncate text-[13px] text-stone">{r.description ?? "—"}</span>
+              <span className="min-w-[200px] flex-1 truncate text-[13px] text-body-gray">{r.description ?? "—"}</span>
             </div>
           ))}
         </div>
@@ -625,17 +625,17 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
         ) : (
           <IconChip icon={Mail} tone="emerald" size={36} iconSize={16} />
         )}
-        <h2 className="text-[15px] font-semibold leading-6 text-ink">
+        <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">
           {kind === "sms" ? "SMS Gateway" : "Email Notices"}
         </h2>
       </div>
-      <div className="dlg-card p-6">
+      <div className="dlg-card-plain p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Active provider</p>
-            <p className="num mt-1 text-xl font-medium text-ink">{humanize(data?.provider ?? "…")}</p>
+            <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Active provider</p>
+            <p className="num mt-1 text-lg font-semibold text-ink">{humanize(data?.provider ?? "…")}</p>
             {data?.provider === "mock" ? (
-              <p className="mt-1 text-xs text-stone">Messages are logged only.</p>
+              <p className="mt-1 text-xs text-body-gray">Messages are logged only.</p>
             ) : null}
           </div>
           {data?.provider === "mock" ? (
@@ -644,18 +644,18 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
             <StatusPill status={data?.configured ? "Configured" : "Not configured"} variant={data?.configured ? "ok" : "warn"} />
           )}
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {tiles.map(([label, value]) => (
-            <div key={label} className="rounded-none bg-fog p-3">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
-              <p className="num mt-1 text-[28px] font-semibold leading-none text-ink">{value ?? "—"}</p>
+            <div key={label} className="rounded-lg bg-cloud p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+              <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "—"}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="dlg-card p-6">
-        <p className="mb-4 text-sm font-medium text-ink">Test send</p>
+      <div className="dlg-card-plain p-5 sm:p-6">
+        <p className="mb-4 text-base font-semibold tracking-[-0.01em] text-ink">Test send</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label className={labelCls()}>{kind === "sms" ? "Mobile number (09…)" : "Recipient email"}</Label>
@@ -677,7 +677,7 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
         </button>
       </div>
 
-      <div className="dlg-card overflow-hidden">
+      <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
@@ -703,14 +703,14 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
                 </tr>
               )}
               {data?.logs.map((l) => (
-                <tr key={l.id} className="border-t border-border align-top transition-colors hover:bg-fog/60">
+                <tr key={l.id} className="border-b border-[var(--border)] align-top transition-colors last:border-0 hover:bg-fog/60">
                   <td className="px-5 py-3 font-medium text-ink">{l.to}</td>
-                  <td className="max-w-[280px] truncate px-4 py-3 text-stone">{l.subject ?? l.message ?? "—"}</td>
+                  <td className="max-w-[280px] truncate px-4 py-3 text-body-gray">{l.subject ?? l.message ?? "—"}</td>
                   <td className="px-4 py-3">
                     <StatusChip status={l.status} />
-                    {l.error && <p className="mt-1 text-xs text-pebble">{l.error}</p>}
+                    {l.error && <p className="mt-1 text-xs text-body-gray">{l.error}</p>}
                   </td>
-                  <td className="num px-5 py-3 text-right text-xs text-pebble" title={formatDateTime(l.createdAt)}>
+                  <td className="num px-5 py-3 text-right text-xs text-body-gray" title={formatDateTime(l.createdAt)}>
                     {timeAgo(l.createdAt)}
                   </td>
                 </tr>
@@ -732,10 +732,15 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Settings"
-        description="Manage accounts, review the audit trail, and configure notification channels."
-      />
+      {/* Bevel page header — shared anatomy across all workspace views */}
+      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Settings</h1>
+          <p className="mt-1 text-sm text-body-gray">
+            Manage accounts, review the audit trail, and configure notification channels.
+          </p>
+        </div>
+      </header>
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:items-start">
         {/* Left vertical tab rail (white card); horizontal scroll pills on mobile.
@@ -743,9 +748,8 @@ export default function Settings() {
             track on phones (observed OV 231-286 at 320/375). */}
         {/* dlg-card-plain (not dlg-card): .dlg-card sets position:relative in
             unlayered CSS, which would override lg:sticky from the utilities
-            layer and silently kill the desktop pin. shadow-e2 restores the
-            card elevation. */}
-        <nav className="dlg-card-plain min-w-0 p-2 shadow-e2 lg:sticky lg:top-6" aria-label="Settings sections">
+            layer and silently kill the desktop pin. */}
+        <nav className="dlg-card-plain min-w-0 p-2 lg:sticky lg:top-6" aria-label="Settings sections">
           <div className="flex gap-1 overflow-x-auto scroll-thin lg:flex-col lg:overflow-visible">
             {TABS.map((t) => (
               <button
@@ -753,8 +757,8 @@ export default function Settings() {
                 type="button"
                 onClick={() => navigate("settings", { tab: t.key })}
                 aria-current={tab === t.key ? "page" : undefined}
-                className={`focus-ring inline-flex h-11 shrink-0 items-center gap-2.5 whitespace-nowrap px-4 text-sm transition-colors ${
-                  tab === t.key ? "chip-ink" : "text-stone hover:bg-fog hover:text-ink"
+                className={`focus-ring inline-flex h-11 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-4 text-sm transition-colors ${
+                  tab === t.key ? "bg-cloud text-ink" : "text-stone hover:bg-fog hover:text-ink"
                 }`}
               >
                 <t.icon className="h-4 w-4 shrink-0" aria-hidden />

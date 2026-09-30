@@ -5,17 +5,17 @@
 // over /api/evaluator/queue. 15 s silent poll + focus refresh + manual refresh.
 // "Qualified only" lens, stage tabs (list), bulk regret letters with confirm.
 // Card / row review actions open the ReviewWorkspace in a Dialog.
-// Reference-board pass: 4-column kanban exactly matching the approved design —
-// dot+label+count columns, pastel initial avatars, match-percentage badge,
-// position / department / relative applied date rows and credential tags.
-// Handlers byte-identical.
+// Bevel pass: shared page-header anatomy + cloud stat cards, capsule segmented
+// toggles, white hairline table-card, quiet round row actions. 4-column kanban
+// keeps the shared reference-board primitives (dot+label+count columns, pastel
+// avatars, match badge, credential tags). Handlers byte-identical.
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowUpRight, Building2, Clock, Inbox, LayoutGrid, List, MailX, MapPin,
-  RefreshCw, UserRound,
+  AlertTriangle, ArrowUpRight, BadgeCheck, Building2, Clock, Inbox, LayoutGrid, List, MailX, MapPin,
+  RefreshCw, UserCheck, UserRound, type LucideIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -26,7 +26,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  EmptyState, PageHeader, SkeletonKanban, SkeletonRows,
+  EmptyState, IconChip, SkeletonKanban, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot,
@@ -34,6 +34,7 @@ import {
 import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, type StageKey } from "@/lib/status";
 import { navigate } from "@/lib/router";
+import { ghostBtn, iconBtn } from "@/components/views/recruitment";
 import { ReviewWorkspace, StatusPill, VerdictPill } from "@/components/views/review-workspace";
 
 // ── Wire shapes ─────────────────────────────────────────────────────────────
@@ -75,11 +76,34 @@ type RegretSummary = {
 
 // ── Small shared visuals ────────────────────────────────────────────────────
 
-const ghostBtn =
-  "dlg-ghost inline-flex min-h-[44px] items-center justify-center gap-2 px-4 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50";
-
-const iconBtn =
-  "focus-ring inline-flex h-9 w-9 items-center justify-center text-stone transition-colors hover:bg-fog hover:text-ink";
+/**
+ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+ * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
+ */
+function StatCard({
+  label,
+  value,
+  icon,
+  chipTone,
+  hint,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: LucideIcon;
+  chipTone: ChipTone;
+  hint: string;
+}) {
+  return (
+    <div className="dlg-card p-6">
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <IconChip icon={icon} tone={chipTone} size={40} />
+      </div>
+      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p className="mt-2 text-xs text-body-gray">{hint}</p>
+    </div>
+  );
+}
 
 function useFocusRefresh(fn: () => void) {
   useEffect(() => {
@@ -155,6 +179,19 @@ export default function ReviewQueue() {
     return map;
   }, [filtered]);
 
+  // Header stat tiles — purely derived counts over the loaded queue.
+  const stat = useMemo(() => {
+    const qualified = applications.filter((r) => r.match?.verdict === "ALL_MET").length;
+    let underReview = 0;
+    let shortlisted = 0;
+    for (const r of applications) {
+      const s = stageForStatus(r.status);
+      if (s === "Under Review") underReview += 1;
+      else if (s === "Shortlisted") shortlisted += 1;
+    }
+    return { qualified, underReview, shortlisted };
+  }, [applications]);
+
   const sendRegrets = async () => {
     setRegretBusy(true);
     try {
@@ -186,46 +223,70 @@ export default function ReviewQueue() {
 
   return (
     <div className="space-y-6">
-      {/* Header + toolbar */}
-      <PageHeader
-        title="Review Queue"
-        description="Screen applications, verify minimum qualifications, and advance candidates through the pipeline."
-        actions={
-          <>
-            <span className="status-pill status-neutral num">
-              {filtered.length} application{filtered.length === 1 ? "" : "s"}
-            </span>
-            <label className="focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 border border-border bg-white px-3.5 text-sm text-stone transition-colors hover:border-ink/10">
-              <Switch checked={qualifiedOnly} onCheckedChange={setQualifiedOnly} aria-label="Qualified only" />
-              Qualified only
-            </label>
-            <div className="flex items-center gap-1 bg-fog p-1" role="group" aria-label="View mode">
-              <button
-                type="button"
-                className={`inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-ink text-white" : "text-stone hover:text-ink"}`}
-                onClick={() => setMode("kanban")}
-                aria-pressed={mode === "kanban"}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-                Kanban
-              </button>
-              <button
-                type="button"
-                className={`inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-ink text-white" : "text-stone hover:text-ink"}`}
-                onClick={() => setMode("list")}
-                aria-pressed={mode === "list"}
-              >
-                <List className="h-3.5 w-3.5" aria-hidden />
-                List
-              </button>
-            </div>
-            <button type="button" className={ghostBtn} onClick={manualRefresh}>
-              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-              Refresh
+      {/* Bevel page header — shared anatomy across all workspace views */}
+      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Review Queue</h1>
+          <p className="mt-1 text-sm text-body-gray">
+            Screen applications, verify minimum qualifications, and advance candidates through the pipeline.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="status-pill status-neutral num">
+            {filtered.length} application{filtered.length === 1 ? "" : "s"}
+          </span>
+          <label className="dlg-ghost focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 px-3.5 text-sm text-stone">
+            <Switch checked={qualifiedOnly} onCheckedChange={setQualifiedOnly} aria-label="Qualified only" />
+            Qualified only
+          </label>
+          <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
+            <button
+              type="button"
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+              onClick={() => setMode("kanban")}
+              aria-pressed={mode === "kanban"}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+              Kanban
             </button>
-          </>
-        }
-      />
+            <button
+              type="button"
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+              onClick={() => setMode("list")}
+              aria-pressed={mode === "list"}
+            >
+              <List className="h-3.5 w-3.5" aria-hidden />
+              List
+            </button>
+          </div>
+          <button type="button" className={ghostBtn} onClick={manualRefresh}>
+            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      {/* Queue stat tiles — Bevel cloud stat cards */}
+      {!error && (queue === null ? (
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="dlg-card p-6">
+              <div className="flex items-start justify-between">
+                <div className="skel h-3 w-20" />
+                <div className="skel h-10 w-10" />
+              </div>
+              <div className="skel mt-4 h-8 w-16" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <StatCard label="In queue" value={applications.length} icon={Inbox} chipTone="slate" hint="applications on file" />
+          <StatCard label="Qualified" value={stat.qualified} icon={BadgeCheck} chipTone="emerald" hint="meet all minimum requirements" />
+          <StatCard label="Under review" value={stat.underReview} icon={Clock} chipTone="gold" hint="being screened" />
+          <StatCard label="Shortlisted" value={stat.shortlisted} icon={UserCheck} chipTone="plum" hint="advanced by evaluators" />
+        </div>
+      ))}
 
       {/* Stage tabs (list mode only) */}
       {mode === "list" && (
@@ -237,20 +298,20 @@ export default function ReviewQueue() {
               <button
                 key={s}
                 type="button"
-                className={`inline-flex min-h-[36px] items-center gap-2 px-3.5 text-xs font-medium transition-colors ${active ? "bg-ink text-white" : "dlg-ghost"}`}
+                className={`inline-flex min-h-[36px] items-center gap-2 rounded-full px-3.5 text-xs font-medium transition-colors ${active ? "bg-ink text-[#ebf0f8]" : "dlg-ghost"}`}
                 onClick={() => setListStage(s)}
                 aria-pressed={active}
               >
                 {s !== "All" && <StageDot stage={s} />}
                 {s}
-                <span className={`num px-1.5 ${active ? "bg-white/20" : "bg-fog"}`}>{count}</span>
+                <span className={`num rounded-full px-1.5 ${active ? "bg-white/20" : "bg-fog"}`}>{count}</span>
               </button>
             );
           })}
           {listStage === "Rejected" && rejectedIds.length > 0 && (
             <button
               type="button"
-              className={ghostBtn + " border-[var(--bad)]/30 text-[var(--bad)]"}
+              className={ghostBtn + " border-[var(--bad)]/30 text-[var(--bad)] hover:bg-[var(--bad-bg)]"}
               onClick={() => setRegretOpen(true)}
             >
               <MailX className="h-4 w-4" aria-hidden />
@@ -354,7 +415,7 @@ export default function ReviewQueue() {
       {!error && queue !== null && mode === "list" && (
         <div className="space-y-3">
           {listRows.length === 0 ? (
-            <div className="dlg-card py-6">
+            <div className="dlg-card p-6 sm:p-10">
               <EmptyState
                 icon={Inbox}
                 title="No applications in the queue"
@@ -362,11 +423,11 @@ export default function ReviewQueue() {
               />
             </div>
           ) : (
-            <div className="dlg-card overflow-hidden">
+            <div className="dlg-card-plain table-card overflow-hidden">
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[760px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border text-left">
+                    <tr className="border-b border-[var(--border)] text-left">
                       <th scope="col" className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Candidate</th>
                       <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Position</th>
                       <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Applied</th>
@@ -382,7 +443,7 @@ export default function ReviewQueue() {
                       const place = row.job.position?.placeOfAssignment ?? null;
                       const name = fullName(row.applicant);
                       return (
-                        <tr key={row.id} className="group/row border-b border-border transition-colors last:border-0 hover:bg-fog/60">
+                        <tr key={row.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
                               <KanbanAvatar name={name} size={32} />
@@ -435,7 +496,7 @@ export default function ReviewQueue() {
       {/* Review modal — much wider surface (1440px cap) so the dossier and
           decision rail breathe; bounded dossier sections scroll internally. */}
       <Dialog open={selectedId !== null} onOpenChange={(v) => !v && setSelectedId(null)}>
-        <DialogContent className="shadow-e4 w-[min(96vw,1440px)] sm:max-w-[1440px] max-h-[92dvh] overflow-y-auto scroll-thin">
+        <DialogContent className="w-[min(96vw,1440px)] sm:max-w-[1440px] max-h-[92dvh] overflow-y-auto scroll-thin">
           <DialogHeader className="sr-only">
             <DialogTitle>Review application</DialogTitle>
             <DialogDescription>Applicant dossier and decision rail</DialogDescription>

@@ -6,10 +6,14 @@
 // workspace body (used inside the review-queue modal); without one it reads
 // the deep-link `#/evaluator-review?id=<applicationId>` from useHashRoute and
 // renders page-style with a close action back to the review queue.
-// LEFT = frozen-snapshot dossier (underline section tabs), RIGHT = decision
+// LEFT = frozen-snapshot dossier (capsule section tabs), RIGHT = decision
 // rail (requirements match, credentials, state banner, decisions, notices,
 // direct email). Enterprise polish pass: functional status pills/dots only —
 // every handler, fetch, and confirmation dialog is unchanged.
+// Bevel pass: shared page header with round back affordance, white dossier
+// panel with cloud/60 snapshot tiles + capsule tabs, cloud decision-rail
+// cards with white/70 interior tiles, metric-blue links, charcoal decision
+// capsules. Zero logic changes.
 // Wave-3 premium pass: warm monogram dossier header, gradient ink→ember
 // active-tab underline, tone chips on verdict actions, mini emerald/rose
 // requirement indicators, IconChip rail headers.
@@ -44,7 +48,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone,
+  EmptyState, IconChip, Monogram, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import { apiFetch, formatDate, formatDateTime, fullName, timeAgo } from "@/lib/client";
 import { getStatusMeta, stageForStatus, type Tone } from "@/lib/status";
@@ -224,7 +228,7 @@ function str(v: unknown): string {
 
 function LedgerRow({ label, value, num = false }: { label: string; value: string; num?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#ececec] py-2.5 last:border-0">
+    <div className="flex items-start justify-between gap-4 border-b border-divider py-2.5 last:border-0">
       <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
       {/* min-w-0: long unbreakable values (emails, URLs) must be allowed to
           shrink + break inside the flex row, otherwise the row's min-content
@@ -235,7 +239,7 @@ function LedgerRow({ label, value, num = false }: { label: string; value: string
 }
 
 function EmptyNote({ children }: { children: React.ReactNode }) {
-  return <p className="py-6 text-center text-sm text-pebble">{children}</p>;
+  return <p className="py-6 text-center text-sm text-body-gray">{children}</p>;
 }
 
 function snapshotDisplayDate(v: unknown): string {
@@ -258,9 +262,9 @@ const DOSSIER_TABS = [
 ] as const;
 
 const tabsListCls =
-  "h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0";
+  "h-auto w-full flex-wrap justify-start gap-1 rounded-full bg-fog p-1";
 const tabTriggerCls =
-  "flex-none gap-1.5 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[13px] font-medium text-stone shadow-none transition-colors hover:text-ink data-[state=active]:bg-transparent data-[state=active]:text-ink data-[state=active]:shadow-none data-[state=active]:[background-image:linear-gradient(90deg,#1591dc,#0e7abf)] data-[state=active]:[background-size:100%_2px] data-[state=active]:[background-position:bottom] data-[state=active]:[background-repeat:no-repeat]";
+  "flex-none gap-1.5 rounded-full border-0 bg-transparent px-3.5 py-2 text-[13px] font-medium text-stone shadow-none transition-colors hover:text-ink data-[state=active]:bg-white data-[state=active]:text-ink data-[state=active]:shadow-sm";
 
 /** Bounded dossier section (modal only): min/max height + internal scroll —
     long lists scroll inside their section instead of stretching the modal. */
@@ -274,20 +278,20 @@ function EducationCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-none bg-fog p-4">
+        <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-ink">{str(r.degree) || str(r.course) || str(r.specifyOthers) || "—"}</p>
             {r.ongoing === true && <span className="status-pill status-neutral shrink-0">Ongoing</span>}
           </div>
-          <p className="mt-1 text-xs text-stone">
+          <p className="mt-1 text-xs text-body-gray">
             {[str(r.educationLevel), str(r.schoolName)].filter(Boolean).join(" · ") || "—"}
           </p>
-          <p className="num mt-0.5 text-xs text-pebble">
+          <p className="num mt-0.5 text-xs text-stone">
             {[str(r.yearFrom) && `${str(r.yearFrom)}–${str(r.yearTo) || (r.ongoing ? "Present" : "")}`, str(r.yearGraduated) && `Graduated ${str(r.yearGraduated)}`, str(r.unitsEarned) && `${str(r.unitsEarned)} units`]
               .filter(Boolean)
               .join(" · ") || "—"}
           </p>
-          {str(r.awards) && <p className="mt-1 text-xs text-stone">Honors: {str(r.awards)}</p>}
+          {str(r.awards) && <p className="mt-1 text-xs text-body-gray">Honors: {str(r.awards)}</p>}
         </div>
       ))}
     </div>
@@ -299,15 +303,15 @@ function ExperienceCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-none bg-fog p-4">
+        <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-ink">{str(r.positionTitle) || "—"}</p>
             {r.isPresentWork === true && (
-              <span className="shrink-0 bg-ink px-2 py-0.5 text-xs text-white">Present</span>
+              <span className="dlg-pill shrink-0 rounded-full bg-charcoal px-2 py-0.5 text-xs font-medium text-[#ebf0f8]">Present</span>
             )}
           </div>
-          <p className="mt-1 text-xs text-stone">{str(r.employerName) || "—"}</p>
-          <p className="num mt-0.5 text-xs text-pebble">
+          <p className="mt-1 text-xs text-body-gray">{str(r.employerName) || "—"}</p>
+          <p className="num mt-0.5 text-xs text-stone">
             {[
               (str(r.dateFrom) || str(r.dateTo)) &&
                 `${snapshotDisplayDate(r.dateFrom) || "—"} – ${r.isPresentWork ? "Present" : snapshotDisplayDate(r.dateTo) || "—"}`,
@@ -327,14 +331,14 @@ function TrainingCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-none bg-fog p-4">
+        <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <p className="text-sm text-ink">{str(r.title) || "—"}</p>
-          <p className="num mt-1 text-xs text-stone">
+          <p className="num mt-1 text-xs text-body-gray">
             {[str(r.typeOfTraining), str(r.numberHours) && `${str(r.numberHours)} hrs`, str(r.hourDecimal) && `${str(r.hourDecimal)} hrs`]
               .filter(Boolean)
               .join(" · ") || "—"}
           </p>
-          <p className="num mt-0.5 text-xs text-pebble">
+          <p className="num mt-0.5 text-xs text-stone">
             {snapshotDisplayDate(r.dateFrom) || snapshotDisplayDate(r.dateTo)
               ? `${snapshotDisplayDate(r.dateFrom) || "—"} – ${snapshotDisplayDate(r.dateTo) || "—"}`
               : "—"}
@@ -350,9 +354,9 @@ function EligibilityCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-none bg-fog p-4">
+        <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <p className="text-sm text-ink">{str(r.title) || str(r.eligibilityTitle) || "—"}</p>
-          <p className="num mt-1 text-xs text-stone">
+          <p className="num mt-1 text-xs text-body-gray">
             {[str(r.rating) && `Rating: ${str(r.rating)}`, snapshotDisplayDate(r.examDate), str(r.examPlace), str(r.licenseNumber) && `License ${str(r.licenseNumber)}`]
               .filter(Boolean)
               .join(" · ") || "—"}
@@ -368,9 +372,9 @@ function AwardCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-none bg-fog p-4">
+        <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <p className="text-sm text-ink">{str(r.details) || "—"}</p>
-          <p className="num mt-1 text-xs text-stone">
+          <p className="num mt-1 text-xs text-body-gray">
             {[str(r.recognitionType), str(r.scope), str(r.provider), snapshotDisplayDate(r.dateGranted)]
               .filter(Boolean)
               .join(" · ") || "—"}
@@ -407,8 +411,8 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
         <div className="flex min-w-0 items-center gap-3">
           <IconChip icon={ListChecks} tone="gold" size={36} iconSize={16} />
           <div className="min-w-0">
-            <h3 className="text-[15px] font-medium leading-6 text-ink">Requirements match</h3>
-            <p className="mt-0.5 text-xs text-stone">{vm.meaning}</p>
+            <h3 className="text-[15px] font-semibold leading-6 text-ink">Requirements match</h3>
+            <p className="mt-0.5 text-xs text-body-gray">{vm.meaning}</p>
           </div>
         </div>
         <StatusPill status={vm.chip} variant={vm.variant} className="shrink-0" />
@@ -422,13 +426,13 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
             const cp = checkPill(c.status);
             const cc = checkChip(c.status);
             return (
-              <div key={i} className="rounded-none border border-border p-3.5">
+              <div key={i} className="rounded-lg bg-white/70 p-3.5">
                 <div className="flex items-start gap-2.5">
                   <IconChip icon={cc.icon} tone={cc.tone} size={22} iconSize={12} className="mt-0.5" />
                   <p className="min-w-0 flex-1 text-[13px] leading-5 text-ink line-clamp-2">{c.standard || "—"}</p>
                   <StatusPill status={cp.label} variant={cp.variant} className="shrink-0" />
                 </div>
-                <p className="num mt-1.5 text-xs leading-5 text-stone line-clamp-2">
+                <p className="num mt-1.5 text-xs leading-5 text-body-gray line-clamp-2">
                   {c.applicantSummary || "No applicant data on file."}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -437,7 +441,7 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
                   ) : (
                     <span aria-hidden />
                   )}
-                  <span className="shrink-0 bg-fog px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-pebble">
+                  <span className="dlg-pill shrink-0 rounded-full bg-fog px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone">
                     {c.dimension}
                   </span>
                 </div>
@@ -465,7 +469,7 @@ function CredentialsRow({ payload }: { payload: ReviewPayload }) {
     <div className="dlg-card p-4">
       <div className="flex items-center gap-2.5">
         <IconChip icon={IdCard} tone="slate" size={28} iconSize={13} />
-        <h3 className="text-[15px] font-medium leading-6 text-ink">Credentials on file</h3>
+        <h3 className="text-[15px] font-semibold leading-6 text-ink">Credentials on file</h3>
       </div>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         {items.map(([label, n]) => (
@@ -965,9 +969,9 @@ function DirectEmailCard({
     <div className="dlg-card p-4">
       <div className="flex items-center gap-2.5">
         <IconChip icon={Mail} tone="slate" size={28} iconSize={13} />
-        <h3 className="text-[15px] font-medium leading-6 text-ink">Direct email</h3>
+        <h3 className="text-[15px] font-semibold leading-6 text-ink">Direct email</h3>
       </div>
-      <p className="mt-1 text-xs text-stone">
+      <p className="mt-1 text-xs text-body-gray">
         {recipient
           ? "Recipient is pulled from the applicant's profile email — attachments ≤ 3 files × 5 MB."
           : "No email on record — the applicant left the profile email blank."}
@@ -981,13 +985,13 @@ function DirectEmailCard({
         <Send className="h-4 w-4" aria-hidden />
         Send a direct email
       </button>
-      <div className="mt-4 border-t border-[#ececec] pt-3">
+      <div className="mt-4 border-t border-divider pt-3">
         <p className="text-xs font-medium text-stone">History</p>
         <div className="mt-2 max-h-48 space-y-1.5 overflow-y-auto scroll-thin">
           {emails === null ? (
-            <p className="text-xs text-pebble">Loading…</p>
+            <p className="text-xs text-body-gray">Loading…</p>
           ) : emails.length === 0 ? (
-            <p className="text-xs text-pebble">No direct emails sent yet.</p>
+            <p className="text-xs text-body-gray">No direct emails sent yet.</p>
           ) : (
             emails.map((m) => {
               const atts = parseAttachments(m.attachments);
@@ -1167,7 +1171,7 @@ export function ReviewWorkspace({
   if (!payload) {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
-        <div className="dlg-card space-y-5 p-6">
+        <div className="dlg-card-plain space-y-5 p-5 sm:p-6">
           <div className="space-y-2.5">
             <Skeleton className="h-7 w-1/2" />
             <Skeleton className="h-4 w-1/3" />
@@ -1203,13 +1207,13 @@ export function ReviewWorkspace({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
       {/* ── LEFT: frozen dossier ── */}
-      <div className="dlg-card space-y-4 p-6">
+      <div className="dlg-card-plain space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <MonogramAvatar name={applicantName} size={48} warm />
             <div className="min-w-0">
-              <h2 className="font-display text-2xl leading-tight text-ink">{applicantName}</h2>
-              <p className="num mt-1 text-sm text-stone">
+              <h2 className="text-xl font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-2xl">{applicantName}</h2>
+              <p className="num mt-1 text-sm text-body-gray">
                 {[positionTitle, place].filter(Boolean).join(" · ")} · Applied {formatDate(payload.dateApplied)}
               </p>
             </div>
@@ -1218,7 +1222,7 @@ export function ReviewWorkspace({
             <StatusPill status={payload.status} />
             <button
               type="button"
-              className="focus-ring inline-flex min-h-[44px] items-center text-sm font-medium text-ink underline underline-offset-4"
+              className="focus-ring inline-flex min-h-[44px] items-center text-sm font-medium text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
               onClick={() => navigate("candidate", { id: String(payload.applicant.id) })}
             >
               View full profile
@@ -1237,7 +1241,7 @@ export function ReviewWorkspace({
           </TabsList>
 
           <TabsContent value="profile" className={sectionCls("pt-4")}>
-            <div className="rounded-none bg-fog p-4">
+            <div className="rounded-lg bg-cloud/60 p-4">
               <LedgerRow label="Email" value={str(p.emailAddress) || str(payload.applicant.emailAddress)} />
               <LedgerRow label="Mobile" value={str(p.mobileNumber) || str(p.contactNumber)} num />
               <LedgerRow label="Other phone" value={[str(p.contactNumberSec), str(p.telephoneNumber)].filter(Boolean).join(" · ")} num />
@@ -1250,7 +1254,7 @@ export function ReviewWorkspace({
             <div className="mt-4">
               <p className="text-xs font-medium text-stone">Character references</p>
               {characterRefs.length === 0 ? (
-                <p className="mt-1 text-sm text-pebble">None on file.</p>
+                <p className="mt-1 text-sm text-body-gray">None on file.</p>
               ) : (
                 <ul className="mt-1 space-y-1">
                   {characterRefs.map((r, i) => (
@@ -1278,9 +1282,9 @@ export function ReviewWorkspace({
             <AwardCards rows={payload.snapshots.awards} />
           </TabsContent>
           <TabsContent value="documents" className="pt-4">
-            <div className="rounded-none bg-fog p-6 text-center">
+            <div className="rounded-lg bg-cloud/60 p-6 text-center">
               <IconChip icon={FileText} tone="slate" size={40} className="mx-auto" />
-              <p className="mt-2 text-sm text-stone">Supporting documents are verified in person at the next stage.</p>
+              <p className="mt-2 text-sm text-body-gray">Supporting documents are verified in person at the next stage.</p>
             </div>
           </TabsContent>
         </Tabs>
@@ -1297,7 +1301,7 @@ export function ReviewWorkspace({
         <RequirementsMatchPanel report={payload.requirements} />
         <CredentialsRow payload={payload} />
 
-        <div className={`rounded-none bg-fog p-4 text-sm ${banner.cls}`}>
+        <div className={`rounded-lg bg-cloud/70 p-4 text-sm ${banner.cls}`}>
           <StatusPill status={payload.status} className="mr-2" />
           {banner.text}
         </div>
@@ -1306,7 +1310,7 @@ export function ReviewWorkspace({
           <div className="dlg-card space-y-3 p-4">
             <div className="flex items-center gap-2.5">
               <IconChip icon={Gavel} tone="slate" size={28} iconSize={13} />
-              <h3 className="text-[15px] font-medium leading-6 text-ink">Decision</h3>
+              <h3 className="text-[15px] font-semibold leading-6 text-ink">Decision</h3>
             </div>
             <div className="space-y-2">
               {stage === "Applied" && (
@@ -1328,7 +1332,7 @@ export function ReviewWorkspace({
                 Not Qualified
               </button>
             </div>
-            <p className="text-xs text-pebble">
+            <p className="text-xs text-body-gray">
               {email ? `Decisions email ${email}.` : "No email on record for this applicant."}
             </p>
           </div>
@@ -1338,9 +1342,9 @@ export function ReviewWorkspace({
           <div className="dlg-card space-y-3 p-4">
             <div className="flex items-center gap-2.5">
               <IconChip icon={History} tone="slate" size={28} iconSize={13} />
-              <h3 className="text-[15px] font-medium leading-6 text-ink">Revise decision</h3>
+              <h3 className="text-[15px] font-semibold leading-6 text-ink">Revise decision</h3>
             </div>
-            <p className="text-xs text-pebble">Changing the decision notifies the applicant.</p>
+            <p className="text-xs text-body-gray">Changing the decision notifies the applicant.</p>
             <button
               type="button"
               className={
@@ -1388,7 +1392,7 @@ export function ReviewWorkspace({
                 })
               }
             >
-              <RotateCcw className="h-4 w-4 text-stone-500" aria-hidden />
+              <RotateCcw className="h-4 w-4 text-stone" aria-hidden />
               Return to Review
             </button>
           </div>
@@ -1398,13 +1402,13 @@ export function ReviewWorkspace({
         <div className="dlg-card space-y-3 p-4">
           <div className="flex items-center gap-2.5">
             <IconChip icon={Mails} tone="slate" size={28} iconSize={13} />
-            <h3 className="text-[15px] font-medium leading-6 text-ink">Notices</h3>
+            <h3 className="text-[15px] font-semibold leading-6 text-ink">Notices</h3>
           </div>
           <div className="max-h-48 space-y-1.5 overflow-y-auto scroll-thin">
             {notices === null ? (
-              <p className="text-xs text-pebble">Loading…</p>
+              <p className="text-xs text-body-gray">Loading…</p>
             ) : notices.length === 0 ? (
-              <p className="text-xs text-pebble">No notices sent yet.</p>
+              <p className="text-xs text-body-gray">No notices sent yet.</p>
             ) : (
               notices.map((n) => (
                 <div key={n.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -1527,16 +1531,21 @@ function ReviewWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Review Workspace"
-        description="Applicant dossier and decision rail."
-        actions={
-          <button type="button" className={ghostBtn} onClick={close}>
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back to review queue
+      {/* Bevel page header — back affordance + title, shared anatomy */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <button
+            type="button"
+            aria-label="Back to review queue"
+            onClick={close}
+            className="-ml-2 mt-0.5 inline-flex h-11 w-11 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink focus-ring"
+          >
+            <ArrowLeft className="h-5 w-5" aria-hidden />
           </button>
-        }
-      />
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Review Workspace</h1>
+          <p className="mt-1 text-sm text-body-gray">Applicant dossier and decision rail.</p>
+        </div>
+      </header>
       {valid ? (
         <ReviewWorkspace applicationId={id} onClose={close} />
       ) : (

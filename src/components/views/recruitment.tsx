@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle, Banknote, Briefcase, CalendarClock, Clock, Eye, FileText,
-  Pencil, Plus, RefreshCw, Search,
+  Pencil, Plus, RefreshCw, Search, type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  EmptyState, IconChip, PageHeader, SectionCard, SkeletonRows, StatusPill,
+  EmptyState, IconChip, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate } from "@/lib/client";
 import type { JobWire } from "@/lib/router";
@@ -44,15 +44,41 @@ export const ghostBtn =
 export const ctaBtn =
   "dlg-cta inline-flex min-h-[44px] items-center justify-center gap-2 px-5 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-50";
 
-/** Destructive ghost (contract §3): ghost shape with the functional --bad tint. */
+/** Destructive ghost (contract §3): capsule shape with the functional --bad tint. */
 export const ghostBadBtn =
-  "inline-flex min-h-[44px] items-center justify-center gap-2 border border-[var(--bad)]/30 bg-white px-4 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:cursor-not-allowed disabled:opacity-50";
-/** 32px icon button (fog tile on hover) for row quick actions. */
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-[var(--bad)]/30 bg-white px-4 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:cursor-not-allowed disabled:opacity-50";
+/** 36px quiet round icon button (cloud tile on hover) for row quick actions. */
 export const iconBtn =
-  "grid h-8 w-8 place-items-center text-stone transition-colors hover:bg-fog hover:text-ink focus-ring";
-/** 32px destructive icon button for row quick actions. */
+  "grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink focus-ring";
+/** 36px destructive round icon button for row quick actions. */
 export const iconBtnBad =
-  "grid h-8 w-8 place-items-center text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] focus-ring";
+  "grid h-9 w-9 place-items-center rounded-full text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] focus-ring";
+
+/**
+ * Bevel dialog sub-panel: cloud-tint 16px nested surface with an ink heading —
+ * used inside the white job-form dialog instead of bordered cards.
+ */
+function FormPanel({
+  title,
+  icon,
+  chipTone = "slate",
+  children,
+}: {
+  title: string;
+  icon: LucideIcon;
+  chipTone?: ChipTone;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-lg bg-cloud/60 p-4 sm:p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <IconChip icon={icon} tone={chipTone} size={32} iconSize={15} />
+        <h3 className="text-sm font-semibold tracking-[-0.01em] text-ink">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
 
 function isOpenJob(j: JobWire): boolean {
   return j.isActive && !deadlineState(j.deadlineDate).overdue;
@@ -224,7 +250,7 @@ export function JobFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="shadow-e4 sm:max-w-2xl max-h-[92dvh] overflow-y-auto scroll-thin">
+      <DialogContent className="sm:max-w-2xl max-h-[92dvh] overflow-y-auto scroll-thin">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">{editing ? "Edit job posting" : "Create job posting"}</DialogTitle>
           <DialogDescription>
@@ -235,7 +261,7 @@ export function JobFormDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <SectionCard title="Position Details" icon={Briefcase} chipTone="slate" className="border border-border p-4">
+          <FormPanel title="Position Details" icon={Briefcase} chipTone="slate">
             <div className="space-y-4">
               <Field id="job-title" label="Title" required error={errors.title}>
                 <Input
@@ -285,7 +311,7 @@ export function JobFormDialog({
                 </datalist>
               </Field>
 
-              <div className="space-y-4 rounded-none bg-fog p-4">
+              <div className="space-y-4 rounded-lg bg-white/70 p-4">
                 <p className="text-xs font-medium text-stone">Qualification vitals (write-through to the position master)</p>
                 <Field id="job-education" label="Education (CSC standard)">
                   <Input
@@ -354,9 +380,9 @@ export function JobFormDialog({
                 </Field>
               </div>
             </div>
-          </SectionCard>
+          </FormPanel>
 
-          <SectionCard title="Compensation & Vacancy" icon={Banknote} chipTone="amber" className="border border-border p-4">
+          <FormPanel title="Compensation & Vacancy" icon={Banknote} chipTone="amber">
             <div className="space-y-4">
               <Field id="job-vacancy" label="Number of vacancies" required error={errors.vacancy}>
                 <Input
@@ -373,9 +399,9 @@ export function JobFormDialog({
                 <Textarea id="job-compensation" className="dlg-input min-h-[80px]" value={compensation} maxLength={4000} onChange={(e) => setCompensation(e.target.value)} />
               </Field>
             </div>
-          </SectionCard>
+          </FormPanel>
 
-          <SectionCard title="Posting Description" icon={FileText} chipTone="plum" className="border border-border p-4">
+          <FormPanel title="Posting Description" icon={FileText} chipTone="plum">
             <div className="space-y-4">
               <Field id="job-brief" label="Brief description">
                 <Textarea id="job-brief" className="dlg-input min-h-[80px]" value={brief} maxLength={5000} onChange={(e) => setBrief(e.target.value)} />
@@ -387,9 +413,9 @@ export function JobFormDialog({
                 <Textarea id="job-quals" className="dlg-input min-h-[80px]" value={otherQuals} maxLength={4000} onChange={(e) => setOtherQuals(e.target.value)} />
               </Field>
             </div>
-          </SectionCard>
+          </FormPanel>
 
-          <SectionCard title="Publishing" icon={CalendarClock} chipTone="gold" className="border border-border p-4">
+          <FormPanel title="Publishing" icon={CalendarClock} chipTone="gold">
             <div className="grid gap-4 sm:grid-cols-3">
               <Field id="job-publish" label="Publish date">
                 <Input id="job-publish" type="date" className="dlg-input" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} />
@@ -401,7 +427,7 @@ export function JobFormDialog({
                 <Input id="job-processing" type="date" className="dlg-input" value={processingDate} onChange={(e) => setProcessingDate(e.target.value)} />
               </Field>
             </div>
-          </SectionCard>
+          </FormPanel>
         </div>
 
         <DialogFooter>
@@ -526,25 +552,28 @@ export default function Recruitment() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Recruitment"
-        description={`${filtered.length} posting${filtered.length === 1 ? "" : "s"}`}
-        actions={
-          <>
-            <button type="button" className={ghostBtn} onClick={manualRefresh}>
-              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-              Refresh
-            </button>
-            <button type="button" className={ctaBtn} onClick={openCreate}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Create Job
-            </button>
-          </>
-        }
-      />
+      {/* Bevel page header — shared anatomy across all workspace views */}
+      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Recruitment</h1>
+          <p className="num mt-1 text-sm text-body-gray">
+            {filtered.length} posting{filtered.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className={ghostBtn} onClick={manualRefresh}>
+            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+            Refresh
+          </button>
+          <button type="button" className={ctaBtn} onClick={openCreate}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Create Job
+          </button>
+        </div>
+      </header>
 
-      {/* Filter bar — one card row: chip + search grows, selects fixed */}
-      <div className="dlg-card flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+      {/* Filter toolbar — white card row: search grows, capsule selects fixed */}
+      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <IconChip icon={Search} tone="slate" size={40} className="shrink-0 max-sm:hidden" />
           <Input
@@ -617,18 +646,18 @@ export default function Recruitment() {
           />
         </div>
       ) : (
-        <div className="dlg-card overflow-hidden">
-          <div className="flex items-center gap-3 border-b border-[#ececec] px-5 py-4">
+        <div className="dlg-card-plain table-card overflow-hidden">
+          <div className="flex items-center gap-3 border-b border-[var(--border)] px-5 py-4">
             <IconChip icon={Briefcase} tone="amber" size={36} iconSize={16} />
-            <h2 className="text-[15px] font-semibold leading-6 text-ink">Job postings</h2>
-            <span className="num ml-auto bg-fog px-2.5 py-1 text-xs font-medium text-stone">
+            <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Job postings</h2>
+            <span className="dlg-pill num ml-auto bg-fog px-2.5 py-1 text-xs font-medium text-stone">
               {filtered.length} total
             </span>
           </div>
           <div className="overflow-x-auto scroll-thin">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-[#ececec] text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+                <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
                   <th className="px-5 py-3.5">Position</th>
                   <th className="px-4 py-3.5">Vacancies</th>
                   <th className="px-4 py-3.5">Monthly salary</th>
@@ -647,7 +676,7 @@ export default function Recruitment() {
                   return (
                     <tr
                       key={j.id}
-                      className="group/row cursor-pointer border-b border-[#ececec] transition-colors last:border-0 hover:bg-fog/60"
+                      className="group/row cursor-pointer border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60"
                       onClick={() => navigate("job", { id: String(j.id) })}
                     >
                       <td className="px-5 py-3.5">
@@ -717,7 +746,7 @@ export default function Recruitment() {
       {/* Pagination */}
       {jobs !== null && filtered.length > 0 && (
         <div className="flex items-center justify-between gap-3">
-          <p className="num text-xs text-pebble">
+          <p className="num text-xs text-body-gray">
             {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
           </p>
           <div className="flex items-center gap-2">

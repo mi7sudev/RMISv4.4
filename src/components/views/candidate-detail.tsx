@@ -6,10 +6,9 @@
 // entity cards, document rows (files served at /api/files/{filePath}), and the
 // application history with deep links into the review workspace. Focus
 // refresh only — no poll (spec §13).
-// Enterprise polish pass: PageHeader with back affordance, KpiCard row, and
-// stacked SectionCards (Contact / Profile summary / Documents / Applications).
-// Wave-3 premium pass: dlg-card hero header with warm 48px monogram, role
-// pills, and mini IconChip stats; chipToned sections; chip document rows.
+// Bevel pass: shared page-header anatomy with back affordance, cloud stat
+// grid, and stacked white content Panels (Contact / Profile summary /
+// Documents / Applications) with cloud-tint nested entity cards.
 // Handlers byte-identical.
 // ============================================================================
 
@@ -18,7 +17,7 @@ import {
   AlertTriangle, ArrowUpRight, BriefcaseBusiness, ChevronLeft, ClipboardList,
   FileText, ExternalLink, FolderOpen, GraduationCap, Mail, UserRound, type LucideIcon,
 } from "lucide-react";
-import { EmptyState, IconChip, Monogram, PageHeader, SectionCard, SkeletonRows, type ChipTone } from "@/components/ui/shell";
+import { EmptyState, IconChip, Monogram, SkeletonRows, type ChipTone } from "@/components/ui/shell";
 import { apiFetch, formatDate, formatDateTime, fullName } from "@/lib/client";
 import { dotClass, pillClass, variantForCompletion, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
@@ -92,8 +91,8 @@ function d(v: unknown): string {
 
 function LedgerRow({ label, value, num = false }: { label: string; value: string; num?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#ececec] py-2.5 last:border-0">
-      <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
+    <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] py-2.5 last:border-0">
+      <span className="shrink-0 pt-0.5 text-xs text-body-gray">{label}</span>
       <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "—"}</span>
     </div>
   );
@@ -101,17 +100,17 @@ function LedgerRow({ label, value, num = false }: { label: string; value: string
 
 function EntityCard({ title, lines }: { title: string; lines: string[] }) {
   return (
-    <div className="rounded-none bg-fog p-4">
+    <div className="rounded-lg bg-cloud/60 p-4">
       <p className="text-sm text-ink">{title}</p>
-      {lines.filter(Boolean).length > 0 && <p className="num mt-1 text-xs text-stone">{lines.filter(Boolean).join(" · ")}</p>}
+      {lines.filter(Boolean).length > 0 && <p className="num mt-1 text-xs text-body-gray">{lines.filter(Boolean).join(" · ")}</p>}
     </div>
   );
 }
 
 function EntityGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-[#ececec] pt-4 first:border-0 first:pt-0">
-      <h3 className="text-[13px] font-medium uppercase tracking-[0.06em] text-stone">{label}</h3>
+    <div className="border-t border-[var(--border)] pt-4 first:border-0 first:pt-0">
+      <h3 className="text-[13px] font-medium uppercase tracking-[0.06em] text-body-gray">{label}</h3>
       <div className="mt-2.5 space-y-3">{children}</div>
     </div>
   );
@@ -145,16 +144,68 @@ function MonogramAvatar({ name, size = 36, warm = false }: { name: string; size?
   );
 }
 
-/** Compact tinted-chip stat for the candidate header card (wave-3). */
-function HeaderStat({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: ChipTone; label: string; value: number }) {
+/**
+ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+ * uppercase stone label, ink 3xl .num value, chip icon.
+ */
+function StatCard({
+  icon,
+  chipTone,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  chipTone: ChipTone;
+  label: string;
+  value: number;
+}) {
   return (
-    <div className="flex items-center gap-2.5">
-      <IconChip icon={Icon} tone={tone} size={36} iconSize={16} />
-      <div className="min-w-0">
-        <p className="num text-[20px] font-semibold leading-none tracking-[-0.01em] text-ink">{value}</p>
-        <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-stone">{label}</p>
+    <div className="dlg-card p-6">
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <IconChip icon={icon} tone={chipTone} size={40} />
       </div>
+      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
     </div>
+  );
+}
+
+/**
+ * Bevel content panel (shared workspace layout system): white 24px card,
+ * p-5 → sm:p-6, ink section heading with body-gray caption.
+ */
+function Panel({
+  title,
+  description,
+  icon,
+  chipTone = "slate",
+  className,
+  bodyClassName,
+  children,
+}: {
+  title?: string;
+  description?: string;
+  icon?: LucideIcon;
+  chipTone?: ChipTone;
+  className?: string;
+  bodyClassName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+      {title ? (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {icon ? <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} /> : null}
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
+              {description ? <p className="mt-0.5 text-xs text-body-gray">{description}</p> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <div className={bodyClassName}>{children}</div>
+    </section>
   );
 }
 
@@ -234,21 +285,23 @@ export default function CandidateDetail() {
   if (!detail) {
     return (
       <div className="space-y-6">
-        {/* Header card skeleton */}
-        <div className="dlg-card p-6">
-          <div className="skel h-9 w-9 rounded-full" />
-          <div className="mt-3 flex items-center gap-4">
-            <div className="skel h-12 w-12 rounded-none" />
+        {/* Header skeleton (shared anatomy) */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="skel h-12 w-12 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="skel h-7 w-1/3" />
               <div className="skel h-4 w-1/2" />
             </div>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-black/[0.06] pt-5 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="skel h-9" />
-            ))}
-          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="dlg-card p-6">
+              <div className="skel h-3 w-20" />
+              <div className="skel mt-4 h-8 w-16" />
+            </div>
+          ))}
         </div>
         <SkeletonRows rows={6} />
       </div>
@@ -261,62 +314,62 @@ export default function CandidateDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Header hero card: identity + role pills + mini chip stats (wave-3) */}
-      <div className="dlg-card p-6 shadow-e2">
-        <button
-          type="button"
-          aria-label="Back to candidates"
-          onClick={() => navigate("candidates")}
-          className="focus-ring -ml-2.5 mb-3 inline-flex h-11 w-11 items-center justify-center text-stone transition-colors hover:bg-fog hover:text-ink"
-        >
-          <ChevronLeft className="h-5 w-5" aria-hidden />
-        </button>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      {/* Bevel page header — shared anatomy across all workspace views, with
+          back affordance, identity monogram, and status pills */}
+      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex min-w-0 items-start gap-1.5">
+          <button
+            type="button"
+            aria-label="Back to candidates"
+            onClick={() => navigate("candidates")}
+            className="focus-ring -ml-2 mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+          </button>
           <div className="flex min-w-0 items-center gap-4">
             <MonogramAvatar name={name} size={48} warm />
-            <PageHeader
-              className="min-w-0 flex-1"
-              title={name}
-              description={
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  {latestPosition && <span>{latestPosition}</span>}
-                  {latestApp && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <span className="num">Applied {formatDate(latestApp.dateApplied)}</span>
-                    </>
-                  )}
-                  <span aria-hidden>·</span>
-                  <span className="num">#{detail.id}</span>
-                  {detail.user && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <span>{detail.user.username}</span>
-                    </>
-                  )}
-                </span>
-              }
-            />
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-            <StatusPill
-              status={detail.isProfileComplete ? "Complete profile" : "Incomplete profile"}
-              variant={variantForCompletion(detail.isProfileComplete)}
-            />
-            {latestApp && <StatusPill status={latestApp.status} />}
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{name}</h1>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-body-gray">
+                {latestPosition && <span>{latestPosition}</span>}
+                {latestApp && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="num">Applied {formatDate(latestApp.dateApplied)}</span>
+                  </>
+                )}
+                <span aria-hidden>·</span>
+                <span className="num">#{detail.id}</span>
+                {detail.user && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span>{detail.user.username}</span>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-black/[0.06] pt-5 sm:grid-cols-4">
-          <HeaderStat icon={ClipboardList} tone="plum" label="Applications" value={detail.applications.length} />
-          <HeaderStat icon={GraduationCap} tone="slate" label="Education" value={detail.educations.length} />
-          <HeaderStat icon={BriefcaseBusiness} tone="slate" label="Experience" value={detail.workExperiences.length} />
-          <HeaderStat icon={FileText} tone="slate" label="Documents" value={detail.documents.length} />
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <StatusPill
+            status={detail.isProfileComplete ? "Complete profile" : "Incomplete profile"}
+            variant={variantForCompletion(detail.isProfileComplete)}
+          />
+          {latestApp && <StatusPill status={latestApp.status} />}
         </div>
+      </header>
+
+      {/* Bevel cloud stat grid */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard icon={ClipboardList} chipTone="plum" label="Applications" value={detail.applications.length} />
+        <StatCard icon={GraduationCap} chipTone="slate" label="Education" value={detail.educations.length} />
+        <StatCard icon={BriefcaseBusiness} chipTone="slate" label="Experience" value={detail.workExperiences.length} />
+        <StatCard icon={FileText} chipTone="slate" label="Documents" value={detail.documents.length} />
       </div>
 
       {/* Contact */}
-      <SectionCard title="Contact" icon={Mail} chipTone="slate" description="Personal details on record.">
-        <div className="rounded-none bg-fog p-4">
+      <Panel title="Contact" icon={Mail} chipTone="slate" description="Personal details on record.">
+        <div className="rounded-lg bg-cloud/60 p-4">
           <LedgerRow label="Email" value={detail.emailAddress ?? ""} />
           <LedgerRow label="Mobile" value={detail.mobileNumber ?? ""} num />
           <LedgerRow label="Contact number" value={detail.contactNumber ?? ""} num />
@@ -343,10 +396,10 @@ export default function CandidateDetail() {
             </ul>
           </div>
         )}
-      </SectionCard>
+      </Panel>
 
       {/* Profile summary */}
-      <SectionCard
+      <Panel
         title="Profile summary"
         icon={UserRound}
         chipTone="plum"
@@ -429,7 +482,7 @@ export default function CandidateDetail() {
 
           <EntityGroup label="Awards">
             {detail.awards.length === 0 ? (
-              <p className="text-[13px] text-pebble">No awards or accomplishments on file.</p>
+              <p className="text-[13px] text-body-gray">No awards or accomplishments on file.</p>
             ) : (
               detail.awards.map((a, i) => (
                 <EntityCard
@@ -441,16 +494,16 @@ export default function CandidateDetail() {
             )}
           </EntityGroup>
         </div>
-      </SectionCard>
+      </Panel>
 
       {/* Documents */}
-      <SectionCard title="Documents" icon={FolderOpen} chipTone="slate" description="Files are served from the document store.">
+      <Panel title="Documents" icon={FolderOpen} chipTone="slate" description="Files are served from the document store.">
         {detail.documents.length === 0 ? (
-          <p className="py-4 text-center text-sm text-pebble">No documents uploaded.</p>
+          <p className="py-4 text-center text-sm text-body-gray">No documents uploaded.</p>
         ) : (
           <div className="space-y-3">
             {detail.documents.map((doc) => (
-              <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-none bg-fog p-4">
+              <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-cloud/60 p-4">
                 <IconChip icon={FileText} tone="slate" size={32} iconSize={14} />
                 <div className="min-w-0 flex-1">
                   <a
@@ -462,7 +515,7 @@ export default function CandidateDetail() {
                     {doc.originalName}
                     <ExternalLink className="inline h-3 w-3" aria-hidden />
                   </a>
-                  <p className="num mt-0.5 text-xs text-pebble">
+                  <p className="num mt-0.5 text-xs text-body-gray">
                     {doc.category} · {(doc.size / 1024).toFixed(0)} KB · {formatDateTime(doc.createdAt)}
                   </p>
                 </div>
@@ -471,26 +524,26 @@ export default function CandidateDetail() {
             ))}
           </div>
         )}
-      </SectionCard>
+      </Panel>
 
       {/* Applications timeline */}
-      <SectionCard title="Applications" icon={ClipboardList} chipTone="plum" description="Every application on file, most recent first.">
+      <Panel title="Applications" icon={ClipboardList} chipTone="plum" description="Every application on file, most recent first.">
         {detail.applications.length === 0 ? (
           <EmptyState icon={BriefcaseBusiness} tone="plum" title="No applications on file" />
         ) : (
-          <div className="relative before:absolute before:bottom-4 before:left-[3.5px] before:top-4 before:w-px before:bg-[#ececec] before:content-['']">
+          <div className="relative before:absolute before:bottom-4 before:left-[3.5px] before:top-4 before:w-px before:bg-[var(--border)] before:content-['']">
             {detail.applications.map((app) => (
               <button
                 key={app.id}
                 type="button"
-                className="group/row relative flex w-full items-center gap-3 rounded-none py-3 pr-2 text-left transition-colors hover:bg-fog/60 focus-ring"
+                className="group/row relative flex w-full items-center gap-3 rounded-lg py-3 pr-2 text-left transition-colors hover:bg-fog/60 focus-ring"
                 onClick={() => navigate("evaluator-review", { id: String(app.id) })}
                 aria-label={`Open review workspace for ${app.positionTitle || app.jobTitle}`}
               >
                 <span className={cn("stage-dot relative shrink-0", dotClass(variantForStatus(app.status)))} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">{app.positionTitle || app.jobTitle}</p>
-                  <p className="num mt-0.5 text-xs text-stone">Applied {formatDate(app.dateApplied)}</p>
+                  <p className="num mt-0.5 text-xs text-body-gray">Applied {formatDate(app.dateApplied)}</p>
                 </div>
                 <StatusPill status={app.status} />
                 <ArrowUpRight
@@ -501,7 +554,7 @@ export default function CandidateDetail() {
             ))}
           </div>
         )}
-      </SectionCard>
+      </Panel>
     </div>
   );
 }

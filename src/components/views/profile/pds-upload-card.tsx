@@ -9,7 +9,9 @@
 // document is EXTRACTED/PARTIALLY_EXTRACTED the dropzone is replaced by a
 // locked strip whose only way back is "Clear Forms & Re-upload" → confirm →
 // POST /api/applicant/profile/clear (files stay). Extraction errors show the
-// server message + file name + Try Again. Presentation-only changes.
+// server message + file name + Try Again. Bevel pass: cloud collapsible card
+// with a white dashed drop zone, Metric Blue progress/ring, capsule
+// destructive actions. Presentation-only changes.
 // ============================================================================
 
 import { useMemo, useRef, useState } from "react";
@@ -187,52 +189,52 @@ export default function PdsUploadCard({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="rounded-none border border-border bg-white"
+      className="dlg-card overflow-hidden"
     >
       {/* Compact resting row — the screenshot look: chip · title · drop hints */}
       <CollapsibleTrigger asChild>
         <button
           type="button"
           aria-expanded={open}
-          className="flex min-h-[44px] w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-fog/60"
+          className="flex min-h-[44px] w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-white/60"
         >
           <IconChip icon={CloudUpload} tone="plum" size={40} />
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-x-1.5">
-              <span className="font-display text-base text-ink">PDS Upload</span>
+              <span className="text-base font-semibold tracking-[-0.01em] text-ink">PDS Upload</span>
             </span>
-            <span className="mt-0.5 block truncate text-xs text-stone">
+            <span className="mt-0.5 block truncate text-xs text-body-gray">
               Drop PDS, resume, or certificates · PDF, DOC, XLS, images · 10MB max
             </span>
           </span>
           <ChevronDown
-            className={cn("h-4 w-4 shrink-0 text-pebble transition-transform duration-200", open && "rotate-180")}
+            className={cn("h-4 w-4 shrink-0 text-stone transition-transform duration-200", open && "rotate-180")}
             aria-hidden="true"
           />
         </button>
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="border-t border-border p-4">
-          {/* Phase progress — thin bar, ember gradient fill (sanctioned progress gradient) */}
+        <div className="border-t border-divider p-4">
+          {/* Phase progress — thin capsule bar with a Metric Blue fill */}
           {busy && (
             <div className="mb-4">
-              <div className="h-1.5 w-full overflow-hidden bg-fog">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/70">
                 <div
-                  className="h-full bg-gradient-to-r from-[#1591dc] to-[#0e7abf] motion-safe:transition-[width] duration-500"
+                  className="h-full rounded-full bg-metric-blue motion-safe:transition-[width] duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-2 flex items-center gap-2 text-xs text-stone">
+              <p className="mt-2 flex items-center gap-2 text-xs text-body-gray">
                 <Loader2 className="h-3 w-3 animate-spin" /> {PHASE_LABEL[phase]}
               </p>
             </div>
           )}
 
           {error && (
-            <div className="mb-4 rounded-none border border-[var(--bad)]/30 bg-white p-4">
+            <div className="mb-4 rounded-xl bg-[var(--bad-bg)] p-4">
               <p className="text-sm text-ink">{error.message}</p>
-              <p className="mt-0.5 text-xs text-stone">{error.fileName}</p>
+              <p className="mt-0.5 text-xs text-body-gray">{error.fileName}</p>
               <button
                 type="button"
                 onClick={pickFile}
@@ -245,12 +247,12 @@ export default function PdsUploadCard({
 
           {/* Extraction result — quiet rows with tabular counts */}
           {!busy && applyRows.length > 0 && (
-            <div className="mb-4 rounded-none bg-fog p-4">
-              <p className="text-xs font-medium text-graphite">Extraction applied to your profile</p>
-              <dl className="mt-2 divide-y divide-border">
+            <div className="mb-4 rounded-xl bg-white/70 p-4">
+              <p className="text-xs font-medium text-stone">Extraction applied to your profile</p>
+              <dl className="mt-2 divide-y divide-divider">
                 {applyRows.map(([label, count]) => (
                   <div key={label} className="flex items-baseline justify-between gap-4 py-1.5 first:pt-0 last:pb-0">
-                    <dt className="text-xs text-stone">{label}</dt>
+                    <dt className="text-xs text-body-gray">{label}</dt>
                     <dd className="num text-xs font-medium text-ink">{count}</dd>
                   </div>
                 ))}
@@ -260,12 +262,12 @@ export default function PdsUploadCard({
 
           {locked ? (
             /* One-extraction lock (§7.5) — the only way back is a full clear. */
-            <div className="flex flex-col gap-3 rounded-none bg-fog p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <IconChip icon={Lock} tone="ink" size={36} iconSize={16} className="mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-ink">Profile auto-filled from your PDS</p>
-                  <p className="mt-0.5 text-xs text-stone">
+                  <p className="mt-0.5 text-xs text-body-gray">
                     Extraction already ran on your documents. Clear your forms to start over.
                   </p>
                 </div>
@@ -274,7 +276,7 @@ export default function PdsUploadCard({
                 type="button"
                 onClick={() => setClearOpen(true)}
                 disabled={clearing}
-                className="min-h-[44px] w-fit shrink-0 border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-white/70 disabled:opacity-50"
+                className="inline-flex min-h-[44px] w-fit shrink-0 items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
               >
                 {clearing ? "Clearing…" : "Clear Forms & Re-upload"}
               </button>
@@ -297,14 +299,14 @@ export default function PdsUploadCard({
                   if (f && !busy) void runPipeline(f);
                 }}
                 className={cn(
-                  "focus-ring flex min-h-[132px] w-full flex-col items-center justify-center gap-2.5 rounded-none border border-dashed border-[#dcdcdc] bg-white p-6 text-center transition-all duration-200 hover:bg-fog disabled:opacity-60",
+                  "focus-ring flex min-h-[132px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-divider bg-white p-6 text-center transition-all duration-200 hover:bg-fog disabled:opacity-60",
                   dragOver &&
-                    "border-ink bg-fog ring-2 ring-[#1591dc]/30 bg-[radial-gradient(460px_200px_at_50%_10%,rgba(21,145,220,0.09),transparent_70%)]"
+                    "border-metric-blue bg-fog ring-2 ring-metric-blue/30 bg-[radial-gradient(460px_200px_at_50%_10%,rgba(65,94,238,0.09),transparent_70%)]"
                 )}
               >
                 <IconChip icon={CloudUpload} tone="plum" size={44} />
                 <span className="text-sm font-medium text-ink">Upload PDS — CS Form 212</span>
-                <span className="text-xs text-pebble">XLSX, PDF, DOCX or image · up to 10 MB</span>
+                <span className="text-xs text-body-gray">XLSX, PDF, DOCX or image · up to 10 MB</span>
               </button>
               <input
                 ref={inputRef}
@@ -326,7 +328,7 @@ export default function PdsUploadCard({
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-xl text-ink">Clear all forms and re-upload?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm leading-relaxed text-stone">
+            <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This erases ALL of your profile information — personal details, education, work experience, training,
               eligibility, and awards — and marks your profile incomplete again. Your uploaded files stay for HR review.
             </AlertDialogDescription>
@@ -339,7 +341,7 @@ export default function PdsUploadCard({
                 void clearProfile();
               }}
               disabled={clearing}
-              className="min-h-[44px] border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-white/70 disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
             >
               {clearing ? "Clearing…" : "Clear Everything"}
             </AlertDialogAction>

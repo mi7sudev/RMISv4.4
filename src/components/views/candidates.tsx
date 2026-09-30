@@ -5,7 +5,7 @@
 // list from /api/admin/applicants with KPI tiles, debounced search, profile
 // status / has-account filters, list rows with quick-view modal, and a kanban
 // mode over the evaluator queue. 20 s silent poll + focus refresh.
-// Enterprise polish pass: PageHeader, KpiCard row, single-card filter toolbar,
+// Enterprise polish pass: Bevel stat cards, single-card filter toolbar,
 // table-card rows with hover quick-view, EmptyState, skeleton loading.
 // Reference-board pass: kanban rebuilt on the shared ui/kanban primitives —
 // dot+label+count columns, pastel avatars, match badge, position / applied
@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle, ArrowUpRight, Building2, Clock, KeyRound, LayoutGrid, List, Mail, MapPin,
-  Phone, RefreshCw, Search, UserCheck, UsersRound,
+  Phone, RefreshCw, Search, UserCheck, UsersRound, type LucideIcon,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
-  EmptyState, IconChip, KpiCard, PageHeader, SkeletonKpis, SkeletonRows,
+  EmptyState, IconChip, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, STAGE_DOT_CLASS,
@@ -84,12 +84,41 @@ type QueueRow = {
 const PAGE_SIZE = 25;
 
 const iconBtn =
-  "focus-ring inline-flex h-9 w-9 items-center justify-center text-stone transition-colors hover:bg-fog hover:text-ink";
+  "focus-ring inline-flex h-9 w-9 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink";
 
 function s(v: unknown): string {
   if (v === null || v === undefined) return "";
   const t = String(v).trim();
   return t;
+}
+
+/**
+ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+ * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
+ */
+function StatCard({
+  label,
+  value,
+  icon,
+  chipTone,
+  hint,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: LucideIcon;
+  chipTone: ChipTone;
+  hint: string;
+}) {
+  return (
+    <div className="dlg-card p-6">
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <IconChip icon={icon} tone={chipTone} size={40} />
+      </div>
+      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p className="mt-2 text-xs text-body-gray">{hint}</p>
+    </div>
+  );
 }
 
 // ── Quick-view modal ────────────────────────────────────────────────────────
@@ -123,7 +152,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
 
   return (
     <Dialog open={id !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="shadow-e4 sm:max-w-lg max-h-[92dvh] overflow-y-auto scroll-thin">
+      <DialogContent className="sm:max-w-lg max-h-[92dvh] overflow-y-auto scroll-thin">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Candidate</DialogTitle>
           <DialogDescription>Quick identity and pipeline snapshot.</DialogDescription>
@@ -134,7 +163,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
         ) : !detail ? (
           <div className="space-y-3">
             <Skeleton className="h-10 w-2/3" />
-            <Skeleton className="h-20 w-full rounded-none" />
+            <Skeleton className="h-20 w-full rounded-lg" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -156,7 +185,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
               {detail.emailAddress && (
                 <a
                   href={`mailto:${detail.emailAddress}`}
-                  className="focus-ring inline-flex min-h-[36px] items-center gap-1.5 bg-fog px-3 text-xs text-ink transition-colors hover:bg-[#ececec]"
+                  className="dlg-pill focus-ring inline-flex min-h-[36px] items-center gap-1.5 bg-fog px-3 text-xs text-ink transition-colors hover:bg-cloud"
                 >
                   <Mail className="h-3.5 w-3.5" aria-hidden />
                   {detail.emailAddress}
@@ -165,7 +194,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
               {detail.mobileNumber && (
                 <a
                   href={`tel:${detail.mobileNumber}`}
-                  className="focus-ring inline-flex min-h-[36px] items-center gap-1.5 bg-fog px-3 text-xs text-ink transition-colors hover:bg-[#ececec]"
+                  className="dlg-pill focus-ring inline-flex min-h-[36px] items-center gap-1.5 bg-fog px-3 text-xs text-ink transition-colors hover:bg-cloud"
                 >
                   <Phone className="h-3.5 w-3.5" aria-hidden />
                   {detail.mobileNumber}
@@ -174,7 +203,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
             </div>
 
             {/* Mini pipeline dots: Submitted → Review → Shortlisted */}
-            <div className="rounded-none bg-fog p-4">
+            <div className="rounded-lg bg-cloud/60 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {(["Applied", "Under Review", "Shortlisted"] as StageKey[]).map((stage, i) => (
                   <div key={stage} className="flex flex-1 items-center gap-2">
@@ -338,53 +367,66 @@ export default function Candidates() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Candidates"
-        description="Registry of every candidate on file — profiles, logins, and pipeline activity."
-        actions={
-          <>
-            <div className="flex items-center gap-1 bg-fog p-1" role="group" aria-label="View mode">
-              <button
-                type="button"
-                className={`inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-ink text-white" : "text-stone hover:text-ink"}`}
-                onClick={() => setMode("list")}
-                aria-pressed={mode === "list"}
-              >
-                <List className="h-3.5 w-3.5" aria-hidden />
-                List
-              </button>
-              <button
-                type="button"
-                className={`inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-ink text-white" : "text-stone hover:text-ink"}`}
-                onClick={() => setMode("kanban")}
-                aria-pressed={mode === "kanban"}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-                Kanban
-              </button>
-            </div>
-            <button type="button" className={ghostBtn} onClick={manualRefresh}>
-              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-              Refresh
+      {/* Bevel page header — shared anatomy across all workspace views */}
+      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Candidates</h1>
+          <p className="mt-1 text-sm text-body-gray">
+            Registry of every candidate on file — profiles, logins, and pipeline activity.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
+            <button
+              type="button"
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+              onClick={() => setMode("list")}
+              aria-pressed={mode === "list"}
+            >
+              <List className="h-3.5 w-3.5" aria-hidden />
+              List
             </button>
-          </>
-        }
-      />
+            <button
+              type="button"
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+              onClick={() => setMode("kanban")}
+              aria-pressed={mode === "kanban"}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+              Kanban
+            </button>
+          </div>
+          <button type="button" className={ghostBtn} onClick={manualRefresh}>
+            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+            Refresh
+          </button>
+        </div>
+      </header>
 
-      {/* KPI tiles */}
+      {/* KPI tiles — Bevel cloud stat cards */}
       {!error && (rows === null ? (
-        <SkeletonKpis count={4} />
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="dlg-card p-6">
+              <div className="flex items-start justify-between">
+                <div className="skel h-3 w-20" />
+                <div className="skel h-10 w-10" />
+              </div>
+              <div className="skel mt-4 h-8 w-16" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          <KpiCard label="Total on file" value={total} icon={UsersRound} tone="info" hint="all registered candidates" />
-          <KpiCard label="Showing" value={`${start}–${end}`} icon={List} tone="neutral" hint={`of ${total}`} />
-          <KpiCard label="Complete profiles" value={completeOnPage} icon={UserCheck} tone="ok" hint="on this page" />
-          <KpiCard label="Has login" value={accountsOnPage} icon={KeyRound} tone="neutral" hint="on this page" />
+          <StatCard label="Total on file" value={total} icon={UsersRound} chipTone="plum" hint="all registered candidates" />
+          <StatCard label="Showing" value={`${start}–${end}`} icon={List} chipTone="slate" hint={`of ${total}`} />
+          <StatCard label="Complete profiles" value={completeOnPage} icon={UserCheck} chipTone="emerald" hint="on this page" />
+          <StatCard label="Has login" value={accountsOnPage} icon={KeyRound} chipTone="slate" hint="on this page" />
         </div>
       ))}
 
-      {/* Filter bar — one card row */}
-      <div className="dlg-card flex flex-wrap items-center gap-3 px-4 py-3">
+      {/* Filter toolbar — white card row */}
+      <div className="dlg-card-plain flex flex-wrap items-center gap-3 p-3 sm:p-4">
         <div className="relative min-w-0 flex-1 basis-56">
           <IconChip
             icon={Search}
@@ -450,11 +492,11 @@ export default function Candidates() {
           />
         </div>
       ) : rows === null ? (
-        <SkeletonRows rows={6} rowClassName="h-16" />
+        <SkeletonRows rows={6} rowClassName="h-16 rounded-lg" />
       ) : mode === "list" ? (
         <div className="space-y-3">
           {list.length === 0 ? (
-            <div className="dlg-card py-6">
+            <div className="dlg-card p-6 sm:p-10">
               <EmptyState
                 icon={UsersRound}
                 title="No candidates match"
@@ -462,11 +504,11 @@ export default function Candidates() {
               />
             </div>
           ) : (
-            <div className="dlg-card overflow-hidden">
+            <div className="dlg-card-plain table-card overflow-hidden">
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border text-left">
+                    <tr className="border-b border-[var(--border)] text-left">
                       <th scope="col" className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Candidate</th>
                       <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Profile</th>
                       <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Applications</th>
@@ -477,7 +519,7 @@ export default function Candidates() {
                     {list.map((r) => {
                       const name = fullName(r);
                       return (
-                        <tr key={r.id} className="group/row border-b border-border transition-colors last:border-0 hover:bg-fog/60">
+                        <tr key={r.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
                               <KanbanAvatar name={name} size={28} />
@@ -526,7 +568,7 @@ export default function Candidates() {
           {/* Pagination */}
           {total > PAGE_SIZE && (
             <div className="flex items-center justify-between gap-3 pt-1">
-              <p className="num text-xs text-pebble">
+              <p className="num text-xs text-body-gray">
                 {start}–{end} of {total}
               </p>
               <div className="flex items-center gap-2">
