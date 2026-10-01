@@ -1,10 +1,12 @@
 // ============================================================================
 // RMIS — POST /api/auth/register (public, spec §3.4)
-// Rate limit 5/IP/hour → 429. Body { email, firstName, lastName, password }.
-// Duplicate email → 409. ONE $transaction: user (bcrypt cost 10, role
-// APPLICANT, auto-username = email local part with numeric-suffix dedupe) +
-// applicant row (firstName/lastName/emailAddress copied, isProfileComplete
-// false). 201 → { id, email, role, applicantId }.
+// Rate limit 5/IP/hour → 429. Turnstile chokepoint: the public applicant door
+// must present a fresh captcha token (403 otherwise). Body { email, firstName,
+// lastName, password, captchaToken? }. Duplicate email → 409. ONE
+// $transaction: user (bcrypt cost 10, role APPLICANT, auto-username = email
+// local part with numeric-suffix dedupe) + applicant row (firstName/lastName/
+// emailAddress copied, isProfileComplete false). 201 → { id, email, role,
+// applicantId }.
 // ============================================================================
 
 import bcrypt from "bcryptjs";
@@ -12,6 +14,7 @@ import { db } from "@/lib/db";
 import { handleApi, ok, ApiError, getClientIp } from "@/lib/api";
 import { registerSchema } from "@/lib/validation";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { enforceCaptcha } from "@/lib/turnstile";
 
 export const POST = handleApi(async (req: Request) => {
   const ip = getClientIp(req);
@@ -25,6 +28,7 @@ export const POST = handleApi(async (req: Request) => {
 
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = registerSchema.parse(body);
+  await enforceCaptcha(req, parsed.captchaToken);
   const email = parsed.email.toLowerCase();
 
   const existing = await db.user.findUnique({ where: { email }, select: { id: true } });

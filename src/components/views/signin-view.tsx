@@ -3,6 +3,10 @@
 // ============================================================================
 // RMIS — Sign-in view (spec §3.3, §7.3): identifier (email or username) +
 // password, demo account chips, welcome toast → session refresh → role home.
+// Gate-aware Turnstile: the widget only mounts when GET /api/auth/captcha
+// says this request arrived on the public applicant door — it renders
+// invisibly (interaction-only) and auto-clears humans; the token rides along
+// in the login payload. On the employee door the form is captcha-free.
 // Bevel pass: lg+ split screen with a LIGHT brand panel (Hero Sky gradient,
 // ink display heading, white trust tiles) on the left and an editorial form
 // directly on the white canvas on the right. Rendered inside PublicShell
@@ -10,12 +14,14 @@
 // them. All handlers, API calls, and copy are preserved exactly.
 // ============================================================================
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Activity, Check, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Turnstile } from "@/components/turnstile";
+import type { TurnstileHandle } from "@/components/turnstile";
 import { BrandLogo } from "@/components/brand-logo";
 import { IconChip } from "@/components/ui/shell";
 import type { ChipTone } from "@/components/ui/shell";
@@ -76,11 +82,33 @@ function AuthBrandPanel() {
   );
 }
 
+type CaptchaConfig = { enabled: boolean; siteKey: string | null };
+
 export default function SignInView() {
   const { refresh } = useSession();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [captcha, setCaptcha] = useState<CaptchaConfig>({ enabled: false, siteKey: null });
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle | null>(null);
+
+  // Gate-aware captcha: ask the server which door we are on. If the config
+  // fetch fails the widget simply stays off — the login endpoint re-checks
+  // the gate server-side and will 403 with a clear message if one is needed.
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<CaptchaConfig>("/api/auth/captcha")
+      .then((cfg) => {
+        if (!cancelled) setCaptcha(cfg);
+      })
+      .catch(() => {
+        /* widget stays off; server-side chokepoint still applies */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -96,13 +124,16 @@ export default function SignInView() {
     try {
       await apiFetch("/api/auth/login", {
         method: "POST",
-        body: { identifier: identifier.trim(), password },
+        body: { identifier: identifier.trim(), password, captchaToken },
       });
       toast.success("Welcome to RMIS");
       const user = await refresh();
       navigate(user ? ROLE_HOME[user.role] : "jobs");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed. Please try again.");
+      // Tokens are single-use — mint a fresh one for the next attempt.
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setBusy(false);
     }
@@ -154,6 +185,18 @@ export default function SignInView() {
                   className="dlg-input min-h-[44px]"
                 />
               </div>
+
+              {/* Gate-aware Turnstile — invisible (interaction-only) while it
+                  auto-solves; occupies zero layout space on the staff door,
+                  where it never mounts at all. */}
+              {captcha.enabled && captcha.siteKey && (
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={captcha.siteKey}
+                  onToken={setCaptchaToken}
+                  appearance="interaction-only"
+                />
+              )}
 
               <button
                 type="submit"

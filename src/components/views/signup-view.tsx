@@ -4,6 +4,12 @@
 // RMIS — Registration view (spec §3.4, §7.2): first/last name, email,
 // password (≥6, show/hide) + confirmation, mandatory RA 10173 consent.
 // Success → auto-login → session refresh → profile builder.
+// Gate-aware Turnstile: on the public applicant door the widget mounts
+// invisibly (interaction-only) and its token rides along with the register
+// call. Tokens are single-use, so after a successful registration the widget
+// is reset and we briefly wait for a fresh token before the auto-login — if
+// one doesn't arrive in time we fall back to the sign-in page (existing
+// path). On the employee door the form is captcha-free.
 // Bevel pass: same split-screen as sign-in — LIGHT brand panel (Hero Sky
 // gradient, ink display heading, white trust tiles) on lg+, editorial form
 // directly on the white canvas. Rendered inside PublicShell (sticky header
@@ -11,13 +17,15 @@
 // field, validation, and behavior is preserved exactly.
 // ============================================================================
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Activity, Eye, EyeOff, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Turnstile } from "@/components/turnstile";
+import type { TurnstileHandle } from "@/components/turnstile";
 import { BrandLogo } from "@/components/brand-logo";
 import { IconChip } from "@/components/ui/shell";
 import type { ChipTone } from "@/components/ui/shell";
@@ -78,6 +86,25 @@ function AuthBrandPanel() {
 /** Compact dark brand strip — removed: PublicShell's sticky header already
     carries the brand lockup on small screens (dedup pass). */
 
+type CaptchaConfig = { enabled: boolean; siteKey: string | null };
+
+/** Wait up to `timeoutMs` for the widget to mint a fresh single-use token. */
+function waitForToken(get: () => string | null, timeoutMs: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const token = get();
+      if (token) {
+        clearInterval(timer);
+        resolve(token);
+      } else if (Date.now() - started > timeoutMs) {
+        clearInterval(timer);
+        resolve(null);
+      }
+    }, 150);
+  });
+}
+
 export default function SignUpView() {
   const { refresh } = useSession();
   const [firstName, setFirstName] = useState("");
@@ -88,6 +115,32 @@ export default function SignUpView() {
   const [showPassword, setShowPassword] = useState(false);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [captcha, setCaptcha] = useState<CaptchaConfig>({ enabled: false, siteKey: null });
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle | null>(null);
+  const captchaTokenRef = useRef<string | null>(null);
+
+  const handleToken = (token: string | null) => {
+    captchaTokenRef.current = token;
+    setCaptchaToken(token);
+  };
+
+  // Gate-aware captcha: ask the server which door we are on. If the config
+  // fetch fails the widget simply stays off — the register/login endpoints
+  // re-check the gate server-side and will 403 with a clear message.
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<CaptchaConfig>("/api/auth/captcha")
+      .then((cfg) => {
+        if (!cancelled) setCaptcha(cfg);
+      })
+      .catch(() => {
+        /* widget stays off; server-side chokepoint still applies */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validate = (): string | null => {
     if (!firstName.trim()) return "Enter your first name";
@@ -116,17 +169,31 @@ export default function SignUpView() {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           password,
+          captchaToken,
         },
       });
-      // Auto-login immediately after registration (spec §3.4).
+      // Auto-login immediately after registration (spec §3.4). The register
+      // call consumed the single-use captcha token, so on the public door we
+      // reset the widget and wait for a fresh one first.
       try {
+        let loginToken: string | null = captchaToken;
+        if (captcha.enabled) {
+          handleToken(null);
+          turnstileRef.current?.reset();
+          loginToken = await waitForToken(() => captchaTokenRef.current, 6000);
+        }
         await apiFetch("/api/auth/login", {
           method: "POST",
-          body: { identifier: email.trim(), password },
+          body: { identifier: email.trim(), password, captchaToken: loginToken },
         });
         toast.success("Welcome to RMIS");
-        await refresh();
+        // Route to the profile builder BEFORE the session refresh commits:
+        // the Router bounces signed-in users off auth views, and the auto-
+        // login above already set the session cookie while we are still on
+        // #/signup — refreshing first would let that redirect win the race
+        // and re-route to the applicant home instead of the builder.
         navigate("profile");
+        await refresh();
       } catch {
         toast.success("Account created", {
           description: "Sign in with your new account to continue.",
@@ -135,6 +202,9 @@ export default function SignUpView() {
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed. Please try again.");
+      // Tokens are single-use — mint a fresh one for the next attempt.
+      handleToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setBusy(false);
     }
@@ -261,6 +331,18 @@ export default function SignUpView() {
                   Act of 2012 (RA 10173)
                 </span>
               </label>
+
+              {/* Gate-aware Turnstile — invisible (interaction-only) while it
+                  auto-solves; occupies zero layout space on the staff door,
+                  where it never mounts at all. */}
+              {captcha.enabled && captcha.siteKey && (
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={captcha.siteKey}
+                  onToken={handleToken}
+                  appearance="interaction-only"
+                />
+              )}
 
               <button
                 type="submit"

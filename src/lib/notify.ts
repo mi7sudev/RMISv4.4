@@ -1,6 +1,7 @@
 // ============================================================================
-// RMIS — Notification subsystem (spec §9). Providers are mock in this
-// deployment; every attempt is persisted to email_logs / sms_logs.
+// RMIS — Notification subsystem (spec §9). Providers: "gateway" (the
+// mirdc_middleware email service, production default), "resend", or "mock"
+// (sandbox default); every attempt is persisted to email_logs / sms_logs.
 // HARD CONTRACT: sendEmail / sendSms NEVER throw — callers fire post-success.
 // Templates per spec §9.3; PH mobile normalization per §9.4.
 // ============================================================================
@@ -53,6 +54,36 @@ export async function sendEmail(input: EmailInput): Promise<SendResult> {
         }
       } catch (e) {
         result = { status: "failed", error: e instanceof Error ? e.message : "provider error", provider: "resend" };
+      }
+    } else if (EMAIL_PROVIDER === "gateway" && process.env.EMAIL_GATEWAY_URL) {
+      // mirdc_middleware email gateway (Task 28 contract): POST /api/rmis/send
+      // with X-RMIS-Key / Bearer authentication. The middleware owns SMTP
+      // credentials and relays delivery logs to the Strapi audit store.
+      try {
+        const base = process.env.EMAIL_GATEWAY_URL.replace(/\/+$/, "");
+        const res = await fetch(`${base}/api/rmis/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-RMIS-Key": process.env.EMAIL_GATEWAY_KEY || "",
+            Authorization: `Bearer ${process.env.EMAIL_GATEWAY_KEY || ""}`,
+          },
+          body: JSON.stringify({
+            to: input.to,
+            subject: input.subject,
+            text: input.bodyText,
+            html: input.bodyHtml ?? input.bodyText,
+          }),
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          result = { status: "failed", error: `Gateway ${res.status}: ${text.slice(0, 200)}`, provider: "gateway" };
+        } else {
+          const json = (await res.json().catch(() => ({}))) as { id?: string; messageId?: string };
+          result = { status: "sent", provider: "gateway", providerRef: json.messageId ?? json.id ?? undefined };
+        }
+      } catch (e) {
+        result = { status: "failed", error: e instanceof Error ? e.message : "gateway error", provider: "gateway" };
       }
     } else {
       result = { status: "mock", provider: EMAIL_PROVIDER };

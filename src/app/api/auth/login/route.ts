@@ -1,11 +1,13 @@
 // ============================================================================
 // RMIS — POST /api/auth/login (public, spec §3.3)
-// Body { identifier, password }. Rate limit keyed IP+identifier (5 fails /
-// rolling 15 min → progressive lockout ladder). Find user by email
-// (case-insensitive) OR username → bcrypt verify. 401 "Invalid credentials" +
-// audit LOGIN_FAILED. Blocked → 403 "Account is blocked". Staff from a
-// non-intranet network → 403 (intranet message) + audit LOGIN_BLOCKED_EXTERNAL.
-// Success → audit LOGIN_SUCCESS, set session cookie.
+// Body { identifier, password, captchaToken? }. Rate limit keyed IP+identifier
+// (5 fails / rolling 15 min → progressive lockout ladder). Turnstile choke-
+// point: on the public applicant door the request must carry a fresh captcha
+// token (403 otherwise — distinct from 401 invalid credentials). Find user by
+// email (case-insensitive) OR username → bcrypt verify. 401 "Invalid
+// credentials" + audit LOGIN_FAILED. Blocked → 403 "Account is blocked".
+// Staff from a non-intranet network → 403 (intranet message) + audit
+// LOGIN_BLOCKED_EXTERNAL. Success → audit LOGIN_SUCCESS, set session cookie.
 // ============================================================================
 
 import bcrypt from "bcryptjs";
@@ -20,10 +22,11 @@ import {
 import { auditLog } from "@/lib/audit";
 import { signSession, setSessionCookie } from "@/lib/jwt";
 import { isIntranetRequest, STAFF_INTRANET_MESSAGE, type Role } from "@/lib/auth";
+import { enforceCaptcha } from "@/lib/turnstile";
 
 export const POST = handleApi(async (req: Request) => {
   const body = (await req.json().catch(() => null)) as unknown;
-  const { identifier, password } = loginSchema.parse(body);
+  const { identifier, password, captchaToken } = loginSchema.parse(body);
   const ip = getClientIp(req);
 
   // 1. Lockout gate (progressive ladder, remembered until a success clears it)
@@ -34,6 +37,9 @@ export const POST = handleApi(async (req: Request) => {
       429
     );
   }
+
+  // 1.5 Turnstile chokepoint — public applicant door only (staff gate exempt)
+  await enforceCaptcha(req, captchaToken);
 
   // 2. Find user by email (case-insensitive) OR username
   const id = identifier.trim();

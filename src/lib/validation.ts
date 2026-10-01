@@ -23,6 +23,8 @@ const optStr = (max: number) => z.string().trim().max(max).optional().nullable()
 export const loginSchema = z.object({
   identifier: z.string().trim().min(1, "Email or username is required"),
   password: z.string().min(1, "Password is required"),
+  // Turnstile token (public applicant door only; ignored on the staff gate).
+  captchaToken: z.string().max(4096).optional().nullable(),
 });
 
 export const registerSchema = z.object({
@@ -30,6 +32,7 @@ export const registerSchema = z.object({
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
   password: z.string().min(6, "Password must be at least 6 characters").max(128),
+  captchaToken: z.string().max(4096).optional().nullable(),
 });
 
 // ── Profile sections (spec §12.3) ───────────────────────────────────────────
