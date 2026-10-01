@@ -91,7 +91,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("data-card min-w-0 p-5 sm:p-6", className)}>
       {title || actions ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -217,7 +217,7 @@ export default function JobWorkspace() {
 
   if (!valid) {
     return (
-      <div className="dlg-card p-8 text-center space-y-3">
+      <div className="data-card p-8 text-center space-y-3">
         <p className="text-sm text-body-gray">No job selected.</p>
         <button type="button" className={ctaBtn} onClick={() => navigate("recruitment")}>
           Go to recruitment
@@ -228,7 +228,7 @@ export default function JobWorkspace() {
 
   if (error) {
     return (
-      <div className="dlg-card p-8 text-center space-y-4">
+      <div className="data-card p-8 text-center space-y-4">
         <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
         <p className="text-sm text-body-gray">{error}</p>
         <button type="button" className={ghostBtn} onClick={() => void load()}>
@@ -264,7 +264,7 @@ export default function JobWorkspace() {
         back={{ label: "Back to Jobs", onClick: () => navigate("recruitment") }}
         title={job.title}
         titleAside={<JobStatusPill job={job} overdue={dl.overdue} />}
-        description={vitals || "—"}
+        description={vitals || "-"}
         actions={
           <>
             <button type="button" className={cn(iconBtn, "h-9 w-9")} onClick={manualRefresh} aria-label="Refresh" title="Refresh">
@@ -311,9 +311,9 @@ export default function JobWorkspace() {
                 <dl>
                   {(
                     [
-                      ["Vacancies", <span key="v" className="num text-sm font-medium text-ink">{job.numberOfVacancy ?? "—"}</span>],
-                      ["Monthly salary", <span key="s" className="num text-sm font-medium text-ink">{salary ?? "—"}</span>],
-                      ["SG · step", <span key="g" className="text-sm font-medium text-ink">{sgStep || "—"}</span>],
+                      ["Vacancies", <span key="v" className="num text-sm font-medium text-ink">{job.numberOfVacancy ?? "-"}</span>],
+                      ["Monthly salary", <span key="s" className="num text-sm font-medium text-ink">{salary ?? "-"}</span>],
+                      ["SG · step", <span key="g" className="text-sm font-medium text-ink">{sgStep || "-"}</span>],
                       ["Applications", <span key="a" className="num text-sm font-medium text-ink">{apps.length}</span>],
                       ["Published", <span key="p" className="num text-sm font-medium text-ink">{formatDate(job.publishDate)}</span>],
                       [
@@ -410,11 +410,11 @@ export default function JobWorkspace() {
         {/* Candidates */}
         <TabsContent value="candidates" className="mt-4">
           {apps.length === 0 ? (
-            <div className="dlg-card p-6 sm:p-10">
+            <div className="data-card p-6 sm:p-10">
               <p className="py-6 text-center text-sm text-body-gray">No applications for this posting yet.</p>
             </div>
           ) : (
-            <div className="dlg-card-plain overflow-hidden">
+            <div className="data-card overflow-hidden">
               {apps.map((app) => (
                 <button
                   key={app.id}
@@ -450,7 +450,7 @@ export default function JobWorkspace() {
             <AlertDialogDescription>
               This will permanently delete “{job.title}”
               {apps.length > 0
-                ? ` and its ${apps.length} linked application${apps.length === 1 ? "" : "s"} — including their PDS snapshots.`
+                ? ` and its ${apps.length} linked application${apps.length === 1 ? "" : "s"} (including their PDS snapshots).`
                 : "."}{" "}
               This cannot be undone.
             </AlertDialogDescription>

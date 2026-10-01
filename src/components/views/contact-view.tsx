@@ -9,19 +9,19 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { LifeBuoy, Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PageHeader } from "@/components/ui/shell";
+import { IconChip, PageHeader } from "@/components/ui/shell";
 import { apiFetch } from "@/lib/client";
 
 type Status = "idle" | "busy" | "sent";
 
 const CHANNELS = [
-  { icon: MapPin, label: "Visit us", value: "Metals Industry Research and Development Center, Gen. Santos Ave., Bicutan, Taguig City" },
-  { icon: Phone, label: "Call us", value: "(632) 8837-2431 loc. 413" },
-  { icon: Mail, label: "Email us", value: "hr@mirdc.gov.ph" },
+  { icon: MapPin, tone: "slate" as const, label: "Visit us", value: "Metals Industry Research and Development Center, Gen. Santos Ave., Bicutan, Taguig City" },
+  { icon: Phone, tone: "emerald" as const, label: "Call us", value: "(632) 8837-2431 loc. 413" },
+  { icon: Mail, tone: "amber" as const, label: "Email us", value: "hr@mirdc.gov.ph" },
 ];
 
 export default function ContactView() {
@@ -63,16 +63,14 @@ export default function ContactView() {
       />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* Form */}
-        <div className="dlg-card-plain p-5 sm:p-6">
+        {/* Form — white data-card with the shared auth form spec */}
+        <div className="data-card p-5 sm:p-6">
           {status === "sent" ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-cloud text-metric-blue">
-                <LifeBuoy className="h-6 w-6" aria-hidden="true" />
-              </span>
-              <h2 className="font-display text-xl text-ink">Inquiry received</h2>
+              <span className="stage-dot dot-ok" aria-hidden="true" />
+              <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">Inquiry received</h2>
               <p className="max-w-sm text-sm leading-relaxed text-body-gray">
-                Thank you — your request is now in the HR queue. Keep an eye on your inbox for the
+                Thank you, your request is now in the HR queue. Keep an eye on your inbox for the
                 response.
               </p>
               <button
@@ -93,20 +91,20 @@ export default function ContactView() {
             <form onSubmit={submit} className="space-y-4" noValidate>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="contact-name" className="mb-1.5 block text-sm font-medium text-ink">
+                  <label htmlFor="contact-name" className="mb-1.5 block text-[13px] font-medium text-ink">
                     Full name <span aria-hidden="true" className="text-[var(--bad)]">*</span>
                   </label>
                   <Input
                     id="contact-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Juan Dela Cruz"
+                    placeholder="Your full name"
                     className="dlg-input min-h-[44px]"
                     maxLength={120}
                   />
                 </div>
                 <div>
-                  <label htmlFor="contact-email" className="mb-1.5 block text-sm font-medium text-ink">
+                  <label htmlFor="contact-email" className="mb-1.5 block text-[13px] font-medium text-ink">
                     Email address <span aria-hidden="true" className="text-[var(--bad)]">*</span>
                   </label>
                   <Input
@@ -121,7 +119,7 @@ export default function ContactView() {
                 </div>
               </div>
               <div>
-                <label htmlFor="contact-subject" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="contact-subject" className="mb-1.5 block text-[13px] font-medium text-ink">
                   Subject <span aria-hidden="true" className="text-[var(--bad)]">*</span>
                 </label>
                 <Input
@@ -134,7 +132,7 @@ export default function ContactView() {
                 />
               </div>
               <div>
-                <label htmlFor="contact-message" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="contact-message" className="mb-1.5 block text-[13px] font-medium text-ink">
                   Message <span aria-hidden="true" className="text-[var(--bad)]">*</span>
                 </label>
                 <Textarea
@@ -158,13 +156,11 @@ export default function ContactView() {
           )}
         </div>
 
-        {/* Channels */}
+        {/* Channels — compact data-card rows with tinted icon chips */}
         <aside className="space-y-3">
           {CHANNELS.map((c) => (
-            <div key={c.label} className="dlg-card flex items-start gap-3.5 p-4">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cloud text-metric-blue">
-                <c.icon className="h-5 w-5" aria-hidden="true" />
-              </span>
+            <div key={c.label} className="data-card flex items-start gap-3.5 p-4">
+              <IconChip icon={c.icon} tone={c.tone} size={40} iconSize={18} />
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-stone">{c.label}</p>
                 <p className="mt-1 text-sm leading-relaxed text-body-gray">{c.value}</p>

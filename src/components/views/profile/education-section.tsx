@@ -160,10 +160,10 @@ export default function EducationSection({
                 <div className="min-w-0">
                   <p className="font-medium text-ink">
                     {row.educationLevel ? humanize(row.educationLevel) : "Education entry"}
-                    {row.course ? ` — ${row.course}` : ""}
+                    {row.course ? `, ${row.course}` : ""}
                   </p>
                   <p className="num mt-1 text-sm text-body-gray">
-                    {row.schoolName ?? "—"}
+                    {row.schoolName ?? "-"}
                     {row.yearFrom || row.yearTo ? ` · ${row.yearFrom ?? "?"}–${row.yearTo ?? "Ongoing"}` : ""}
                     {row.yearGraduated ? ` · Graduated ${row.yearGraduated}` : ""}
                   </p>

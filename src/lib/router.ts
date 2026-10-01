@@ -48,7 +48,7 @@ export type JobWire = {
   title: string;
   positionType: string | null;
   // Plantilla postings are 1:1 with a Plantilla Item Number, so the vacancy
-  // count is optional (null → render "—"); COS postings carry a real count.
+  // count is optional (null → render "-"); COS postings carry a real count.
   numberOfVacancy: number | null;
   briefDescription: string | null;
   briefDescriptionHtml: string | null;

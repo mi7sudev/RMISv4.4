@@ -13,7 +13,7 @@
    Coral Signal) are rationed to data visuals and small indicators — never
    page backgrounds or filled public controls. Business logic untouched.
    PALETTE (PROPOSED-RMIS-DESIGN.md): Paper White #ffffff, Cloud Card #ebf0f8,
-   Ink #222326, Charcoal #1f2025, Body Gray #747679, Metric Blue #415eee,
+   Ink #222326, Charcoal #1f2025, Body Gray #666a72, Metric Blue #415eee,
    Recovery Green #31ce01, Signal Gold #ffca00, Sleep Lilac #b9a6ff,
    Coral Signal #ffab94. Legacy token names are kept for their call sites —
    the values are Bevel now (e.g. --tangerine-tag → Metric Blue).
@@ -28,41 +28,54 @@
   --graphite: #4a4d57;
   --deep-slate: #2a2b31;
   --carbon: #1f2025; /* Charcoal */
-  --stone: #6d7076;
-  --pebble: #9aa0ab;
+  --stone: #5d6067; /* 6.3:1 on white, 5.5:1 on Cloud Card (WCAG AA) */
+  --pebble: #666a72; /* 5.4:1 on white, 4.8:1 on Cloud Card (WCAG AA) */
   --ash: #8d939e;
   --fog: #f5f8fc; /* mist */
   --snow: #ffffff;
   --dusty-rose: #d97a63; /* Coral-leaning */
   --divider: #d5dce8;
 
+<<<<<<< Updated upstream
+  /* Executive Ink rail (dark enterprise sidebar) */
+  --rail-bg-top: #181a22;
+  --rail-bg-bottom: #101218;
+  --rail-border: rgba(255, 255, 255, 0.07);
+  --rail-text: #a4aab9;
+  --rail-text-dim: #707789;
+  --rail-text-strong: #f2f4f9;
+  --rail-active-bg: rgba(255, 255, 255, 0.09);
+  --rail-hover-bg: rgba(255, 255, 255, 0.05);
+  --rail-accent: #6b83ff;
+=======
   /* Light rail (Bevel white sidebar) */
   --rail-bg-top: #ffffff;
   --rail-bg-bottom: #fbfcfe;
   --rail-border: #e8edf5;
-  --rail-text: #6d7076;
-  --rail-text-dim: #9aa0ab;
+  --rail-text: #5d6067;
+  --rail-text-dim: #666a72;
   --rail-active-bg: #ebf0f8;
   --rail-hover-bg: #f2f5fa;
+>>>>>>> Stashed changes
 
   /* Functional status system (softened Bevel tints) */
   --ok: #1f7a3d;
   --ok-bg: #e8f5ea;
-  --warn: #9a6b00;
+  --warn: #8a5f00; /* 5.1:1 on warn-bg (WCAG AA) */
   --warn-bg: #fbf3dd;
-  --bad: #c05446;
+  --bad: #a8432f; /* 5.3:1 on bad-bg (WCAG AA) */
   --bad-bg: #fdeeea;
   --info: #4a4d57;
   --info-bg: #eef1f6;
-  --neutral: #6d7076;
+  --neutral: #5d6067;
   --neutral-bg: #f1f3f7;
 
   /* Data-viz series — the Bevel metric accents */
   --viz-1: #415eee; /* Metric Blue */
-  --viz-2: #31ce01; /* Recovery Green */
-  --viz-3: #ffca00; /* Signal Gold */
-  --viz-4: #b9a6ff; /* Sleep Lilac */
-  --viz-5: #ffab94; /* Coral Signal */
+  --viz-2: #1fa45c; /* Recovery Green (tuned for charts) */
+  --viz-3: #efb008; /* Signal Gold (tuned for charts) */
+  --viz-4: #8b7cf6; /* Sleep Lilac (tuned for charts) */
+  --viz-5: #ff8f70; /* Coral Signal (tuned for charts) */
 
   /* shadcn token bridge */
   --background: #ffffff;
@@ -76,7 +89,7 @@
   --secondary: #f5f8fc;
   --secondary-foreground: #222326;
   --muted: #f5f8fc;
-  --muted-foreground: #6d7076;
+  --muted-foreground: #5d6067;
   --accent: #ebf0f8; /* Cloud Card */
   --accent-foreground: #222326;
   --destructive: #c05446;
@@ -85,18 +98,18 @@
   --input: #d7dfec;
   --ring: #415eee; /* Metric Blue focus */
   --chart-1: #415eee;
-  --chart-2: #31ce01;
-  --chart-3: #ffca00;
-  --chart-4: #b9a6ff;
-  --chart-5: #ffab94;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #222326;
-  --sidebar-primary: #1f2025;
-  --sidebar-primary-foreground: #ebf0f8;
-  --sidebar-accent: #ebf0f8;
-  --sidebar-accent-foreground: #222326;
-  --sidebar-border: #e8edf5;
-  --sidebar-ring: #415eee;
+  --chart-2: #1fa45c;
+  --chart-3: #efb008;
+  --chart-4: #8b7cf6;
+  --chart-5: #ff8f70;
+  --sidebar: #181a22;
+  --sidebar-foreground: #a4aab9;
+  --sidebar-primary: #6b83ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.09);
+  --sidebar-accent-foreground: #f2f4f9;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #6b83ff;
   --radius: 1rem;
 }
 
@@ -141,8 +154,8 @@
   --color-graphite: #4a4d57;
   --color-slate-dark: #2a2b31;
   --color-carbon: #1f2025;
-  --color-stone: #6d7076;
-  --color-pebble: #9aa0ab;
+  --color-stone: #5d6067;
+  --color-pebble: #666a72;
   --color-ash: #8d939e;
   --color-fog: #f5f8fc;
   --color-snow: #ffffff;
@@ -153,7 +166,7 @@
   --color-paper: #ffffff;
   --color-cloud: #ebf0f8;
   --color-charcoal: #1f2025;
-  --color-body-gray: #747679;
+  --color-body-gray: #666a72; /* 5.4:1 white, 4.8:1 cloud (WCAG AA) */
   --color-metric-blue: #415eee;
   --color-recovery-green: #31ce01;
   --color-signal-gold: #ffca00;
@@ -178,6 +191,10 @@
   --color-viz-3: var(--viz-3);
   --color-viz-4: var(--viz-4);
   --color-viz-5: var(--viz-5);
+
+  /* Executive Ink rail (Tailwind utilities) */
+  --color-rail-strong: var(--rail-text-strong);
+  --color-rail-accent: var(--rail-accent);
 
   /* Radii — Bevel cloud geometry: soft cards, capsule controls. */
   --radius-xs: 8px;
@@ -315,11 +332,95 @@
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
 }
 
-/* Light rail — Bevel white navigation surface */
+/* Executive Ink rail — dark enterprise navigation surface */
 .rail {
   background: linear-gradient(180deg, var(--rail-bg-top) 0%, var(--rail-bg-bottom) 100%);
   border-right: 1px solid var(--rail-border);
 }
+
+/* ── Enterprise data surfaces (white + hairline — Stripe/Linear precision) ── */
+
+.data-card {
+  background: #ffffff;
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(31, 32, 37, 0.04);
+}
+.data-card-hover {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.data-card-hover:hover {
+  transform: translateY(-1px);
+  border-color: #d5dcea;
+  box-shadow: 0 10px 28px -14px rgba(31, 32, 37, 0.16);
+}
+
+/* Framed table container — chrome for enterprise data grids */
+.table-frame {
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(31, 32, 37, 0.04);
+}
+
+/* Table header cell — 11px uppercase micro-label */
+.thead-cell {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8d939e;
+  white-space: nowrap;
+}
+
+/* Recharts tooltip surface */
+.chart-tip {
+  background: #ffffff;
+  border: 1px solid #e7ebf3;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px -12px rgba(31, 32, 37, 0.2);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.chart-tip .tip-label {
+  font-weight: 600;
+  color: #222326;
+  margin-bottom: 2px;
+}
+.chart-tip .tip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6d7076;
+}
+.chart-tip .tip-row .num {
+  font-weight: 600;
+  color: #222326;
+  margin-left: auto;
+}
+
+/* ── Executive hero band — dark ink + Metric Blue aurora (public face) ───── */
+.hero-band {
+  background:
+    radial-gradient(1100px 420px at 88% -12%, rgba(65, 94, 238, 0.32), transparent 62%),
+    radial-gradient(820px 360px at 4% 118%, rgba(65, 94, 238, 0.2), transparent 58%),
+    radial-gradient(520px 260px at 55% 130%, rgba(139, 124, 246, 0.12), transparent 60%),
+    linear-gradient(180deg, #1a1c25 0%, #12141c 100%);
+}
+/* Hairline grid texture for the hero (very subtle, enterprise blueprint feel) */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(75% 90% at 60% 20%, black 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(75% 90% at 60% 20%, black 30%, transparent 100%);
+}
+/* Dark-surface text helpers */
+.on-ink { color: #f2f4f9; }
+.on-ink-dim { color: rgba(242, 244, 249, 0.64); }
+.on-ink-faint { color: rgba(242, 244, 249, 0.42); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
@@ -367,7 +468,7 @@
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 .dlg-input::placeholder {
-  color: #9aa0ab;
+  color: #666a72;
 }
 .dlg-input:focus {
   border-color: #415eee;
@@ -381,7 +482,7 @@
   outline: none;
 }
 .dlg-underline-input::placeholder {
-  color: #9aa0ab;
+  color: #666a72;
 }
 
 /* ── Tinted icon chips (flat pale tints — Bevel metric accents) ───────────── */
@@ -435,6 +536,11 @@
 .monogram-warm {
   background: linear-gradient(145deg, #5e6cf0 0%, #415eee 100%);
   color: #ffffff;
+}
+.monogram-rail {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%);
+  color: #f2f4f9;
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 /* ── Enterprise polish additions ─────────────────────────────────────────── */
@@ -545,14 +651,14 @@
 .scroll-thin::-webkit-scrollbar-track {
   background: transparent;
 }
-/* Light rail scrollbar */
+/* Dark rail scrollbar */
 .rail .scroll-thin,
 .rail.scroll-thin {
-  scrollbar-color: #d3dcea transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
 .rail .scroll-thin::-webkit-scrollbar-thumb,
 .rail.scroll-thin::-webkit-scrollbar-thumb {
-  background: #d3dcea;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 /* ============================================================================
@@ -616,7 +722,7 @@
 }
 [data-sonner-toast] [data-description] {
   font-size: 12px;
-  color: #6d7076;
+  color: #5d6067;
 }
 
 /* Rich-text content rendering (job descriptions etc.) */
@@ -648,4 +754,16 @@
 /* Hairline table polish */
 .table-card thead th {
   border-bottom: 1px solid var(--border);
+}
+
+/* Enterprise data-grid row affordances */
+.table-frame tbody tr {
+  transition: background-color 120ms ease;
+}
+.table-frame tbody tr:hover {
+  background: #f7f9fc;
+}
+.table-frame tbody tr + tr td,
+.table-frame tbody tr + tr th {
+  border-top: 1px solid #eef1f7;
 }

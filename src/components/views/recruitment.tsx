@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, Banknote, Briefcase, CalendarClock, Clock, Eye, FileText,
+  AlertTriangle, Banknote, Briefcase, CalendarClock, Eye, FileText,
   Pencil, Plus, RefreshCw, Search, type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  EmptyState, IconChip, PageHeader, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate } from "@/lib/client";
 import type { JobWire } from "@/lib/router";
 import { navigate } from "@/lib/router";
-import { BrandLogo } from "@/components/brand-logo";
 import { textToHtml } from "@/lib/sanitize";
 import { variantForJobStatus } from "@/lib/status-ui";
 import {
@@ -77,6 +76,18 @@ function FormPanel({
       </div>
       {children}
     </section>
+  );
+}
+
+/** First letters of the first two title words — 36px row monogram. */
+function jobInitials(title: string | null | undefined): string {
+  return (
+    (title ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "J"
   );
 }
 
@@ -323,7 +334,7 @@ export function JobFormDialog({
                       {d.name}
                     </option>
                   ))}
-                  <option value="Others">Others — type your own</option>
+                  <option value="Others">Others (type your own)</option>
                 </datalist>
               </Field>
 
@@ -596,12 +607,16 @@ export default function Recruitment() {
         }
       />
 
-      {/* Filter toolbar — white card row: search grows, capsule selects fixed */}
-      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <IconChip icon={Search} tone="slate" size={40} className="shrink-0 max-sm:hidden" />
+      {/* Filter well — search grows with the leading icon inside the input
+          shell; compact selects right-aligned. bg-fog = subtle inset. */}
+      <div className="flex flex-col gap-3 rounded-2xl bg-fog p-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search
+            className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-pebble"
+            aria-hidden
+          />
           <Input
-            className="dlg-input min-h-[44px] flex-1 pl-4"
+            className="dlg-input min-h-[40px] pl-10"
             placeholder="Search title, item no., or place…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -615,7 +630,7 @@ export default function Recruitment() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-44" aria-label="Status filter">
+          <SelectTrigger className="dlg-input min-h-[40px] w-full sm:w-36" aria-label="Status filter">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -631,7 +646,7 @@ export default function Recruitment() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-44" aria-label="Sort">
+          <SelectTrigger className="dlg-input min-h-[40px] w-full sm:w-44" aria-label="Sort">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -643,7 +658,7 @@ export default function Recruitment() {
       </div>
 
       {error ? (
-        <div className="dlg-card p-8 text-center space-y-4">
+        <div className="data-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
           <p className="text-sm text-stone">{error}</p>
           <button type="button" className={ghostBtn} onClick={() => void load()}>
@@ -651,11 +666,11 @@ export default function Recruitment() {
           </button>
         </div>
       ) : jobs === null ? (
-        <div className="dlg-card p-6">
+        <div className="data-card p-6">
           <SkeletonRows rows={6} rowClassName="h-14" />
         </div>
       ) : pageRows.length === 0 ? (
-        <div className="dlg-card p-6">
+        <div className="data-card p-6">
           <EmptyState
             icon={Briefcase}
             tone="amber"
@@ -670,25 +685,26 @@ export default function Recruitment() {
           />
         </div>
       ) : (
-        <div className="dlg-card-plain table-card overflow-hidden">
+        <section className="table-frame overflow-hidden">
+          {/* Header strip — IconChip + count pill on the white frame */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-5 py-4">
-            <IconChip icon={Briefcase} tone="amber" size={36} iconSize={16} />
-            <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Job postings</h2>
+            <IconChip icon={Briefcase} tone="amber" size={34} iconSize={15} />
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-ink">Job postings</h2>
             <span className="dlg-pill num ml-auto bg-fog px-2.5 py-1 text-xs font-medium text-stone">
               {filtered.length} total
             </span>
           </div>
           <div className="overflow-x-auto scroll-thin">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
-                  <th className="px-5 py-3.5">Position</th>
-                  <th className="px-4 py-3.5">Vacancies</th>
-                  <th className="px-4 py-3.5">Monthly salary</th>
-                  <th className="px-4 py-3.5">Applications</th>
-                  <th className="px-4 py-3.5">Deadline</th>
-                  <th className="px-4 py-3.5">Status</th>
-                  <th className="px-5 py-3.5 text-right">
+                <tr className="border-b border-[var(--border)]">
+                  <th scope="col" className="thead-cell px-4 py-3 pl-5 text-left font-semibold">Position</th>
+                  <th scope="col" className="thead-cell px-4 py-3 text-right font-semibold">Vacancies</th>
+                  <th scope="col" className="thead-cell px-4 py-3 text-right font-semibold">Monthly salary</th>
+                  <th scope="col" className="thead-cell px-4 py-3 text-right font-semibold">Applications</th>
+                  <th scope="col" className="thead-cell px-4 py-3 text-right font-semibold">Deadline</th>
+                  <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Status</th>
+                  <th scope="col" className="thead-cell px-4 py-3 pr-5 text-right font-semibold">
                     <span className="sr-only">Quick actions</span>
                   </th>
                 </tr>
@@ -700,37 +716,48 @@ export default function Recruitment() {
                   return (
                     <tr
                       key={j.id}
-                      className="group/row cursor-pointer border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60"
+                      className="group/row cursor-pointer"
                       onClick={() => navigate("job", { id: String(j.id) })}
                     >
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3 pl-5">
                         <div className="flex items-center gap-3">
-                          <span aria-hidden="true" className="contents">
-                            <BrandLogo logoSize={20} />
-                          </span>
+                          <Monogram size={36}>{jobInitials(j.title)}</Monogram>
                           <div className="min-w-0">
+<<<<<<< Updated upstream
+                            <p className="truncate text-[13.5px] font-medium text-ink">{j.title}</p>
+                            <p className="mt-0.5 truncate text-xs text-stone">
+                              {[j.position?.itemNumber, j.position?.placeOfAssignment, j.position?.division].filter(Boolean).join(" · ") || "—"}
+=======
                             <p className="truncate text-sm font-medium text-ink">{j.title}</p>
                             <p className="mt-0.5 text-xs text-stone">
-                              {[j.position?.itemNumber, j.position?.placeOfAssignment, j.position?.division].filter(Boolean).join(" · ") || "—"}
+                              {[j.position?.itemNumber, j.position?.placeOfAssignment, j.position?.division].filter(Boolean).join(" · ") || "-"}
+>>>>>>> Stashed changes
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="num px-4 py-3.5 font-medium text-stone">{j.numberOfVacancy ?? "—"}</td>
-                      <td className="num px-4 py-3.5 font-medium text-stone">
+<<<<<<< Updated upstream
+                      <td className="num px-4 py-3 text-right font-medium text-stone">{j.numberOfVacancy ?? "—"}</td>
+                      <td className="num px-4 py-3 text-right font-medium text-stone">
                         {j.position?.salaryAmount != null ? formatCurrency(j.position.salaryAmount) : "—"}
+=======
+                      <td className="num px-4 py-3.5 font-medium text-stone">{j.numberOfVacancy ?? "-"}</td>
+                      <td className="num px-4 py-3.5 font-medium text-stone">
+                        {j.position?.salaryAmount != null ? formatCurrency(j.position.salaryAmount) : "-"}
+>>>>>>> Stashed changes
                       </td>
-                      <td className="num px-4 py-3.5 text-stone">{j.applicationCount}</td>
-                      <td className={`num px-4 py-3.5 ${urgent ? "text-[var(--bad)]" : "text-stone"}`}>
-                        <span className="inline-flex items-center gap-1.5">
-                          {urgent ? <Clock className="h-3 w-3" aria-hidden /> : null}
-                          {formatDate(j.deadlineDate)}
-                        </span>
+                      <td className="num px-4 py-3 text-right text-stone">{j.applicationCount}</td>
+                      <td className="px-4 py-3 text-right">
+                        {urgent ? (
+                          <span className="status-pill status-bad">{dl.label}</span>
+                        ) : (
+                          <span className="num text-xs text-stone">{formatDate(j.deadlineDate)}</span>
+                        )}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3">
                         <JobStatusPill job={j} />
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3 pr-5 text-right">
                         <div className="flex justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
                           <button
                             type="button"
@@ -764,7 +791,7 @@ export default function Recruitment() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Pagination */}

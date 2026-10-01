@@ -141,7 +141,7 @@ export default function EligibilitySection({
         type: "text",
         required: true,
         full: true,
-        placeholder: "e.g. Career Service (Second Level) — PD 907 grantee",
+        placeholder: "e.g. Career Service (Second Level), PD 907 grantee",
         showIf: (v) => kindOfValue(v) === "custom",
       },
       {
@@ -239,7 +239,7 @@ export default function EligibilitySection({
       icon={BadgeCheck}
       chipTone="gold"
       title="Eligibility"
-      description="Civil-service eligibility — matched verbatim against job requirements."
+      description="Civil-service eligibility: matched verbatim against job requirements."
       actions={
         <div className="flex items-center gap-3">
           <SaveHint saving={busy} saved={savedFlash} />

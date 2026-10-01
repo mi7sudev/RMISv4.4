@@ -376,7 +376,7 @@ export default function PersonalInfoSection({
         }
       } catch (e) {
         setSaveState("error");
-        if (manual) toast.error(e instanceof Error ? e.message : "Save failed — please try again");
+        if (manual) toast.error(e instanceof Error ? e.message : "Save failed. Please try again");
       }
     },
     [refreshSession]
@@ -427,7 +427,7 @@ export default function PersonalInfoSection({
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--ok)]" aria-hidden="true" /> Saved ✓
       </span>
     ) : saveState === "error" ? (
-      <span className="text-xs leading-none text-[var(--bad)]">Save failed — click Save Changes</span>
+      <span className="text-xs leading-none text-[var(--bad)]">Save failed. Click Save Changes</span>
     ) : saveState === "dirty" ? (
       <span className="text-xs leading-none text-stone">Unsaved changes</span>
     ) : null;

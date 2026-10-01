@@ -85,15 +85,15 @@ export const POST = handleApi(async (req: Request) => {
         `Hi ${firstName},\n\n` +
         `We received a request to reset the password for your RMIS account.\n` +
         `Open the link below within 30 minutes to choose a new password:\n\n${link}\n\n` +
-        `If you did not request this, you can safely ignore this email — your password stays unchanged.\n\n` +
-        `— MIRDC Human Resources`,
+        `If you did not request this, you can safely ignore this email; your password stays unchanged.\n\n` +
+        `MIRDC Human Resources`,
       bodyHtml:
         `<p style="color:#484758;font-size:14px;line-height:1.6;">Hi ${firstName},</p>` +
         `<p style="color:#484758;font-size:14px;line-height:1.6;">We received a request to reset the password for your RMIS account. Open the link below within <strong>30 minutes</strong> to choose a new password:</p>` +
         `<p style="margin:20px 0;"><a href="${link}" style="background:#1f2025;color:#ebf0f8;padding:12px 24px;border-radius:999px;text-decoration:none;font-size:14px;">Choose a new password</a></p>` +
         `<p style="color:#8a8a99;font-size:12px;line-height:1.6;">If the button does not work, copy this link into your browser:<br>${link}</p>` +
-        `<p style="color:#484758;font-size:14px;line-height:1.6;">If you did not request this, you can safely ignore this email — your password stays unchanged.</p>` +
-        `<p style="color:#8a8a99;font-size:12px;">— MIRDC Human Resources</p>`,
+        `<p style="color:#484758;font-size:14px;line-height:1.6;">If you did not request this, you can safely ignore this email; your password stays unchanged.</p>` +
+        `<p style="color:#8a8a99;font-size:12px;">MIRDC Human Resources</p>`,
       relatedType: "PASSWORD_RESET",
     });
 

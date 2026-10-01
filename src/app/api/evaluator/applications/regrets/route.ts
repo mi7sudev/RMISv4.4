@@ -19,7 +19,9 @@ const bodySchema = z.object({
   applicationIds: z.array(z.number().int()).min(1, "At least one application id is required").max(200, "A maximum of 200 applications per batch"),
 });
 
-const REGRET_PREFIX = "Application regret —";
+const REGRET_PREFIX = "Application regret:";
+/** Pre-R-02 subjects used an em dash; keep matching them for idempotency/history. */
+const REGRET_LEGACY_PREFIX = "Application regret —";
 
 export const POST = handleApi(async (req: Request) => {
   const user = await requireEvaluatorFromReq(req);
@@ -65,7 +67,7 @@ export const POST = handleApi(async (req: Request) => {
       where: {
         relatedType: "application",
         relatedId: applicationId,
-        subject: { startsWith: REGRET_PREFIX },
+        OR: [{ subject: { startsWith: REGRET_PREFIX } }, { subject: { startsWith: REGRET_LEGACY_PREFIX } }],
         status: { in: ["sent", "mock"] },
       },
       select: { id: true },
@@ -136,7 +138,7 @@ export const POST = handleApi(async (req: Request) => {
     action: "REGRET_LETTERS_BULK_SENT",
     entityType: "application",
     entityId: null,
-    description: `Bulk regret letters — batch of ${summary.total}: ${summary.sent} sent, ${summary.alreadySent} already sent, ${summary.shortlisted} shortlisted (skipped), ${summary.failed} failed, ${summary.notFound} not found`,
+    description: `Bulk regret letters, batch of ${summary.total}: ${summary.sent} sent, ${summary.alreadySent} already sent, ${summary.shortlisted} shortlisted (skipped), ${summary.failed} failed, ${summary.notFound} not found`,
     ipAddress: getClientIp(req),
   });
 

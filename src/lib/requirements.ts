@@ -172,7 +172,7 @@ export function buildRequirementsReport(
     const standard = position.cscEducation!;
     const bareNumber = /^\d+$/.test(standard.trim());
     if (bareNumber) {
-      checks.push({ dimension: "education", standard, status: "REVIEW", applicantSummary: "Ambiguous standard — verify manually", evidence: [] });
+      checks.push({ dimension: "education", standard, status: "REVIEW", applicantSummary: "Ambiguous standard, verify manually", evidence: [] });
     } else {
       const clauses = parseEducationClauses(standard);
       const matched = snapshot.educations.some((row) => {
@@ -188,8 +188,8 @@ export function buildRequirementsReport(
         dimension: "education",
         standard,
         status: matched ? "MET" : "NOT_MET",
-        applicantSummary: snapshot.educations.map((e) => [e.degree, e.course].filter(Boolean).join(" — ") || e.educationLevel || "Education entry").slice(0, 3).join("; ") || "None on file",
-        evidence: snapshot.educations.slice(0, 3).map((e) => `${[e.educationLevel, e.degree || e.course].filter(Boolean).join(" · ")}${e.schoolName ? ` — ${e.schoolName}` : ""}`),
+        applicantSummary: snapshot.educations.map((e) => [e.degree, e.course].filter(Boolean).join(", ") || e.educationLevel || "Education entry").slice(0, 3).join("; ") || "None on file",
+        evidence: snapshot.educations.slice(0, 3).map((e) => `${[e.educationLevel, e.degree || e.course].filter(Boolean).join(" · ")}${e.schoolName ? `, ${e.schoolName}` : ""}`),
         shortfall: matched ? undefined : "Minimum required education level not met",
       });
     }
@@ -203,7 +203,7 @@ export function buildRequirementsReport(
     const required = extractQuantity(standard, "year");
     const total = snapshot.experiences.reduce((s, w) => s + (w.yearDecimal ?? 0), 0);
     if (required === null) {
-      checks.push({ dimension: "experience", standard, status: "REVIEW", applicantSummary: `${total.toFixed(1)} years on file — verify manually`, evidence: [] });
+      checks.push({ dimension: "experience", standard, status: "REVIEW", applicantSummary: `${total.toFixed(1)} years on file, verify manually`, evidence: [] });
     } else if (required === 0) {
       checks.push({ dimension: "experience", standard, status: "NOT_REQUIRED", applicantSummary: "No minimum stated", evidence: [] });
     } else {
@@ -212,7 +212,7 @@ export function buildRequirementsReport(
         standard,
         status: total >= required ? "MET" : "NOT_MET",
         applicantSummary: `${total.toFixed(1)} of ${required} year(s) on file`,
-        evidence: snapshot.experiences.slice(0, 3).map((w) => `${w.positionTitle || "Work"} — ${w.employerName || "Employer"} (${(w.yearDecimal ?? 0).toFixed(1)} yr)`),
+        evidence: snapshot.experiences.slice(0, 3).map((w) => `${w.positionTitle || "Work"} at ${w.employerName || "Employer"} (${(w.yearDecimal ?? 0).toFixed(1)} yr)`),
         shortfall: total >= required ? undefined : `${Math.max(0, required - total).toFixed(1)} more years of relevant experience needed`,
       });
     }
@@ -226,7 +226,7 @@ export function buildRequirementsReport(
     const required = extractQuantity(standard, "hour");
     const total = snapshot.trainings.reduce((s, t) => s + (t.hourDecimal ?? t.numberHours ?? 0), 0);
     if (required === null) {
-      checks.push({ dimension: "training", standard, status: "REVIEW", applicantSummary: `${total} hours on file — verify manually`, evidence: [] });
+      checks.push({ dimension: "training", standard, status: "REVIEW", applicantSummary: `${total} hours on file, verify manually`, evidence: [] });
     } else if (required === 0) {
       checks.push({ dimension: "training", standard, status: "NOT_REQUIRED", applicantSummary: "No minimum stated", evidence: [] });
     } else {
@@ -257,7 +257,7 @@ export function buildRequirementsReport(
         standard,
         status,
         applicantSummary: snapshot.eligibilities.map((e) => e.title).filter(Boolean).slice(0, 3).join("; ") || "None on file",
-        evidence: snapshot.eligibilities.slice(0, 3).map((e) => `${e.title}${e.rating ? ` — rating ${e.rating}` : ""}`),
+        evidence: snapshot.eligibilities.slice(0, 3).map((e) => `${e.title}${e.rating ? ` (rating ${e.rating})` : ""}`),
         shortfall: status === "NOT_MET" ? "Required civil-service eligibility not held" : undefined,
       });
     }

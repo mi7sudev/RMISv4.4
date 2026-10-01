@@ -59,30 +59,30 @@ export async function apiFetch<T = unknown>(
 // ── Formatters (en-PH) ──────────────────────────────────────────────────────
 
 export function formatDate(d: string | Date | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
-  if (Number.isNaN(date.getTime())) return typeof d === "string" ? d : "—";
+  if (Number.isNaN(date.getTime())) return typeof d === "string" ? d : "-";
   return date.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function formatDateTime(d: string | Date | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
-  if (Number.isNaN(date.getTime())) return typeof d === "string" ? d : "—";
+  if (Number.isNaN(date.getTime())) return typeof d === "string" ? d : "-";
   return date.toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function formatCurrency(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
 }
 
 export function fullName(p: { firstName?: string | null; middleName?: string | null; lastName?: string | null; extensionName?: string | null } | null | undefined): string {
-  if (!p) return "—";
+  if (!p) return "-";
   const parts = [p.firstName, p.middleName, p.lastName].filter(Boolean);
   let name = parts.join(" ");
   if (p.extensionName) name = `${name}, ${p.extensionName}`;
-  return name || "—";
+  return name || "-";
 }
 
 export function humanize(s: string | null | undefined): string {

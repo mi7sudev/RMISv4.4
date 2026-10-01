@@ -26,8 +26,8 @@ type ExtractOutcome = {
 
 const BLANK_TEMPLATE_MESSAGE =
   "No recognizable data was found. If this is a blank CS Form 212 template, fill it in and re-upload. " +
-  "Supported formats: Excel PDS (.xlsx or legacy .xls — Excel 2019 and older), PDF, and DOCX. " +
-  "Files downloaded from Google Drive or SharePoint sometimes lose their data — use 'Download as .xlsx' and re-upload."
+  "Supported formats: Excel PDS (.xlsx or legacy .xls, Excel 2019 and older), PDF, and DOCX. " +
+  "Files downloaded from Google Drive or SharePoint sometimes lose their data; use 'Download as .xlsx' and re-upload."
 
 export const POST = handleApi(async (req: Request) => {
   const { applicant } = await requireApplicantRow(req);

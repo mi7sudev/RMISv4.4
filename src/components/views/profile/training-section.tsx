@@ -125,7 +125,7 @@ export default function TrainingSection({
       icon={BookOpen}
       chipTone="emerald"
       title="Training"
-      description="Seminars and trainings — hours count toward training requirements."
+      description="Seminars and trainings: hours count toward training requirements."
       actions={
         <div className="flex items-center gap-3">
           <SaveHint saving={busy} saved={savedFlash} />
@@ -150,9 +150,9 @@ export default function TrainingSection({
             <div key={row.id} className="rounded-lg bg-cloud/60 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium text-ink">{row.title ?? "—"}</p>
+                  <p className="font-medium text-ink">{row.title ?? "-"}</p>
                   <p className="num mt-1 text-sm text-body-gray">
-                    {row.typeOfTraining ?? "—"}
+                    {row.typeOfTraining ?? "-"}
                     {row.specifyTraining ? ` (${row.specifyTraining})` : ""}
                     {row.numberHours != null ? ` · ${row.numberHours} hrs` : ""}
                     {row.dateFrom ? ` · ${new Date(row.dateFrom).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}` : ""}

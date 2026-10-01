@@ -24,6 +24,8 @@ import {
 } from "@/lib/notify";
 
 const SUBJECT_PREFIXES: [string, "regret" | "interview" | "skills_exam"][] = [
+  ["Application regret:", "regret"],
+  // Pre-R-02 subjects used an em dash in the regret prefix.
   ["Application regret —", "regret"],
   ["Interview invitation", "interview"],
   ["Skills examination", "skills_exam"],
@@ -82,7 +84,7 @@ export const POST = handleApi(async (req: Request, ctx: { params: Promise<{ id: 
   // ── Doctrine guards (spec §9.3) ─────────────────────────────────────────
   const stage = stageForStatus(app.status);
   if (input.type === "regret" && stage === "Shortlisted") {
-    throw new ApiError("This application was shortlisted — a regret letter is not applicable.", 409);
+    throw new ApiError("This application was shortlisted; a regret letter is not applicable.", 409);
   }
   if ((input.type === "interview" || input.type === "skills_exam") && stage !== "Shortlisted") {
     throw new ApiError("Interview and skills-exam notices can only be sent to shortlisted applications.", 409);
@@ -183,8 +185,8 @@ export const POST = handleApi(async (req: Request, ctx: { params: Promise<{ id: 
 
   notificationDescription =
     input.type === "interview"
-      ? `Interview invitation sent for ${title} — ${input.date} at ${input.time}, ${input.venue}.`
-      : `Skills examination notice sent for ${title} — ${input.date} at ${input.time}, ${input.venue}.`;
+      ? `Interview invitation sent for ${title}: ${input.date} at ${input.time}, ${input.venue}.`
+      : `Skills examination notice sent for ${title}: ${input.date} at ${input.time}, ${input.venue}.`;
   await db.notification.create({
     data: { applicantId: app.applicantId, name: "Notice", description: notificationDescription },
   });

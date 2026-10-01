@@ -128,7 +128,7 @@ export default function PdsUploadCard({
         setError({
           message:
             failed?.error ??
-            "Extraction failed. Try a filled PDS file — Excel CS Form 212 (.xlsx or legacy .xls, Excel 2019 and older), PDF, or DOCX works best.",
+            "Extraction failed. Try a filled PDS file: Excel CS Form 212 (.xlsx or legacy .xls, Excel 2019 and older), PDF, or DOCX works best.",
           fileName: file.name,
         });
         setPhase("idle");
@@ -172,7 +172,7 @@ export default function PdsUploadCard({
     try {
       await apiFetch("/api/applicant/profile/clear", { method: "POST" });
       toast.success("Profile cleared", {
-        description: "Your forms are empty again — upload your PDS to auto-fill them.",
+        description: "Your forms are empty again. Upload your PDS to auto-fill them.",
       });
       setClearOpen(false);
       setLastApply(null);
@@ -307,7 +307,7 @@ export default function PdsUploadCard({
                 )}
               >
                 <IconChip icon={CloudUpload} tone="plum" size={44} />
-                <span className="text-sm font-medium text-ink">Upload PDS — CS Form 212</span>
+                <span className="text-sm font-medium text-ink">Upload PDS (CS Form 212)</span>
                 <span className="text-xs text-body-gray">XLSX, PDF, DOCX or image · up to 10 MB</span>
               </button>
               <input

@@ -113,5 +113,5 @@ export function allMet(results: MqrResult): boolean {
 }
 
 export function mqrDiagnostics(label: string, verdict: string, detail?: string): string {
-  return verdict === MQR_MEETS ? `${label}: ${verdict}` : `${label}: ${verdict}${detail ? ` — ${detail}` : ""}`;
+  return verdict === MQR_MEETS ? `${label}: ${verdict}` : `${label}: ${verdict}${detail ? ` (${detail})` : ""}`;
 }

@@ -233,7 +233,7 @@ function LedgerRow({ label, value, num = false }: { label: string; value: string
       {/* min-w-0: long unbreakable values (emails, URLs) must be allowed to
           shrink + break inside the flex row, otherwise the row's min-content
           forces the dialog's grid track wider than small viewports. */}
-      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "—"}</span>
+      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "-"}</span>
     </div>
   );
 }
@@ -280,16 +280,16 @@ function EducationCards({ rows }: { rows: SnapRow[] }) {
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-sm text-ink">{str(r.degree) || str(r.course) || str(r.specifyOthers) || "—"}</p>
+            <p className="text-sm text-ink">{str(r.degree) || str(r.course) || str(r.specifyOthers) || "-"}</p>
             {r.ongoing === true && <span className="status-pill status-neutral shrink-0">Ongoing</span>}
           </div>
           <p className="mt-1 text-xs text-body-gray">
-            {[str(r.educationLevel), str(r.schoolName)].filter(Boolean).join(" · ") || "—"}
+            {[str(r.educationLevel), str(r.schoolName)].filter(Boolean).join(" · ") || "-"}
           </p>
           <p className="num mt-0.5 text-xs text-stone">
             {[str(r.yearFrom) && `${str(r.yearFrom)}–${str(r.yearTo) || (r.ongoing ? "Present" : "")}`, str(r.yearGraduated) && `Graduated ${str(r.yearGraduated)}`, str(r.unitsEarned) && `${str(r.unitsEarned)} units`]
               .filter(Boolean)
-              .join(" · ") || "—"}
+              .join(" · ") || "-"}
           </p>
           {str(r.awards) && <p className="mt-1 text-xs text-body-gray">Honors: {str(r.awards)}</p>}
         </div>
@@ -305,20 +305,20 @@ function ExperienceCards({ rows }: { rows: SnapRow[] }) {
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-sm text-ink">{str(r.positionTitle) || "—"}</p>
+            <p className="text-sm text-ink">{str(r.positionTitle) || "-"}</p>
             {r.isPresentWork === true && (
               <span className="dlg-pill shrink-0 rounded-full bg-charcoal px-2 py-0.5 text-xs font-medium text-[#ebf0f8]">Present</span>
             )}
           </div>
-          <p className="mt-1 text-xs text-body-gray">{str(r.employerName) || "—"}</p>
+          <p className="mt-1 text-xs text-body-gray">{str(r.employerName) || "-"}</p>
           <p className="num mt-0.5 text-xs text-stone">
             {[
               (str(r.dateFrom) || str(r.dateTo)) &&
-                `${snapshotDisplayDate(r.dateFrom) || "—"} – ${r.isPresentWork ? "Present" : snapshotDisplayDate(r.dateTo) || "—"}`,
+                `${snapshotDisplayDate(r.dateFrom) || "-"} – ${r.isPresentWork ? "Present" : snapshotDisplayDate(r.dateTo) || "-"}`,
               str(r.statusOfEmployment),
             ]
               .filter(Boolean)
-              .join(" · ") || "—"}
+              .join(" · ") || "-"}
           </p>
         </div>
       ))}
@@ -332,16 +332,16 @@ function TrainingCards({ rows }: { rows: SnapRow[] }) {
     <div className="space-y-3">
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
-          <p className="text-sm text-ink">{str(r.title) || "—"}</p>
+          <p className="text-sm text-ink">{str(r.title) || "-"}</p>
           <p className="num mt-1 text-xs text-body-gray">
             {[str(r.typeOfTraining), str(r.numberHours) && `${str(r.numberHours)} hrs`, str(r.hourDecimal) && `${str(r.hourDecimal)} hrs`]
               .filter(Boolean)
-              .join(" · ") || "—"}
+              .join(" · ") || "-"}
           </p>
           <p className="num mt-0.5 text-xs text-stone">
             {snapshotDisplayDate(r.dateFrom) || snapshotDisplayDate(r.dateTo)
-              ? `${snapshotDisplayDate(r.dateFrom) || "—"} – ${snapshotDisplayDate(r.dateTo) || "—"}`
-              : "—"}
+              ? `${snapshotDisplayDate(r.dateFrom) || "-"} – ${snapshotDisplayDate(r.dateTo) || "-"}`
+              : "-"}
           </p>
         </div>
       ))}
@@ -355,11 +355,11 @@ function EligibilityCards({ rows }: { rows: SnapRow[] }) {
     <div className="space-y-3">
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
-          <p className="text-sm text-ink">{str(r.title) || str(r.eligibilityTitle) || "—"}</p>
+          <p className="text-sm text-ink">{str(r.title) || str(r.eligibilityTitle) || "-"}</p>
           <p className="num mt-1 text-xs text-body-gray">
             {[str(r.rating) && `Rating: ${str(r.rating)}`, snapshotDisplayDate(r.examDate), str(r.examPlace), str(r.licenseNumber) && `License ${str(r.licenseNumber)}`]
               .filter(Boolean)
-              .join(" · ") || "—"}
+              .join(" · ") || "-"}
           </p>
         </div>
       ))}
@@ -373,11 +373,11 @@ function AwardCards({ rows }: { rows: SnapRow[] }) {
     <div className="space-y-3">
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
-          <p className="text-sm text-ink">{str(r.details) || "—"}</p>
+          <p className="text-sm text-ink">{str(r.details) || "-"}</p>
           <p className="num mt-1 text-xs text-body-gray">
             {[str(r.recognitionType), str(r.scope), str(r.provider), snapshotDisplayDate(r.dateGranted)]
               .filter(Boolean)
-              .join(" · ") || "—"}
+              .join(" · ") || "-"}
           </p>
         </div>
       ))}
@@ -406,7 +406,7 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
   const allMet = report.requiredCount > 0 && report.metCount === report.requiredCount;
   const summaryCls = allMet ? "text-[var(--ok)]" : report.metCount > 0 ? "text-[var(--warn)]" : "text-stone";
   return (
-    <div className="dlg-card p-4">
+    <div className="data-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <IconChip icon={ListChecks} tone="gold" size={36} iconSize={16} />
@@ -429,7 +429,7 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
               <div key={i} className="rounded-lg bg-white/70 p-3.5">
                 <div className="flex items-start gap-2.5">
                   <IconChip icon={cc.icon} tone={cc.tone} size={22} iconSize={12} className="mt-0.5" />
-                  <p className="min-w-0 flex-1 text-[13px] leading-5 text-ink line-clamp-2">{c.standard || "—"}</p>
+                  <p className="min-w-0 flex-1 text-[13px] leading-5 text-ink line-clamp-2">{c.standard || "-"}</p>
                   <StatusPill status={cp.label} variant={cp.variant} className="shrink-0" />
                 </div>
                 <p className="num mt-1.5 text-xs leading-5 text-body-gray line-clamp-2">
@@ -466,7 +466,7 @@ function CredentialsRow({ payload }: { payload: ReviewPayload }) {
     ["Awards", payload.snapshots.awards.length],
   ];
   return (
-    <div className="dlg-card p-4">
+    <div className="data-card p-4">
       <div className="flex items-center gap-2.5">
         <IconChip icon={IdCard} tone="slate" size={28} iconSize={13} />
         <h3 className="text-[15px] font-semibold leading-6 text-ink">Credentials on file</h3>
@@ -659,7 +659,7 @@ function DecisionDialog({
       toast.success(`Applicant marked as ${getStatusMeta(decision).label}`, {
         description: email
           ? `A notification email was sent to ${email}.`
-          : "No email on record — HR will contact the applicant directly.",
+          : "No email on record; HR will contact the applicant directly.",
       });
       setConfirmOpen(false);
       onClose();
@@ -690,7 +690,7 @@ function DecisionDialog({
             <DialogDescription>
               {email
                 ? `Confirming will notify the applicant at ${email}.`
-                : "No email on record — HR will contact the applicant directly."}
+                : "No email on record; HR will contact the applicant directly."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
@@ -730,7 +730,7 @@ function DecisionDialog({
             <AlertDialogDescription>
               {email
                 ? `A notification email will be sent to ${email}.`
-                : "No email on record — HR will contact the applicant directly."}
+                : "No email on record; HR will contact the applicant directly."}
               {remarks.trim() ? ` Remarks will be included: “${remarks.trim()}”` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -966,15 +966,15 @@ function DirectEmailCard({
   const [composerOpen, setComposerOpen] = useState(false);
 
   return (
-    <div className="dlg-card p-4">
+    <div className="data-card p-4">
       <div className="flex items-center gap-2.5">
         <IconChip icon={Mail} tone="slate" size={28} iconSize={13} />
         <h3 className="text-[15px] font-semibold leading-6 text-ink">Direct email</h3>
       </div>
       <p className="mt-1 text-xs text-body-gray">
         {recipient
-          ? "Recipient is pulled from the applicant's profile email — attachments ≤ 3 files × 5 MB."
-          : "No email on record — the applicant left the profile email blank."}
+          ? "Recipient is pulled from the applicant's profile email; attachments ≤ 3 files × 5 MB."
+          : "No email on record; the applicant left the profile email blank."}
       </p>
       <button
         type="button"
@@ -1091,7 +1091,7 @@ export function ReviewWorkspace({
         toast.info("Returned to the review queue", { description: "No notification was sent to the applicant." });
       } else {
         toast.success(`Applicant marked as ${label}`, {
-          description: email ? `A notification email was sent to ${email}.` : "No email on record — HR will contact the applicant directly.",
+          description: email ? `A notification email was sent to ${email}.` : "No email on record; HR will contact the applicant directly.",
         });
       }
       setConfirmAction(null);
@@ -1127,7 +1127,7 @@ export function ReviewWorkspace({
     const label = getStatusMeta(status).label;
     const consequence = email
       ? `An email will be sent to ${email}.`
-      : "No email on record — HR will contact the applicant directly.";
+      : "No email on record; HR will contact the applicant directly.";
     setConfirmAction({
       status,
       title: `Mark as ${label}?`,
@@ -1145,7 +1145,7 @@ export function ReviewWorkspace({
 
   if (error) {
     return (
-      <div className="dlg-card p-8">
+      <div className="data-card p-8">
         <EmptyState
           icon={AlertTriangle}
           tone="rose"
@@ -1171,7 +1171,7 @@ export function ReviewWorkspace({
   if (!payload) {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
-        <div className="dlg-card-plain space-y-5 p-5 sm:p-6">
+        <div className="data-card space-y-5 p-5 sm:p-6">
           <div className="space-y-2.5">
             <Skeleton className="h-7 w-1/2" />
             <Skeleton className="h-4 w-1/3" />
@@ -1184,11 +1184,11 @@ export function ReviewWorkspace({
           <SkeletonRows rows={6} />
         </div>
         <div className="space-y-4">
-          <div className="dlg-card p-4">
+          <div className="data-card p-4">
             <Skeleton className="mb-3 h-4 w-32" />
             <SkeletonRows rows={3} rowClassName="h-6" />
           </div>
-          <div className="dlg-card p-4">
+          <div className="data-card p-4">
             <Skeleton className="mb-3 h-4 w-24" />
             <SkeletonRows rows={4} rowClassName="h-6" />
           </div>
@@ -1207,7 +1207,7 @@ export function ReviewWorkspace({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
       {/* ── LEFT: frozen dossier ── */}
-      <div className="dlg-card-plain space-y-4 p-5 sm:p-6">
+      <div className="data-card space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <MonogramAvatar name={applicantName} size={48} warm />
@@ -1259,7 +1259,7 @@ export function ReviewWorkspace({
                 <ul className="mt-1 space-y-1">
                   {characterRefs.map((r, i) => (
                     <li key={i} className="text-sm text-ink">
-                      {[str(r.name), str(r.address), str(r.telephone) || str(r.contactNumber)].filter(Boolean).join(" · ") || "—"}
+                      {[str(r.name), str(r.address), str(r.telephone) || str(r.contactNumber)].filter(Boolean).join(" · ") || "-"}
                     </li>
                   ))}
                 </ul>
@@ -1307,7 +1307,7 @@ export function ReviewWorkspace({
         </div>
 
         {(stage === "Applied" || stage === "Under Review") && (
-          <div className="dlg-card space-y-3 p-4">
+          <div className="data-card space-y-3 p-4">
             <div className="flex items-center gap-2.5">
               <IconChip icon={Gavel} tone="slate" size={28} iconSize={13} />
               <h3 className="text-[15px] font-semibold leading-6 text-ink">Decision</h3>
@@ -1339,7 +1339,7 @@ export function ReviewWorkspace({
         )}
 
         {(stage === "Shortlisted" || stage === "Rejected") && (
-          <div className="dlg-card space-y-3 p-4">
+          <div className="data-card space-y-3 p-4">
             <div className="flex items-center gap-2.5">
               <IconChip icon={History} tone="slate" size={28} iconSize={13} />
               <h3 className="text-[15px] font-semibold leading-6 text-ink">Revise decision</h3>
@@ -1357,7 +1357,7 @@ export function ReviewWorkspace({
                       title: "Mark as Not Qualified?",
                       description: email
                         ? `The decision will be flipped and a regret letter will be emailed to ${email}.`
-                        : "The decision will be flipped. No email on record — HR will contact the applicant directly.",
+                        : "The decision will be flipped. No email on record; HR will contact the applicant directly.",
                       destructive: true,
                     })
                   : setConfirmAction({
@@ -1365,7 +1365,7 @@ export function ReviewWorkspace({
                       title: "Mark as Shortlisted?",
                       description: email
                         ? `The decision will be flipped and the shortlist notice will be emailed to ${email}.`
-                        : "The decision will be flipped. No email on record — HR will contact the applicant directly.",
+                        : "The decision will be flipped. No email on record; HR will contact the applicant directly.",
                     })
               }
             >
@@ -1399,7 +1399,7 @@ export function ReviewWorkspace({
         )}
 
         {/* Notices */}
-        <div className="dlg-card space-y-3 p-4">
+        <div className="data-card space-y-3 p-4">
           <div className="flex items-center gap-2.5">
             <IconChip icon={Mails} tone="slate" size={28} iconSize={13} />
             <h3 className="text-[15px] font-semibold leading-6 text-ink">Notices</h3>
@@ -1476,7 +1476,7 @@ export function ReviewWorkspace({
             <AlertDialogDescription>
               {email
                 ? `A formal regret letter will be emailed to ${email}.`
-                : "No email on record — the send will be logged as skipped and HR will contact the applicant directly."}
+                : "No email on record; the send will be logged as skipped and HR will contact the applicant directly."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1540,7 +1540,7 @@ function ReviewWorkspacePage() {
       {valid ? (
         <ReviewWorkspace applicationId={id} onClose={close} />
       ) : (
-        <div className="dlg-card py-6">
+        <div className="data-card py-6">
           <EmptyState
             icon={FileText}
             title="No application selected"

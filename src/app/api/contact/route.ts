@@ -25,7 +25,7 @@ export const POST = handleApi(async (req: Request) => {
   if (!limit.allowed) {
     return ok({
       submitted: false,
-      message: "You've sent several inquiries already — please try again in a few minutes.",
+      message: "You've sent several inquiries already. Please try again in a few minutes.",
     });
   }
 

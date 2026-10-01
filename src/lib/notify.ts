@@ -189,8 +189,8 @@ function emailShell(title: string, bodyHtml: string): string {
 
 export function emailApplicationReceived(applicantName: string, jobTitle: string) {
   return {
-    subject: `Application received — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nYour application for ${jobTitle} has been received and is awaiting evaluation. We will notify you of the outcome through this channel.\n\n— MIRDC Human Resources`,
+    subject: `Application received: ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nYour application for ${jobTitle} has been received and is awaiting evaluation. We will notify you of the outcome through this channel.\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "Application received",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -202,8 +202,8 @@ export function emailApplicationReceived(applicantName: string, jobTitle: string
 
 export function emailStatusChanged(applicantName: string, jobTitle: string, status: string, reason?: string | null) {
   return {
-    subject: `Application status: ${status} — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nThe status of your application for ${jobTitle} is now: ${status}.${reason ? `\n\nRemarks from HR: ${reason}` : ""}\n\n— MIRDC Human Resources`,
+    subject: `Application status: ${status}, ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nThe status of your application for ${jobTitle} is now: ${status}.${reason ? `\n\nRemarks from HR: ${reason}` : ""}\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "Application status update",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -215,8 +215,8 @@ export function emailStatusChanged(applicantName: string, jobTitle: string, stat
 
 export function emailUnderReview(applicantName: string, jobTitle: string) {
   return {
-    subject: `Your application is under review — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nYour application for ${jobTitle} is now under review by our HR team. No action is needed from you at this time; we will notify you of the outcome.\n\n— MIRDC Human Resources`,
+    subject: `Your application is under review: ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nYour application for ${jobTitle} is now under review by our HR team. No action is needed from you at this time; we will notify you of the outcome.\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "Your application is under review",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -228,8 +228,8 @@ export function emailUnderReview(applicantName: string, jobTitle: string) {
 
 export function emailShortlisted(applicantName: string, jobTitle: string) {
   return {
-    subject: `You are shortlisted — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nCongratulations! You have been shortlisted for ${jobTitle}.\n\nNext steps are conducted face-to-face. Please prepare your ORIGINAL credentials for verification:\n• Diploma / Transcript of Records\n• Training certificates\n• Eligibility / Professional license\n• Certificates of Employment\n\nOur HR team will contact you to schedule the next steps.\n\n— MIRDC Human Resources`,
+    subject: `You are shortlisted: ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nCongratulations! You have been shortlisted for ${jobTitle}.\n\nNext steps are conducted face-to-face. Please prepare your ORIGINAL credentials for verification:\n• Diploma / Transcript of Records\n• Training certificates\n• Eligibility / Professional license\n• Certificates of Employment\n\nOur HR team will contact you to schedule the next steps.\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "You are shortlisted",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -243,8 +243,8 @@ export function emailShortlisted(applicantName: string, jobTitle: string) {
 
 export function emailRegretLetter(applicantName: string, jobTitle: string) {
   return {
-    subject: `Application regret — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nThank you for your interest in the ${jobTitle} position and for taking the time to apply.\n\nAfter careful evaluation, we regret to inform you that you were not shortlisted for this position. This decision does not diminish your qualifications, and we encourage you to apply for other openings that match your credentials.\n\nWe appreciate your interest in joining DOST-MIRDC.\n\n— MIRDC Human Resources`,
+    subject: `Application regret: ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nThank you for your interest in the ${jobTitle} position and for taking the time to apply.\n\nAfter careful evaluation, we regret to inform you that you were not shortlisted for this position. This decision does not diminish your qualifications, and we encourage you to apply for other openings that match your credentials.\n\nWe appreciate your interest in joining DOST-MIRDC.\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "Application regret",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -258,8 +258,8 @@ export function emailRegretLetter(applicantName: string, jobTitle: string) {
 export function emailInterviewInvitation(applicantName: string, jobTitle: string, d: { date?: string; time?: string; venue?: string; contact?: string; notes?: string }) {
   const row = (k: string, v?: string) => v ? `<tr><td style="padding:6px 12px 6px 0;color:#949494;font-size:13px;">${k}</td><td style="padding:6px 0;color:#181825;font-size:14px;">${v}</td></tr>` : "";
   return {
-    subject: `Interview invitation — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nYou are invited to an interview for ${jobTitle}.\nDate: ${d.date || "TBA"}\nTime: ${d.time || "TBA"}\nVenue: ${d.venue || "TBA"}${d.contact ? `\nHR Contact: ${d.contact}` : ""}${d.notes ? `\nNotes: ${d.notes}` : ""}\n\nPlease bring your original credentials.\n\n— MIRDC Human Resources`,
+    subject: `Interview invitation: ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nYou are invited to an interview for ${jobTitle}.\nDate: ${d.date || "TBA"}\nTime: ${d.time || "TBA"}\nVenue: ${d.venue || "TBA"}${d.contact ? `\nHR Contact: ${d.contact}` : ""}${d.notes ? `\nNotes: ${d.notes}` : ""}\n\nPlease bring your original credentials.\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "Interview invitation",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -272,8 +272,8 @@ export function emailInterviewInvitation(applicantName: string, jobTitle: string
 
 export function emailSkillsExam(applicantName: string, jobTitle: string, d: { examType?: string; date?: string; time?: string; venue?: string; contact?: string; notes?: string }) {
   return {
-    subject: `Skills examination notice — ${jobTitle}`,
-    bodyText: `Dear ${applicantName},\n\nYou are invited to a skills examination${d.examType ? ` (${d.examType})` : ""} for ${jobTitle}.\nDate: ${d.date || "TBA"}\nTime: ${d.time || "TBA"}\nVenue: ${d.venue || "TBA"}\n\nPlease bring a valid ID and a pen, and arrive 15 minutes early.\n\n— MIRDC Human Resources`,
+    subject: `Skills examination notice: ${jobTitle}`,
+    bodyText: `Dear ${applicantName},\n\nYou are invited to a skills examination${d.examType ? ` (${d.examType})` : ""} for ${jobTitle}.\nDate: ${d.date || "TBA"}\nTime: ${d.time || "TBA"}\nVenue: ${d.venue || "TBA"}\n\nPlease bring a valid ID and a pen, and arrive 15 minutes early.\n\nMIRDC Human Resources`,
     bodyHtml: emailShell(
       "Skills examination notice",
       `<p style="color:#484758;font-size:14px;line-height:1.6;">Dear ${applicantName},</p>
@@ -287,8 +287,8 @@ export function emailSkillsExam(applicantName: string, jobTitle: string, d: { ex
 export function emailDirect(senderName: string, subject: string, message: string) {
   return {
     subject,
-    bodyText: `${message}\n\n— ${senderName}, MIRDC Human Resources`,
-    bodyHtml: emailShell(subject, `<div style="color:#484758;font-size:14px;line-height:1.7;white-space:pre-wrap;">${message.replace(/</g, "&lt;")}</div><p style="color:#949494;font-size:12px;">— ${senderName}, MIRDC Human Resources</p>`),
+    bodyText: `${message}\n\n${senderName}, MIRDC Human Resources`,
+    bodyHtml: emailShell(subject, `<div style="color:#484758;font-size:14px;line-height:1.7;white-space:pre-wrap;">${message.replace(/</g, "&lt;")}</div><p style="color:#949494;font-size:12px;">${senderName}, MIRDC Human Resources</p>`),
   };
 }
 

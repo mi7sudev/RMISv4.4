@@ -199,7 +199,7 @@ export default function DocumentsSection({
       icon={FileText}
       chipTone="slate"
       title="Supporting Documents"
-      description="Credentials for HR verification — stored as-is. PDS extraction lives at the top of this page."
+      description="Credentials for HR verification: stored as-is. PDS extraction lives at the top of this page."
       actions={<SaveHint saving={uploading} saved={savedFlash} />}
     >
       {/* Upload rail — category REQUIRED before any file is accepted (§7.4) */}

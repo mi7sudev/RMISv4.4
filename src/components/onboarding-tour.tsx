@@ -231,7 +231,7 @@ export default function OnboardingTour({
               onClick={finish}
               className="dlg-ghost min-h-[44px] w-full px-5 py-2.5 text-sm"
             >
-              Skip — I'll explore on my own
+              I'll explore on my own
             </button>
           </DialogFooter>
         </DialogContent>

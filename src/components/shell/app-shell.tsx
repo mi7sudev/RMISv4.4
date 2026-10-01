@@ -37,7 +37,7 @@ export function AppShell({
 
         {/* Content column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile top bar with sheet menu — dark premium strip */}
+          {/* Mobile top bar with sheet menu — dark executive strip */}
           <div
             className="rail sticky top-0 z-40 flex h-16 items-center gap-1.5 px-3 text-[var(--rail-text)] sm:px-4 lg:hidden"
           >
@@ -49,10 +49,9 @@ export function AppShell({
               className="flex min-h-[44px] items-center gap-2.5"
               aria-label="Go to my workspace"
             >
-              {/* Official two-logo lockup — the emblems' art carries transparent
-                  backgrounds, so it floats directly on the light rail strip. */}
-              <BrandLogo logoSize={22} tone="light" />
-              <span className="text-sm font-semibold text-ink">RMIS</span>
+              {/* Official two-logo lockup on its white plate — legible on ink. */}
+              <BrandLogo logoSize={20} tone="dark" />
+              <span className="text-sm font-semibold text-[var(--rail-text-strong)]">RMIS</span>
             </button>
           </div>
 

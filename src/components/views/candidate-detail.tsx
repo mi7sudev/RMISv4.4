@@ -93,7 +93,7 @@ function LedgerRow({ label, value, num = false }: { label: string; value: string
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] py-2.5 last:border-0">
       <span className="shrink-0 pt-0.5 text-xs text-body-gray">{label}</span>
-      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "—"}</span>
+      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "-"}</span>
     </div>
   );
 }
@@ -160,7 +160,7 @@ function StatCard({
   value: number;
 }) {
   return (
-    <div className="dlg-card p-6">
+    <div className="data-card p-6">
       <div className="flex items-start justify-between gap-3">
         <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
         <IconChip icon={icon} tone={chipTone} size={40} />
@@ -192,7 +192,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("data-card min-w-0 p-5 sm:p-6", className)}>
       {title ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -248,7 +248,7 @@ export default function CandidateDetail() {
 
   if (!valid) {
     return (
-      <div className="dlg-card py-6">
+      <div className="data-card py-6">
         <EmptyState
           icon={UserRound}
           tone="slate"
@@ -266,7 +266,7 @@ export default function CandidateDetail() {
 
   if (error) {
     return (
-      <div className="dlg-card p-8">
+      <div className="data-card p-8">
         <EmptyState
           icon={AlertTriangle}
           tone="rose"
@@ -297,7 +297,7 @@ export default function CandidateDetail() {
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="dlg-card p-6">
+            <div key={i} className="data-card p-6">
               <div className="skel h-3 w-20" />
               <div className="skel mt-4 h-8 w-16" />
             </div>
@@ -381,7 +381,7 @@ export default function CandidateDetail() {
             <ul className="mt-1 space-y-1">
               {detail.characterReferences.map((r, i) => (
                 <li key={i} className="text-sm text-ink">
-                  {[s(r.name), s(r.address), s(r.telephone) || s(r.contactNumber)].filter(Boolean).join(" · ") || "—"}
+                  {[s(r.name), s(r.address), s(r.telephone) || s(r.contactNumber)].filter(Boolean).join(" · ") || "-"}
                 </li>
               ))}
             </ul>
@@ -404,7 +404,7 @@ export default function CandidateDetail() {
               detail.educations.map((e, i) => (
                 <EntityCard
                   key={i}
-                  title={[s(e.degree) || s(e.course), s(e.specifyOthers)].filter(Boolean).join(" — ") || "—"}
+                  title={[s(e.degree) || s(e.course), s(e.specifyOthers)].filter(Boolean).join(", ") || "-"}
                   lines={[
                     [s(e.educationLevel), s(e.schoolName)].filter(Boolean).join(" · "),
                     [s(e.yearFrom) && `${s(e.yearFrom)}–${s(e.yearTo) || (e.ongoing ? "Present" : "")}`, s(e.yearGraduated) && `Graduated ${s(e.yearGraduated)}`]
@@ -424,10 +424,10 @@ export default function CandidateDetail() {
               detail.workExperiences.map((w, i) => (
                 <EntityCard
                   key={i}
-                  title={s(w.positionTitle) || "—"}
+                  title={s(w.positionTitle) || "-"}
                   lines={[
                     s(w.employerName),
-                    `${d(w.dateFrom) || "—"} – ${w.isPresentWork ? "Present" : d(w.dateTo) || "—"}`,
+                    `${d(w.dateFrom) || "-"} – ${w.isPresentWork ? "Present" : d(w.dateTo) || "-"}`,
                     [s(w.statusOfEmployment), s(w.monthlySalary) && `PHP ${s(w.monthlySalary)}`].filter(Boolean).join(" · "),
                   ]}
                 />
@@ -442,10 +442,10 @@ export default function CandidateDetail() {
               detail.trainings.map((t, i) => (
                 <EntityCard
                   key={i}
-                  title={s(t.title) || "—"}
+                  title={s(t.title) || "-"}
                   lines={[
                     [s(t.typeOfTraining), s(t.numberHours) && `${s(t.numberHours)} hrs`].filter(Boolean).join(" · "),
-                    `${d(t.dateFrom) || "—"} – ${d(t.dateTo) || "—"}`,
+                    `${d(t.dateFrom) || "-"} – ${d(t.dateTo) || "-"}`,
                   ]}
                 />
               ))
@@ -459,7 +459,7 @@ export default function CandidateDetail() {
               detail.eligibilities.map((e, i) => (
                 <EntityCard
                   key={i}
-                  title={s(e.title) || s(e.eligibilityTitle) || "—"}
+                  title={s(e.title) || s(e.eligibilityTitle) || "-"}
                   lines={[
                     s(e.rating) && `Rating: ${s(e.rating)}`,
                     d(e.examDate),
@@ -478,7 +478,7 @@ export default function CandidateDetail() {
               detail.awards.map((a, i) => (
                 <EntityCard
                   key={i}
-                  title={s(a.details) || "—"}
+                  title={s(a.details) || "-"}
                   lines={[[s(a.recognitionType), s(a.scope), s(a.provider), d(a.dateGranted)].filter(Boolean).join(" · ")]}
                 />
               ))

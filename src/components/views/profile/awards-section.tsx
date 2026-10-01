@@ -150,7 +150,7 @@ export default function AwardsSection({
             <div key={row.id} className="rounded-lg bg-cloud/60 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium text-ink">{row.details ?? "—"}</p>
+                  <p className="font-medium text-ink">{row.details ?? "-"}</p>
                   <p className="num mt-1 text-sm text-body-gray">
                     {[row.recognitionType, row.scope, row.category, row.provider]
                       .filter(Boolean)

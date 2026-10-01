@@ -69,8 +69,8 @@ function matchesCategory(positionType: string | null, category: string): boolean
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function divisionShort(code: string | null | undefined): string {
-  if (!code) return "—";
-  return divisionName(code).split(" — ")[0] || code;
+  if (!code) return "-";
+  return divisionName(code).split(" · ")[0] || code;
 }
 
 function stripHtml(html: string): string {
@@ -78,7 +78,7 @@ function stripHtml(html: string): string {
 }
 
 function sgLabel(grade: string | null | undefined, step: string | null | undefined): string {
-  if (!grade) return "—";
+  if (!grade) return "-";
   return step ? `SG${grade}/${step}` : `SG${grade}`;
 }
 
@@ -141,7 +141,7 @@ function Skeleton({ className }: { className?: string }) {
 
 function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="dlg-card p-8 text-center">
+    <div className="data-card p-8 text-center">
       <p className="font-display text-xl text-ink">Something went wrong</p>
       <p className="mt-2 text-sm text-stone">{message}</p>
       <button onClick={onRetry} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
@@ -170,10 +170,10 @@ function QuickView({
       ? stripHtml(job.briefDescriptionHtml)
       : "";
   const facts: [string, string][] = [
-    ["Item No.", pos?.itemNumber || "—"],
-    ["Vacancies", job.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
+    ["Item No.", pos?.itemNumber || "-"],
+    ["Vacancies", job.numberOfVacancy == null ? "-" : String(job.numberOfVacancy)],
     ["Salary Grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
-    ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
+    ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "-"],
     ["Published", formatDate(job.publishDate ?? job.publishedAt)],
     ["Deadline", formatDate(job.deadlineDate)],
   ];
@@ -186,7 +186,7 @@ function QuickView({
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {facts.map(([label, value]) => (
-          <div key={label} className="rounded-xl bg-white p-3">
+          <div key={label} className="rounded-xl bg-fog p-3">
             <p className="text-xs text-stone">{label}</p>
             <p className="mt-0.5 truncate text-sm text-ink" title={value}>
               {value}
@@ -230,7 +230,7 @@ function JobCard({
   const applied = (job.applications?.length ?? 0) > 0;
   const dl = deadlineState(job.deadlineDate);
   return (
-    <article className="dlg-card lift p-4 sm:p-6">
+    <article className="data-card data-card-hover p-4 sm:p-6">
       <div className="flex items-start gap-4">
         {/* Official two-logo lockup — anchors the card the way a company
             logo does on every top-ranked job-board design */}
@@ -240,10 +240,17 @@ function JobCard({
             <DeadlinePill job={job} />
             {applied && <span className="status-pill status-ok">Applied</span>}
           </div>
-          <h3 className="mt-2 font-display text-xl text-ink">{humanize(job.title)}</h3>
-          <p className="mt-1 text-sm text-body-gray">
+<<<<<<< Updated upstream
+          <h3 className="mt-2 text-[17px] font-medium leading-snug text-ink">{humanize(job.title)}</h3>
+          <p className="mt-1 text-xs text-stone">
             {pos?.placeOfAssignment || "—"} ·{" "}
             {job.positionType ? humanize(job.positionType) : "—"}
+=======
+          <h3 className="mt-2 font-display text-xl text-ink">{humanize(job.title)}</h3>
+          <p className="mt-1 text-sm text-body-gray">
+            {pos?.placeOfAssignment || "-"} ·{" "}
+            {job.positionType ? humanize(job.positionType) : "-"}
+>>>>>>> Stashed changes
             {pos?.salaryGrade ? <span className="num"> · SG {pos.salaryGrade}</span> : null}
             <span className={dl.overdue ? "text-[var(--bad)]" : undefined}>
               {" "}
@@ -260,7 +267,7 @@ function JobCard({
           onClick={() => onToggle(job.id)}
           aria-label={expanded ? "Collapse quick view" : "Expand quick view"}
           aria-expanded={expanded}
-          className="dlg-ghost grid h-11 w-11 shrink-0 place-items-center text-ink"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-body-gray transition-colors hover:bg-fog hover:text-ink"
         >
           {expanded ? (
             <Minus className="h-4 w-4" aria-hidden="true" />
@@ -291,8 +298,8 @@ function SummaryCard({
   const dl = deadlineState(job.deadlineDate);
   const applied = (job.applications?.length ?? 0) > 0;
   const rows: [string, string][] = [
-    ["Vacancies", job.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
-    ["Monthly salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
+    ["Vacancies", job.numberOfVacancy == null ? "-" : String(job.numberOfVacancy)],
+    ["Monthly salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "-"],
     ["Salary grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
     ["Applications", String(job.applicationCount ?? 0)],
     ["Published", formatDate(job.publishDate ?? job.publishedAt)],
@@ -300,7 +307,7 @@ function SummaryCard({
     ["Processing", formatDate(job.processingDate)],
   ];
   return (
-    <div className="dlg-card p-6">
+    <div className="data-card p-6">
       <p className="text-sm font-medium text-ink">Position Summary</p>
       <dl className="mt-4 space-y-3 text-sm">
         {rows.map(([label, value]) => (
@@ -328,7 +335,7 @@ function SummaryCard({
               Closes <span className="num">{formatDate(job.deadlineDate)}</span>
             </span>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden bg-white" role="presentation">
+          <div className="mt-2 h-1.5 overflow-hidden bg-fog" role="presentation">
             <div
               className={`h-full transition-[width] duration-500 ${
                 dl.overdue ? "bg-[var(--bad)]" : dl.closingSoon ? "bg-[var(--warn)]" : "bg-metric-blue"
@@ -342,7 +349,7 @@ function SummaryCard({
       <div className="mt-5">
         {applied ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-2xl bg-white p-3">
+            <div className="flex items-center gap-3 rounded-2xl bg-fog p-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--ok-bg)] text-sm text-[var(--ok)]">
                 ✓
               </span>
@@ -419,30 +426,30 @@ function DetailBody({ job }: { job: JobWire }) {
 
   const vitals: [string, string][] = [
     ["Division", divisionShort(pos?.division)],
-    ["Item No.", pos?.itemNumber || "—"],
-    ["Vacancies", job.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
-    ["Position Type", job.positionType ? humanize(job.positionType) : "—"],
+    ["Item No.", pos?.itemNumber || "-"],
+    ["Vacancies", job.numberOfVacancy == null ? "-" : String(job.numberOfVacancy)],
+    ["Position Type", job.positionType ? humanize(job.positionType) : "-"],
     ["Salary Grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
-    ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
+    ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "-"],
   ];
 
   return (
     <div className="min-w-0 space-y-6">
       {/* Hero */}
-      <section className="dlg-card p-6 sm:p-8">
+      <section className="data-card p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
           <DeadlinePill job={job} />
           {(job.applications?.length ?? 0) > 0 && <span className="status-pill status-ok">Applied</span>}
         </div>
         <h1 className="text-heading-md mt-3">{humanize(job.title)}</h1>
         <p className="mt-2 text-sm text-body-gray">
-          {pos?.placeOfAssignment || "—"} · {divisionName(pos?.division)} ·{" "}
-          {job.positionType ? humanize(job.positionType) : "—"}
+          {pos?.placeOfAssignment || "-"} · {divisionName(pos?.division)} ·{" "}
+          {job.positionType ? humanize(job.positionType) : "-"}
         </p>
       </section>
 
       {/* Sections */}
-      <section className="dlg-card space-y-8 p-6 sm:p-8">
+      <section className="data-card space-y-8 p-6 sm:p-8">
         <div>
           <h2 className="text-lg font-semibold text-ink">Brief Description</h2>
           <div className="mt-3">
@@ -452,7 +459,7 @@ function DetailBody({ job }: { job: JobWire }) {
 
         <div>
           <h2 className="text-lg font-semibold text-ink">Minimum Qualification Requirements</h2>
-          <div className="mt-3 overflow-hidden rounded-2xl bg-white">
+          <div className="mt-3 overflow-hidden rounded-2xl bg-fog">
             {visibleMqr.length > 0 ? (
               visibleMqr.map(([label, value], i) => (
                 <div
@@ -505,7 +512,7 @@ function DetailBody({ job }: { job: JobWire }) {
           <h2 className="text-lg font-semibold text-ink">Position Details</h2>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {vitals.map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-white p-4">
+              <div key={label} className="rounded-xl bg-fog p-4">
                 <p className="text-xs text-stone">{label}</p>
                 <p className="mt-0.5 truncate text-sm text-ink" title={value}>
                   {value}
@@ -514,18 +521,18 @@ function DetailBody({ job }: { job: JobWire }) {
             ))}
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-xl bg-white p-4">
+            <div className="rounded-xl bg-fog p-4">
               <p className="text-xs text-stone">Published</p>
               <p className="mt-0.5 text-sm text-ink">{formatDate(job.publishDate ?? job.publishedAt)}</p>
             </div>
-            <div className="rounded-xl bg-white p-4">
+            <div className="rounded-xl bg-fog p-4">
               <p className="text-xs text-stone">Deadline</p>
               <p className={`mt-0.5 text-sm ${dl.overdue ? "text-[var(--bad)]" : "text-ink"}`}>
                 {formatDate(job.deadlineDate)}
-                {job.deadlineDate ? ` — ${dl.label}` : ""}
+                {job.deadlineDate ? ` · ${dl.label}` : ""}
               </p>
             </div>
-            <div className="rounded-xl bg-white p-4">
+            <div className="rounded-xl bg-fog p-4">
               <p className="text-xs text-stone">Processing</p>
               <p className="mt-0.5 text-sm text-ink">{formatDate(job.processingDate)}</p>
             </div>
@@ -714,12 +721,12 @@ export default function JobsView() {
 
         {jobs === null && error === null ? (
           <div className="space-y-6">
-            <div className="dlg-card space-y-4 p-8">
+            <div className="data-card space-y-4 p-8">
               <Skeleton className="h-6 w-32" />
               <Skeleton className="h-10 w-2/3" />
               <Skeleton className="h-4 w-1/2" />
             </div>
-            <div className="dlg-card space-y-3 p-8">
+            <div className="data-card space-y-3 p-8">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-full" />
@@ -729,7 +736,7 @@ export default function JobsView() {
         ) : error !== null ? (
           <ErrorCard message={error} onRetry={() => void load(false)} />
         ) : detail === null ? (
-          <div className="dlg-card p-10 text-center">
+          <div className="data-card p-10 text-center">
             <p className="font-display text-xl text-ink">Position not found</p>
             <p className="mt-2 text-sm text-body-gray">
               This position may have closed or is no longer published.
@@ -770,7 +777,7 @@ export default function JobsView() {
   // The id suffix keeps the duplicate DOM valid — two inputs must never share
   // one id (label htmlFor / a11y lookups would hit the hidden copy).
   const filterRail = (sfx: string) => (
-    <div className="dlg-card p-5">
+    <div className="data-card p-5">
       <label htmlFor={`job-search-${sfx}`} className="sr-only">
         Search positions
       </label>
@@ -797,7 +804,7 @@ export default function JobsView() {
         ].map(({ code, label }) => (
           <label
             key={code}
-            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-white/70"
+            className="flex h-10 cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-fog"
           >
             <Checkbox
               checked={categoryFilter.includes(code)}
@@ -816,7 +823,7 @@ export default function JobsView() {
         {facets.map(([code, count]) => (
           <label
             key={code}
-            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-white/70"
+            className="flex h-10 cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-fog"
           >
             <Checkbox
               checked={divisionFilter.includes(code)}
@@ -847,7 +854,7 @@ export default function JobsView() {
     content = (
       <div className="space-y-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="dlg-card p-6">
+          <div key={i} className="data-card p-6">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="mt-3 h-6 w-2/3" />
             <Skeleton className="mt-2 h-4 w-full" />
@@ -859,16 +866,16 @@ export default function JobsView() {
     content = <ErrorCard message={error} onRetry={() => void load(false)} />;
   } else if ((jobs ?? []).length === 0) {
     content = (
-      <div className="dlg-card p-10 text-center">
+      <div className="data-card p-10 text-center">
         <p className="font-display text-xl text-ink">No vacant positions</p>
         <p className="mt-2 text-sm text-body-gray">
-          There are no published postings at the moment — check back soon.
+          There are no published postings at the moment. Check back soon.
         </p>
       </div>
     );
   } else if (filtered.length === 0) {
     content = (
-      <div className="dlg-card p-10 text-center">
+      <div className="data-card p-10 text-center">
         <p className="font-display text-xl text-ink">No positions match your filters</p>
         <p className="mt-2 text-sm text-body-gray">Try a different search term or clear the filters.</p>
         <button onClick={clearFilters} className="dlg-ghost mt-5 min-h-[44px] px-6 text-sm">
@@ -963,7 +970,7 @@ export default function JobsView() {
                 }}
               >
                 <SelectTrigger
-                  className="dlg-input min-h-[44px] w-[140px] sm:w-[170px]"
+                  className="dlg-input h-10 w-[140px] rounded-xl sm:w-[170px]"
                   aria-label="Sort results"
                 >
                   <SelectValue />
@@ -981,7 +988,7 @@ export default function JobsView() {
       <div className="items-start lg:flex lg:gap-6">
         {/* Search rail — sticky on desktop, collapsible on mobile */}
         <aside
-          className={`mb-4 w-full lg:sticky ${user ? "lg:top-6" : "lg:top-20"} lg:mb-0 lg:w-72 lg:shrink-0`}
+          className={`mb-4 w-full lg:sticky ${user ? "lg:top-6" : "lg:top-24"} lg:mb-0 lg:w-72 lg:shrink-0`}
         >
           <div className="lg:hidden">
             <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -1021,7 +1028,7 @@ export default function JobsView() {
                   <button
                     onClick={() => changeQuery("")}
                     aria-label="Clear search filter"
-                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink"
+                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white hover:text-ink"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>
@@ -1036,7 +1043,7 @@ export default function JobsView() {
                   <button
                     onClick={() => toggleDivision(code)}
                     aria-label={`Remove ${divisionShort(code)} filter`}
-                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink"
+                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white hover:text-ink"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>

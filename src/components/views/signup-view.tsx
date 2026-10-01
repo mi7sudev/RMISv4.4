@@ -10,11 +10,13 @@
 // is reset and we briefly wait for a fresh token before the auto-login — if
 // one doesn't arrive in time we fall back to the sign-in page (existing
 // path). On the employee door the form is captcha-free.
-// Bevel pass: same split-screen as sign-in — LIGHT brand panel (Hero Sky
-// gradient, ink display heading, white trust tiles) on lg+, editorial form
-// directly on the white canvas. Rendered inside PublicShell (sticky header
-// + footer), so the root flexes to fill the viewport between them. Every
-// field, validation, and behavior is preserved exactly.
+// Bevel pass: same split-screen as sign-in. Executive Ink pass: the brand
+// panel is now the dark `.hero-band` aurora (full-bleed on lg+, compact band
+// above the form on mobile) with the white-plate BrandLogo, ink-on-dark
+// display heading and glass trust chips; a pure-white editorial form column
+// on the right. Rendered inside PublicShell (sticky header + footer), so the
+// root flexes to fill the viewport between them. Every field, validation, and
+// behavior is preserved exactly.
 // ============================================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -39,42 +41,50 @@ const TRUST_POINTS: ReadonlyArray<{ icon: LucideIcon; tone: ChipTone; text: stri
   { icon: ShieldCheck, tone: "plum", text: "Data Privacy Act compliant" },
 ];
 
-/** Light brand panel — lg+ only. Hero Sky gradient with ink display type;
- *  the watermark is decorative and pointer-events-none. */
+/** Dark brand panel — the Executive Ink hero band. Full-bleed on lg+ (no
+ *  rounding, stretches to full column height); on mobile it collapses to a
+ *  compact band (p-6) above the form. The watermark is decorative. */
 function AuthBrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] lg:flex lg:w-[42%] xl:w-[46%]">
-      {/* Ink watermark (decorative) */}
+    <aside className="hero-band relative overflow-hidden lg:flex lg:w-[42%] lg:flex-col xl:w-[46%]">
+      {/* Blueprint grid + ink watermark (decorative) */}
+      <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[130px] -right-8 select-none font-display text-[400px] leading-none text-ink/[0.05]"
+        className="pointer-events-none absolute -bottom-[130px] -right-8 hidden select-none font-display text-[400px] leading-none text-white/[0.04] lg:block"
       >
         M
       </span>
 
-      <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
-        <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white py-2 pl-2 pr-4 shadow-e1">
-          {/* Official two-logo lockup — the emblems' art carries transparent
-              backgrounds, so it floats directly on the white capsule. */}
-          <BrandLogo logoSize={22} />
-          <span className="text-sm font-semibold text-ink">RMIS</span>
+      <div className="relative z-10 flex w-full flex-col px-6 py-8 sm:px-10 sm:py-10 lg:max-w-md lg:justify-center lg:px-12 lg:py-16 xl:pl-20 xl:pr-16">
+        <div className="flex w-fit items-center gap-3">
+          {/* Official two-logo lockup on its white plate — tone="dark"
+              softens the plate ring for the dark surface. */}
+          <BrandLogo logoSize={22} tone="dark" />
+          <span className="text-sm font-semibold on-ink">RMIS</span>
         </div>
 
-        <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] text-ink">
+        <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
+          Recruitment Management Information System
+        </p>
+
+        <h1 className="on-ink mt-8 font-display text-[clamp(26px,2.6vw,38px)] font-semibold leading-[1.18] tracking-[-0.02em] lg:mt-10">
           Build a career that moves the nation forward.
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-body-gray">
+        <p className="on-ink-dim mt-4 max-w-md text-sm leading-relaxed">
           The official hiring portal of the Metals Industry Research and Development Center.
         </p>
 
-        <ul className="mt-10 space-y-3">
+        {/* Feature rows as glass chips (icon chips on white/10) — lg+ only,
+            so the mobile band stays compact. */}
+        <ul className="mt-8 hidden space-y-3 lg:mt-10 lg:block">
           {TRUST_POINTS.map((point) => (
             <li
               key={point.text}
-              className="flex items-center gap-3.5 rounded-xl bg-white p-3.5 shadow-e1"
+              className="flex items-center gap-3.5 rounded-2xl bg-white/[0.06] p-3.5 ring-1 ring-white/12"
             >
-              <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} />
-              <span className="text-[13px] font-medium text-ink">{point.text}</span>
+              <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} className="bg-white/10!" />
+              <span className="text-[13px] font-medium on-ink">{point.text}</span>
             </li>
           ))}
         </ul>
@@ -214,24 +224,24 @@ export default function SignUpView() {
     <div className="flex w-full flex-1 flex-col lg:flex-row">
       <AuthBrandPanel />
 
-      {/* Form column — editorial form directly on the white canvas */}
+      {/* Form column — editorial form on the pure-white canvas (~420px card) */}
       <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
-        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="w-full max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div>
             {/* Card header — mobile/tablet only; the lg+ brand panel carries brand + heading */}
             <div className="lg:hidden">
-              <h2 className="text-center font-display text-3xl text-ink">
+              <h2 className="text-center font-display text-xl font-semibold tracking-[-0.02em] text-ink">
                 Create your account
               </h2>
             </div>
-            <p className="mt-2 text-center text-sm text-body-gray lg:mt-0 lg:text-left">
+            <p className="mt-2 text-center text-[13px] text-body-gray lg:mt-0 lg:text-left">
               Register to apply for positions at DOST-MIRDC.
             </p>
 
             <form onSubmit={submit} className="mt-7 space-y-4" noValidate>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="firstName" className="mb-1.5 block text-sm font-medium text-ink">
+                  <label htmlFor="firstName" className="mb-1.5 block text-[13px] font-medium text-ink">
                     First name *
                   </label>
                   <Input
@@ -240,11 +250,11 @@ export default function SignUpView() {
                     autoComplete="given-name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="dlg-input min-h-[44px]"
+                    className="dlg-input h-11 rounded-xl px-4"
                   />
                 </div>
                 <div>
-                  <label htmlFor="lastName" className="mb-1.5 block text-sm font-medium text-ink">
+                  <label htmlFor="lastName" className="mb-1.5 block text-[13px] font-medium text-ink">
                     Last name *
                   </label>
                   <Input
@@ -253,13 +263,13 @@ export default function SignUpView() {
                     autoComplete="family-name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="dlg-input min-h-[44px]"
+                    className="dlg-input h-11 rounded-xl px-4"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-ink">
                   Email *
                 </label>
                 <Input
@@ -270,12 +280,12 @@ export default function SignUpView() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="dlg-input min-h-[44px]"
+                  className="dlg-input h-11 rounded-xl px-4"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-ink">
                   Password * <span className="font-normal text-stone">(minimum 6 characters)</span>
                 </label>
                 <div className="relative">
@@ -286,13 +296,13 @@ export default function SignUpView() {
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="dlg-input min-h-[44px] pr-12"
+                    className="dlg-input h-11 rounded-xl px-4 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-0.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-stone hover:bg-cloud hover:text-ink"
+                    className="absolute right-0.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-stone hover:bg-fog hover:text-ink"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -304,7 +314,7 @@ export default function SignUpView() {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="confirmPassword" className="mb-1.5 block text-[13px] font-medium text-ink">
                   Confirm password *
                 </label>
                 <Input
@@ -314,7 +324,7 @@ export default function SignUpView() {
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="dlg-input min-h-[44px]"
+                  className="dlg-input h-11 rounded-xl px-4"
                 />
               </div>
 
@@ -347,7 +357,7 @@ export default function SignUpView() {
               <button
                 type="submit"
                 disabled={busy}
-                className="dlg-cta min-h-[44px] w-full text-sm font-medium disabled:opacity-50"
+                className="dlg-cta h-11 w-full text-sm font-medium disabled:opacity-50"
               >
                 {busy ? "Creating account…" : "Create account"}
               </button>
@@ -357,7 +367,7 @@ export default function SignUpView() {
           <div className="mt-8 flex justify-center">
             <button
               onClick={() => navigate("signin")}
-              className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+              className="min-h-[44px] text-[13px] text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
             >
               Sign in
             </button>

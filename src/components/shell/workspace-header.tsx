@@ -61,34 +61,36 @@ export function WorkspaceHeader({
 
   return (
     <div className="w-full">
-      <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-4 pb-1 pt-4 sm:px-6 sm:pt-6 lg:px-8">
-        {/* Breadcrumb — mobile shows only the current label */}
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem className="hidden sm:inline-flex">
-              <span className="text-sm text-stone">Workspace</span>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden sm:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-sm font-medium text-ink">{label}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      <div className="glass sticky top-0 z-30 w-full border-b border-divider/60">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+          {/* Breadcrumb — mobile shows only the current label */}
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden sm:inline-flex">
+                <span className="text-sm text-stone">Workspace</span>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden sm:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-sm font-medium text-ink">{label}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-        {/* Right cluster */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCmdOpen(true)}
-            className="dlg-ghost flex min-h-[44px] items-center gap-2 px-4 text-sm text-stone"
-            aria-label="Search (Command menu)"
-          >
-            <Search className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden rounded-md border border-border bg-fog px-1.5 py-0.5 text-[11px] font-normal text-pebble sm:inline">
-              ⌘K
-            </kbd>
-          </button>
-          {user?.role === "ADMIN" && <NotificationCenter />}
+          {/* Right cluster */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCmdOpen(true)}
+              className="dlg-ghost flex h-9 min-h-[36px] items-center gap-2 px-3.5 text-[13px] text-stone"
+              aria-label="Search (Command menu)"
+            >
+              <Search className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="hidden rounded-md border border-border bg-fog px-1.5 py-0.5 font-mono text-[10px] font-normal text-pebble sm:inline">
+                ⌘K
+              </kbd>
+            </button>
+            {user?.role === "ADMIN" && <NotificationCenter />}
+          </div>
         </div>
       </div>
 

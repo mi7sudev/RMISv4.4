@@ -7,11 +7,12 @@
 // says this request arrived on the public applicant door — it renders
 // invisibly (interaction-only) and auto-clears humans; the token rides along
 // in the login payload. On the employee door the form is captcha-free.
-// Bevel pass: lg+ split screen with a LIGHT brand panel (Hero Sky gradient,
-// ink display heading, white trust tiles) on the left and an editorial form
-// directly on the white canvas on the right. Rendered inside PublicShell
-// (sticky header + footer), so the root flexes to fill the viewport between
-// them. All handlers, API calls, and copy are preserved exactly.
+// Bevel pass: lg+ split screen. Executive Ink pass: the brand panel is now the
+// dark `.hero-band` aurora (full-bleed, no rounding, blueprint grid) with the
+// white-plate BrandLogo, ink-on-dark display heading and glass trust chips on
+// the left; a pure-white editorial form column on the right. Rendered inside
+// PublicShell (sticky header + footer), so the root flexes to fill the viewport
+// between them. All handlers, API calls, and copy are preserved exactly.
 // ============================================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -46,48 +47,52 @@ const TRUST_POINTS: ReadonlyArray<{ icon: LucideIcon; tone: ChipTone; text: stri
   { icon: ShieldCheck, tone: "plum", text: "Data Privacy Act compliant" },
 ];
 
-/** Light brand panel — lg+ only. Hero Sky gradient with ink display type;
- *  the watermark is decorative and pointer-events-none. */
+/** Dark brand panel — the Executive Ink hero band. Full-bleed on lg+ (no
+ *  rounding, stretches to full column height); on mobile it collapses to a
+ *  compact band (p-6) above the form. The watermark is decorative. */
 function AuthBrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] lg:flex lg:w-[42%] xl:w-[46%]">
-      {/* Ink watermark (decorative) */}
+    <aside className="hero-band relative overflow-hidden lg:flex lg:w-[42%] lg:flex-col xl:w-[46%]">
+      {/* Blueprint grid + ink watermark (decorative) */}
+      <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[130px] -right-8 select-none font-display text-[400px] leading-none text-ink/[0.05]"
+        className="pointer-events-none absolute -bottom-[130px] -right-8 hidden select-none font-display text-[400px] leading-none text-white/[0.04] lg:block"
       >
         M
       </span>
 
-      <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
-        <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white py-2 pl-2 pr-4 shadow-e1">
-          {/* Official two-logo lockup — the emblems' art carries transparent
-              backgrounds, so it floats directly on the white capsule. */}
-          <BrandLogo logoSize={22} />
-          <span className="text-sm font-semibold text-ink">RMIS</span>
+      <div className="relative z-10 flex w-full flex-col px-6 py-8 sm:px-10 sm:py-10 lg:max-w-md lg:justify-center lg:px-12 lg:py-16 xl:pl-20 xl:pr-16">
+        <div className="flex w-fit items-center gap-3">
+          {/* Official two-logo lockup on its white plate — tone="dark"
+              softens the plate ring for the dark surface. */}
+          <BrandLogo logoSize={22} tone="dark" />
+          <span className="text-sm font-semibold on-ink">RMIS</span>
         </div>
 
         {/* QA 2026-02: spell out the acronym in full — the system name is
             "Recruitment Management Information System", not "Recruitment portal". */}
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-body-gray">
+        <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
           Recruitment Management Information System
         </p>
 
-        <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] text-ink">
+        <h1 className="on-ink mt-8 font-display text-[clamp(26px,2.6vw,38px)] font-semibold leading-[1.18] tracking-[-0.02em] lg:mt-10">
           Build a career that moves the nation forward.
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-body-gray">
+        <p className="on-ink-dim mt-4 max-w-md text-sm leading-relaxed">
           The official hiring portal of the Metals Industry Research and Development Center.
         </p>
 
-        <ul className="mt-10 space-y-3">
+        {/* Feature rows as glass chips (icon chips on white/10) — lg+ only,
+            so the mobile band stays compact. */}
+        <ul className="mt-8 hidden space-y-3 lg:mt-10 lg:block">
           {TRUST_POINTS.map((point) => (
             <li
               key={point.text}
-              className="flex items-center gap-3.5 rounded-xl bg-white p-3.5 shadow-e1"
+              className="flex items-center gap-3.5 rounded-2xl bg-white/[0.06] p-3.5 ring-1 ring-white/12"
             >
-              <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} />
-              <span className="text-[13px] font-medium text-ink">{point.text}</span>
+              <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} className="bg-white/10!" />
+              <span className="text-[13px] font-medium on-ink">{point.text}</span>
             </li>
           ))}
         </ul>
@@ -184,21 +189,21 @@ export default function SignInView() {
     <div className="flex w-full flex-1 flex-col lg:flex-row">
       <AuthBrandPanel />
 
-      {/* Form column — editorial form directly on the white canvas */}
+      {/* Form column — editorial form on the pure-white canvas (~420px card) */}
       <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
-        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="w-full max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div>
             {/* Card header — mobile/tablet only; the lg+ brand panel carries brand + heading */}
             <div className="lg:hidden">
-              <h2 className="text-center font-display text-3xl text-ink">Welcome back</h2>
+              <h2 className="text-center font-display text-xl font-semibold tracking-[-0.02em] text-ink">Welcome back</h2>
             </div>
-            <p className="mt-2 text-center text-sm text-body-gray lg:mt-0 lg:text-left">
+            <p className="mt-2 text-center text-[13px] text-body-gray lg:mt-0 lg:text-left">
               Sign in with your email or username to continue.
             </p>
 
             <form onSubmit={submit} className="mt-7 space-y-4" noValidate>
               <div>
-                <label htmlFor="identifier" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="identifier" className="mb-1.5 block text-[13px] font-medium text-ink">
                   Email or username
                 </label>
                 <Input
@@ -208,12 +213,12 @@ export default function SignInView() {
                   placeholder="you@example.gov.ph"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="dlg-input min-h-[44px]"
+                  className="dlg-input h-11 rounded-xl px-4"
                 />
               </div>
               <div>
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label htmlFor="password" className="block text-sm font-medium text-ink">
+                  <label htmlFor="password" className="block text-[13px] font-medium text-ink">
                     Password
                   </label>
                   {/* QA 2026-02: forgot-password option for applicants,
@@ -221,7 +226,7 @@ export default function SignInView() {
                   <button
                     type="button"
                     onClick={() => setForgotOpen(true)}
-                    className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+                    className="min-h-[44px] text-[13px] text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
                   >
                     Forgot password?
                   </button>
@@ -234,7 +239,7 @@ export default function SignInView() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="dlg-input min-h-[44px]"
+                  className="dlg-input h-11 rounded-xl px-4"
                 />
               </div>
 
@@ -253,15 +258,15 @@ export default function SignInView() {
               <button
                 type="submit"
                 disabled={busy}
-                className="dlg-cta min-h-[44px] w-full text-sm font-medium disabled:opacity-50"
+                className="dlg-cta h-11 w-full text-sm font-medium disabled:opacity-50"
               >
                 {busy ? "Signing in…" : "Sign in"}
               </button>
             </form>
 
             {/* Demo accounts — capsule quick-fill chips (charcoal when active) */}
-            <div className="mt-6 border-t border-border pt-5">
-              <p className="text-xs font-medium uppercase tracking-wider text-stone">Demo accounts</p>
+            <div className="mt-6 border-t border-divider pt-5">
+              <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-stone">Demo accounts</p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 {DEMO_ACCOUNTS.map((name) => {
                   const selected = identifier === name && password === "password123";
@@ -275,7 +280,7 @@ export default function SignInView() {
                         setPassword("password123");
                       }}
                       className={cn(
-                        "inline-flex min-h-[44px] items-center gap-1.5 px-4 text-xs font-medium transition-all duration-150",
+                        "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-medium transition-all duration-150",
                         selected ? "dlg-cta" : "dlg-ghost"
                       )}
                     >
@@ -285,7 +290,7 @@ export default function SignInView() {
                   );
                 })}
               </div>
-              <p className="mt-3 text-xs leading-relaxed text-stone">
+              <p className="mt-3 text-[13px] leading-relaxed text-stone">
                 password123 · staff accounts are restricted to the MIRDC intranet; applicants can
                 sign in from any network.
               </p>
@@ -296,13 +301,13 @@ export default function SignInView() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <button
               onClick={() => navigate("signup")}
-              className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+              className="min-h-[44px] text-[13px] text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
             >
               Create an account
             </button>
             <button
               onClick={() => navigate("vacant-positions")}
-              className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+              className="min-h-[44px] text-[13px] text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
             >
               Back to vacant positions
             </button>
@@ -316,13 +321,13 @@ export default function SignInView() {
           <DialogHeader>
             <DialogTitle className="font-display text-xl tracking-[-0.02em] text-ink">Reset your password</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-body-gray">
-              Enter the email address on your account — applicants, evaluators, and administrators
-              alike — and we'll send you a reset link. The link expires in 30 minutes.
+              Enter the email address on your account (applicants, evaluators, and administrators
+              alike) and we'll send you a reset link. The link expires in 30 minutes.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={submitForgot} className="space-y-4" noValidate>
             <div>
-              <label htmlFor="forgot-email" className="mb-1.5 block text-sm font-medium text-ink">
+              <label htmlFor="forgot-email" className="mb-1.5 block text-[13px] font-medium text-ink">
                 Email address
               </label>
               <Input
@@ -332,7 +337,7 @@ export default function SignInView() {
                 placeholder="you@example.gov.ph"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
-                className="dlg-input min-h-[44px]"
+                className="dlg-input h-11 rounded-xl px-4"
               />
             </div>
             <DialogFooter className="gap-2">

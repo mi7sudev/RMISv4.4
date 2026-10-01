@@ -127,7 +127,7 @@ export default function WorkExperienceSection({
       icon={Briefcase}
       chipTone="amber"
       title="Work Experience"
-      description="Relevant roles — dates drive the experience requirement check."
+      description="Relevant roles: dates drive the experience requirement check."
       actions={
         <div className="flex items-center gap-3">
           <SaveHint saving={busy} saved={savedFlash} />
@@ -159,7 +159,7 @@ export default function WorkExperienceSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-ink">
-                    {row.positionTitle ?? "—"}
+                    {row.positionTitle ?? "-"}
                     {row.employerName ? <span className="text-body-gray"> · {row.employerName}</span> : null}
                   </p>
                   <p className="num mt-1 text-sm text-body-gray">

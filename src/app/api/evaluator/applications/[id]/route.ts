@@ -148,7 +148,7 @@ export const PATCH = handleApi(async (req: Request, ctx: { params: Promise<{ id:
       action: "APPLICATION_STATUS_CHANGED",
       entityType: "application",
       entityId: id,
-      description: `Application ${id} status changed: ${from} → ${to}${input.reason ? ` — ${input.reason}` : ""}`,
+      description: `Application ${id} status changed: ${from} → ${to}${input.reason ? ` (reason: ${input.reason})` : ""}`,
       ipAddress: getClientIp(req),
     });
   } catch {

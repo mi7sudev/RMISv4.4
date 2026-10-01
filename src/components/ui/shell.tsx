@@ -199,13 +199,13 @@ export function KpiCard({
 }: KpiCardProps) {
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
-        {Icon ? <IconChip icon={Icon} tone={TONE_CHIP[tone]} size={40} /> : null}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
+        {Icon ? <IconChip icon={Icon} tone={TONE_CHIP[tone]} size={32} /> : null}
       </div>
-      <div className="mt-4 flex items-end justify-between gap-3">
+      <div className="mt-3 flex items-end justify-between gap-3">
         <div className="flex items-baseline gap-2">
-          <span className="num text-[34px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</span>
+          <span className="num text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</span>
           {hint ? <span className="text-xs font-medium text-pebble">{hint}</span> : null}
         </div>
         {aside}
@@ -214,9 +214,8 @@ export function KpiCard({
   );
 
   const base = cn(
-    "dlg-card-plain border border-black/[0.07] bg-gradient-to-b from-white to-[#fdfdfc] p-6 shadow-e2",
-    onClick &&
-      "group focus-ring cursor-pointer lift hover:border-ink/15",
+    "data-card p-5",
+    onClick && "data-card-hover group focus-ring cursor-pointer",
     className
   );
 
@@ -228,6 +227,37 @@ export function KpiCard({
     );
   }
   return <div className={base}>{body}</div>;
+}
+
+// ── DeltaBadge (trend indicator for KPIs) ───────────────────────────────────
+
+export function DeltaBadge({
+  dir,
+  children,
+  className,
+}: {
+  dir: "up" | "down" | "flat";
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const map = {
+    up: "bg-ok-bg text-ok",
+    down: "bg-bad-bg text-bad",
+    flat: "bg-fog text-stone",
+  } as const;
+  const glyph = dir === "up" ? "▲" : dir === "down" ? "▼" : "◆";
+  return (
+    <span
+      className={cn(
+        "dlg-pill inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold",
+        map[dir],
+        className
+      )}
+    >
+      <span aria-hidden="true" className="text-[8px] leading-none">{glyph}</span>
+      {children}
+    </span>
+  );
 }
 
 // ── EmptyState ──────────────────────────────────────────────────────────────
@@ -302,20 +332,20 @@ export function SectionCard({
   // min-content floor of its nowrap description, or the grid track blows out
   // and the card overflows its viewport (observed at 320–1279px).
   return (
-    <section className={cn("dlg-card min-w-0 p-6", className)} aria-label={title}>
+    <section className={cn("data-card min-w-0 p-5 sm:p-6", className)} aria-label={title}>
       {title || actions ? (
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {Icon ? (
               <IconChip
                 icon={Icon}
                 tone={chipTone ?? SECTION_CHIP_TONE[title ?? ""] ?? "slate"}
-                size={36}
-                iconSize={16}
+                size={34}
+                iconSize={15}
               />
             ) : null}
             <div className="min-w-0">
-              <h2 className="truncate font-display text-lg leading-7 text-ink">{title}</h2>
+              <h2 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-ink">{title}</h2>
               {/* Wraps below sm, truncates from sm up. Full-width nowrap (truncate
                   everywhere) gave the card a huge min-content floor that blew out
                   auto grid tracks on phones; wrapping text has none. */}
@@ -336,12 +366,12 @@ export function SkeletonKpis({ count = 4, className }: { count?: number; classNa
   return (
     <div className={cn("grid grid-cols-2 gap-4 lg:grid-cols-4", className)} aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="dlg-card-plain border border-black/[0.07] p-6 shadow-e1">
+        <div key={i} className="data-card p-5">
           <div className="flex items-start justify-between">
             <div className="skel h-3 w-20" />
-            <div className="skel h-10 w-10 rounded-xl" />
+            <div className="skel h-8 w-8 rounded-lg" />
           </div>
-          <div className="skel mt-4 h-8 w-16" />
+          <div className="skel mt-4 h-7 w-16" />
         </div>
       ))}
     </div>

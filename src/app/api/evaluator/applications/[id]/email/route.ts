@@ -94,7 +94,7 @@ export const POST = handleApi(async (req: Request, ctx: { params: Promise<{ id: 
   // Recipient always resolved server-side from the live applicant record.
   const recipient = app.applicant.emailAddress ?? "";
   if (!recipient) {
-    throw new ApiError("No email address on record — contact the applicant directly.", 400);
+    throw new ApiError("No email address on record; contact the applicant directly.", 400);
   }
 
   let subject: string | undefined;

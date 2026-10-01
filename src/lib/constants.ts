@@ -15,9 +15,9 @@ export const DIVISIONS: { code: string; name: string }[] = [
 ];
 
 export function divisionName(code: string | null | undefined): string {
-  if (!code) return "—";
+  if (!code) return "-";
   const hit = DIVISIONS.find((d) => d.code === code || d.name === code);
-  return hit ? `${hit.code} — ${hit.name}` : code;
+  return hit ? `${hit.code} · ${hit.name}` : code;
 }
 
 export const POSITION_TYPES = [
@@ -32,7 +32,7 @@ export const CSC_EDUCATION_FIRST_LEVEL = [
   "Two years of college education (prior to 2018)",
   "High school graduate with relevant vocational course (prior to 2018)",
   "Grade 12 / Senior High School graduate (starting 2016)",
-  "Grade 12 / Senior High School — TVL track",
+  "Grade 12 / Senior High School (TVL track)",
   "Grade 10 / JHS graduate with TESDA NC II (starting 2018)",
 ];
 
@@ -45,10 +45,10 @@ export const CSC_EDUCATION_HIGHER_LEVEL = [
 ];
 
 export const CSC_ELIGIBILITY_REGISTRY: { name: string; description: string }[] = [
-  { name: "Career Service Sub-Professional (First Level)", description: "Career Service Sub-Professional examination passers — first level positions." },
-  { name: "Career Service Professional (Second Level)", description: "Career Service Professional examination passers — second level positions." },
-  { name: "Honor Graduate (PD 907)", description: "Cum laude or higher — civil service eligibility without examination." },
-  { name: "Bar/Board (RA 1080)", description: "Bar or board examination passers — professional license counts as eligibility." },
+  { name: "Career Service Sub-Professional (First Level)", description: "Career Service Sub-Professional examination passers, first level positions." },
+  { name: "Career Service Professional (Second Level)", description: "Career Service Professional examination passers, second level positions." },
+  { name: "Honor Graduate (PD 907)", description: "Cum laude or higher, civil service eligibility without examination." },
+  { name: "Bar/Board (RA 1080)", description: "Bar or board examination passers; a professional license counts as eligibility." },
   { name: "Barangay Official (RA 7160)", description: "Elected barangay officials completing a term of office." },
   { name: "Veteran Preference (EO 790)", description: "Veterans preference grantee." },
   { name: "Solo Parent (CSC MC 08, s. 2021)", description: "Solo parent eligibility under CSC MC 08, s. 2021." },

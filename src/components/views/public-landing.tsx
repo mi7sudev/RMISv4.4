@@ -2,16 +2,17 @@
 
 // ============================================================================
 // RMIS — Public landing (spec §7.1): a two-pane job explorer in the
-// reference-board style — TOP: a Bevel "Hero Sky" rounded-32 gradient field
-// carrying the display headline, live open-count pill and the charcoal
-// capsule CTA to the full board; LEFT: a scrollable register of Cloud Card
-// job cards (title · company · place · salary · clamped snippet · posted
-// age · chevron quick-view + bookmark); RIGHT: the full posting pane
-// (display title, verified company row + "View all jobs", icon meta rows,
-// posted age, charcoal Quick apply + ghost Save, description,
-// Responsibilities / Qualifications / Compensation sections). The selected
-// card carries the Metric Blue ring (#415eee). Mobile swaps panes
-// (list → detail with back).
+// reference-board style — TOP: the dark "Executive Ink" hero band (rounded-3xl
+// aurora field + blueprint grid) carrying the display headline, a live
+// open-count glass chip and the charcoal capsule CTA to the full board;
+// LEFT: a scrollable register of white Data Card job cards (title · company ·
+// place · salary · clamped snippet · posted age · chevron quick-view +
+// bookmark); RIGHT: the full posting pane on a white Data Card (display
+// title, verified company row + "View all jobs", icon meta rows, salary &
+// closing label/value register, charcoal Quick apply + ghost Save,
+// description, Responsibilities / Qualifications / Compensation sections).
+// The selected card carries the Metric Blue ring (#415eee). Mobile swaps
+// panes (list → detail with back).
 // Data from GET /api/jobs (30s silent poll + refetch on focus); visitors
 // without a session are routed to sign-in by the shared apply gate; saves
 // persist in localStorage. Apply actions are cancelled-only on the landing.
@@ -23,13 +24,11 @@ import {
   AlertCircle,
   ArrowRight,
   BadgeCheck,
-  Banknote,
   Bookmark,
   Briefcase,
   Building2,
   ChevronDown,
   ChevronLeft,
-  Clock,
   Inbox,
   MapPin,
 } from "lucide-react";
@@ -143,7 +142,7 @@ function JobListCard({
   const overdue = deadline ? new Date(deadline).getTime() < Date.now() : false;
 
   return (
-    <article className={cn("dlg-card lift", selected && "ring-2 ring-metric-blue/60")}>
+    <article className={cn("data-card data-card-hover", selected && "ring-2 ring-[#415eee]/40")}>
       {/* Select target — title, company, vitals, snippet */}
       <button
         type="button"
@@ -154,15 +153,15 @@ function JobListCard({
       >
         <h3
           className={cn(
-            "text-[17px] font-semibold leading-snug",
+            "text-[16px] font-medium leading-snug",
             selected ? TITLE_SELECTED : "text-ink"
           )}
         >
           {humanize(title)}
         </h3>
-        <p className="mt-1 text-[15px] text-ink">{company}</p>
-        <p className="mt-2.5 text-sm text-body-gray">{jobPlace(job)}</p>
-        {salary != null && <p className="num mt-0.5 text-sm text-body-gray">{formatCurrency(salary)} per month</p>}
+        <p className="mt-1 text-[13px] font-medium text-stone">{company}</p>
+        <p className="mt-1.5 text-xs text-stone">{jobPlace(job)}</p>
+        {salary != null && <p className="num mt-1 text-[13px] text-body-gray">{formatCurrency(salary)} per month</p>}
         {job.briefDescription && (
           <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-body-gray">{job.briefDescription}</p>
         )}
@@ -183,8 +182,13 @@ function JobListCard({
             type="button"
             onClick={onToggle}
             aria-expanded={expanded}
+<<<<<<< Updated upstream
             aria-label={expanded ? `Collapse — ${humanize(title)}` : `Quick view — ${humanize(title)}`}
+            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-body-gray transition-colors hover:bg-fog hover:text-ink"
+=======
+            aria-label={expanded ? `Collapse: ${humanize(title)}` : `Quick view: ${humanize(title)}`}
             className="focus-ring grid h-9 w-9 place-items-center rounded-full text-body-gray transition-colors hover:bg-white/70 hover:text-ink"
+>>>>>>> Stashed changes
           >
             <ChevronDown
               className={cn("h-[18px] w-[18px] transition-transform duration-200", expanded && "rotate-180")}
@@ -195,7 +199,7 @@ function JobListCard({
             onClick={onSave}
             aria-pressed={saved}
             aria-label={saved ? `Remove ${humanize(title)} from saved` : `Save ${humanize(title)}`}
-            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-body-gray transition-colors hover:bg-white/70 hover:text-ink"
+            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-body-gray transition-colors hover:bg-fog hover:text-ink"
           >
             <Bookmark className={cn("h-[18px] w-[18px]", saved && "fill-current text-metric-blue")} />
           </button>
@@ -229,17 +233,17 @@ function JobListCard({
               )}
               {/* 3-up everywhere — a 6-up row wraps currency mid-number. */}
               <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
-                <QuickFact label="Item No." value={pos?.itemNumber ?? "—"} />
-                <QuickFact label="Vacancies" value={String(job.numberOfVacancy ?? "—")} />
+                <QuickFact label="Item No." value={pos?.itemNumber ?? "-"} />
+                <QuickFact label="Vacancies" value={String(job.numberOfVacancy ?? "-")} />
                 <QuickFact
                   label="Salary Grade"
                   value={
                     pos?.salaryGrade
                       ? `SG ${pos.salaryGrade}${pos.salaryStep ? `/${pos.salaryStep}` : ""}`
-                      : "—"
+                      : "-"
                   }
                 />
-                <QuickFact label="Monthly Salary" value={salary != null ? formatCurrency(salary) : "—"} />
+                <QuickFact label="Monthly Salary" value={salary != null ? formatCurrency(salary) : "-"} />
                 <QuickFact label="Published" value={formatDate(job.publishDate)} />
                 <QuickFact label="Deadline" value={formatDate(deadline)} danger={overdue} />
               </dl>
@@ -330,9 +334,11 @@ function JobDetail({
   const deadline = job.deadlineDate;
   const overdue = deadline ? new Date(deadline).getTime() < Date.now() : false;
 
-  const meta: { icon: typeof MapPin; label: string; num?: boolean; danger?: boolean }[] = [];
+  const meta: { icon: typeof MapPin; label: string }[] = [];
   if (job.position?.division) meta.push({ icon: Building2, label: job.position.division });
   if (job.positionType) meta.push({ icon: Briefcase, label: humanize(job.positionType) });
+<<<<<<< Updated upstream
+=======
   if (salary != null)
     meta.push({
       icon: Banknote,
@@ -343,10 +349,11 @@ function JobDetail({
     });
   meta.push({
     icon: Clock,
-    label: overdue ? "Closed — deadline passed" : deadline ? `Closes ${formatDate(deadline)}` : "Open until filled",
+    label: overdue ? "Closed: deadline passed" : deadline ? `Closes ${formatDate(deadline)}` : "Open until filled",
     num: !overdue && !deadline,
     danger: overdue,
   });
+>>>>>>> Stashed changes
 
   return (
     <div>
@@ -380,18 +387,34 @@ function JobDetail({
           {jobPlace(job)}
         </li>
         {meta.map((m, i) => (
-          <li
-            key={i}
-            className={cn(
-              "flex items-start gap-2.5 text-[15px]",
-              m.danger ? "font-semibold text-[var(--bad)]" : "text-body-gray"
-            )}
-          >
+          <li key={i} className="flex items-start gap-2.5 text-[15px] text-body-gray">
             <m.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-stone" aria-hidden="true" />
-            <span className={cn(m.num && "num")}>{m.label}</span>
+            <span>{m.label}</span>
           </li>
         ))}
       </ul>
+
+      {/* Salary & closing — label/value register rows with tabular figures */}
+      <dl className="mt-5 divide-y divide-divider overflow-hidden rounded-2xl bg-fog">
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-stone">Monthly salary</dt>
+          <dd className="num text-right text-sm font-medium text-ink">
+            {salary != null ? formatCurrency(salary) : "—"}
+            {pos?.salaryGrade ? ` · SG ${pos.salaryGrade}${pos.salaryStep ? `/${pos.salaryStep}` : ""}` : ""}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-stone">Closing date</dt>
+          <dd
+            className={cn(
+              "num text-right text-sm font-medium",
+              overdue ? "text-[var(--bad)]" : "text-ink"
+            )}
+          >
+            {deadline ? formatDate(deadline) : "Open until filled"}
+          </dd>
+        </div>
+      </dl>
 
       <p className="num mt-4 text-sm text-body-gray">Posted {timeAgo(postedAt(job))}</p>
 
@@ -496,6 +519,12 @@ export default function PublicLanding() {
     [jobs]
   );
 
+  // Derived, fetch-free hero figures (recomputed from the same poll state).
+  const closingSoon = useMemo(
+    () => openJobs.filter((j) => deadlineState(j.deadlineDate).closingSoon).length,
+    [openJobs]
+  );
+
   const selectedJob = useMemo(
     () => openJobs.find((j) => j.id === selectedId) ?? null,
     [openJobs, selectedId]
@@ -552,31 +581,61 @@ export default function PublicLanding() {
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
-        {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer:
-            ink display headline + body-gray copy, live open-count pill and
-            the charcoal capsule CTA to the full board. */}
-        <section className="rounded-[32px] bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] p-6 sm:p-8 lg:px-10 lg:py-9">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            {/* QA 2026-02: header renamed to "Job Opportunities" to match the
-                Positions tab; the live "N open" pill was removed — it read as
-                an unclickable button. */}
+        {/* Hero — dark "Executive Ink" band (rounded-3xl aurora + blueprint
+            grid): display headline over ink, live open-count glass chip and
+            the charcoal capsule CTA to the full board. The count chip is a
+            non-interactive label (the QA-removed button-shaped pill stays
+            gone); the right glass panel surfaces figures already in state. */}
+        <section className="hero-band relative overflow-hidden rounded-3xl p-8 sm:p-12 lg:p-16">
+          <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <h1 className="text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-5xl">
+              {/* QA 2026-02: header renamed to "Job Opportunities" to match the
+                  Positions tab; the system name rides above it as an eyebrow. */}
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">
+                Recruitment Management Information System
+              </p>
+              <h1 className="on-ink mt-3 font-display text-3xl font-semibold leading-[1.08] tracking-[-0.03em] sm:text-5xl">
                 Job Opportunities
               </h1>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-body-gray sm:text-base">
+<<<<<<< Updated upstream
+              <p className="on-ink-dim mt-3 max-w-xl text-sm leading-relaxed sm:text-base">
                 Current vacancies at DOST-MIRDC — pick a role to read the full posting.
+=======
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-body-gray sm:text-base">
+                Current vacancies at DOST-MIRDC. Pick a role to read the full posting.
+>>>>>>> Stashed changes
               </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => navigate("vacant-positions")}
+                  className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 text-sm font-medium"
+                >
+                  Browse the full board
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-4 py-1.5 text-[13px] ring-1 ring-white/15">
+                  <span className="num font-semibold on-ink">{openJobs.length}</span>
+                  <span className="on-ink-dim">open roles right now</span>
+                </span>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => navigate("vacant-positions")}
-                className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 text-sm font-medium"
-              >
-                Browse the full board
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
+
+            {/* Glass stat panel — figures already held in component state */}
+            <dl className="w-full shrink-0 rounded-2xl bg-white/[0.06] p-5 ring-1 ring-white/12 backdrop-blur lg:w-64">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-[13px] on-ink-dim">Open roles</dt>
+                <dd className="num text-xl font-semibold on-ink">{openJobs.length}</dd>
+              </div>
+              <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/10 pt-4">
+                <dt className="text-[13px] on-ink-dim">Closing soon</dt>
+                <dd className="num text-xl font-semibold on-ink">{closingSoon}</dd>
+              </div>
+              <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/10 pt-4">
+                <dt className="text-[13px] on-ink-dim">Published postings</dt>
+                <dd className="num text-xl font-semibold on-ink">{jobs?.length ?? 0}</dd>
+              </div>
+            </dl>
           </div>
         </section>
 
@@ -597,7 +656,7 @@ export default function PublicLanding() {
             ))}
           </div>
         ) : openJobs.length === 0 ? (
-          <div className="dlg-card mt-6">
+          <div className="data-card mt-6">
             <EmptyState
               icon={Inbox}
               title="No open positions right now"
@@ -649,7 +708,7 @@ export default function PublicLanding() {
             {showDetail && (
               <div ref={paneRef} className="scroll-thin min-h-0 lg:overscroll-contain lg:overflow-y-auto lg:pr-2">
                 {selectedJob ? (
-                  <div className="dlg-card p-6 sm:p-8">
+                  <div className="data-card p-6 sm:p-8">
                     <JobDetail
                       job={selectedJob}
                       saved={saved.includes(selectedJob.id)}
@@ -659,7 +718,7 @@ export default function PublicLanding() {
                     />
                   </div>
                 ) : (
-                  <div className="dlg-card">
+                  <div className="data-card">
                     <EmptyState
                       icon={Briefcase}
                       title="Select a position"

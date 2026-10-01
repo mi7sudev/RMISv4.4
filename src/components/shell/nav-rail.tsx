@@ -2,13 +2,14 @@
 
 // ============================================================================
 // RMIS — Desktop left navigation rail (spec §13 view registry, §7.10 nav
-// config). PREMIUM DARK RAIL (Linear/Notion pattern): deep-ink gradient,
-// glass hover states, glowing active pill, blue brand mark. LABELED w-64 by
-// default; the collapse toggle sits in the brand row next to "MIRDC
-// Recruitment" (persisted in localStorage "rmis.rail-expanded"). When
+// config). EXECUTIVE INK RAIL: deep-ink gradient, hairline separators,
+// glass hover states, Metric Blue active pill with glow, white brand plate.
+// LABELED w-64 by default; the collapse toggle sits in the brand row next to
+// "MIRDC Recruitment" (persisted in localStorage "rmis.rail-expanded"). When
 // collapsed to the w-16 icon-only rail there is NO expand button — clicking
 // anywhere on the rail (brand plate or empty chrome) expands it instead.
-// Bottom: user dropdown with sign out.
+// Bottom: user card (gradient monogram + role) with dropdown, then a faint
+// system version strip.
 // ============================================================================
 
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -193,21 +194,31 @@ export function NavRail({ view }: { view: string }) {
         )}
         {/* Brand → role home when expanded; when collapsed the brand plate is
             the rail's most prominent affordance, so it expands the rail. */}
-        <div className={`flex h-16 shrink-0 items-center gap-1 ${expanded ? "px-3" : "justify-center"}`}>
+        <div
+          className={`flex h-16 shrink-0 items-center gap-1 ${
+            expanded ? "px-3" : "justify-center"
+          }`}
+          style={{ borderBottom: "1px solid var(--rail-border)" }}
+        >
           <button
             onClick={() => (expanded ? navigate(ROLE_HOME[user.role]) : toggleExpanded())}
             className={`flex min-h-[44px] items-center gap-3 ${expanded ? "min-w-0 flex-1" : ""}`}
             aria-label={expanded ? "Go to my workspace" : "Expand navigation"}
           >
-            {/* Official two-logo lockup — see brand-logo (tone adapts the divider). */}
+            {/* Official two-logo lockup on its white plate */}
             {expanded ? (
-              <BrandLogo logoSize={22} tone="light" />
+              <BrandLogo logoSize={20} tone="dark" />
             ) : (
-              <BrandLogo logoSize={16} tone="light" />
+              <BrandLogo logoSize={14} tone="dark" />
             )}
             {expanded && (
               <span className="min-w-0 text-left">
-                <span className="block truncate text-sm font-semibold text-ink">RMIS</span>
+                <span className="block truncate text-[12.5px] font-semibold leading-tight tracking-[-0.01em] text-[var(--rail-text-strong)]">
+                  MIRDC Recruitment
+                </span>
+                <span className="block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--rail-text-dim)]">
+                  DOST · RMIS 2.0
+                </span>
               </span>
             )}
           </button>
@@ -216,7 +227,7 @@ export function NavRail({ view }: { view: string }) {
           {expanded && (
             <button
               onClick={toggleExpanded}
-              className="grid h-9 w-9 shrink-0 place-items-center text-[var(--rail-text-dim)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[var(--rail-text-dim)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-[var(--rail-text-strong)]"
               aria-label="Collapse navigation"
               title="Collapse navigation"
             >
@@ -226,44 +237,47 @@ export function NavRail({ view }: { view: string }) {
         </div>
 
         {/* Sections */}
-        <nav className="flex-1 space-y-6 overflow-y-auto scroll-thin px-2.5 py-4" aria-label="Workspace">
+        <nav className="flex-1 space-y-6 overflow-y-auto scroll-thin px-2.5 py-5" aria-label="Workspace">
           {groups.map((g) => (
             <div key={g.group}>
               {expanded ? (
-                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--rail-text-dim)]">
+                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--rail-text-dim)]">
                   {g.group}
                 </p>
               ) : (
                 <div className="mx-auto mb-2 h-px w-6 bg-[var(--rail-border)]" aria-hidden="true" />
               )}
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {g.items.map((item) => {
                   const active = item.view === activeKey;
                   const button = (
                     <button
                       onClick={() => navigate(item.view)}
                       aria-current={active ? "page" : undefined}
-                      className={`group relative flex min-h-[44px] w-full items-center gap-3 text-sm transition-all duration-150 ${
-                        expanded ? "px-3.5" : "justify-center px-0"
+                      className={`group relative flex min-h-[40px] w-full items-center gap-3 rounded-[10px] text-sm transition-all duration-150 ${
+                        expanded ? "px-3" : "justify-center px-0"
                       } ${
                         active
-                          ? "bg-[var(--rail-active-bg)] font-medium text-ink"
-                          : "text-[var(--rail-text)] hover:bg-[var(--rail-hover-bg)] hover:text-ink"
+                          ? "bg-[var(--rail-active-bg)] font-medium text-[var(--rail-text-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                          : "text-[var(--rail-text)] hover:bg-[var(--rail-hover-bg)] hover:text-[var(--rail-text-strong)]"
                       }`}
                     >
-                      {/* Metric Blue active indicator — small Bevel accent */}
+                      {/* Metric Blue active indicator with glow */}
                       <span
                         aria-hidden="true"
                         className={`absolute -left-2.5 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-opacity duration-200 ${
                           active ? "opacity-100" : "opacity-0"
                         }`}
-                        style={{ background: "#415eee" }}
+                        style={{
+                          background: "var(--rail-accent)",
+                          boxShadow: "0 0 10px rgba(107, 131, 255, 0.65)",
+                        }}
                       />
                       <item.icon
                         className={`h-[18px] w-[18px] shrink-0 transition-colors ${
                           active
-                            ? "text-ink"
-                            : "text-[var(--rail-text-dim)] group-hover:text-ink"
+                            ? "text-[var(--rail-text-strong)]"
+                            : "text-[var(--rail-text-dim)] group-hover:text-[var(--rail-text)]"
                         }`}
                         aria-hidden="true"
                       />
@@ -277,7 +291,7 @@ export function NavRail({ view }: { view: string }) {
                       ) : (
                         <Tooltip>
                           <TooltipTrigger asChild>{button}</TooltipTrigger>
-                          <TooltipContent side="right" className="rounded-lg bg-ink text-xs text-white">
+                          <TooltipContent side="right" className="rounded-lg bg-[#181a22] text-xs text-white">
                             {item.label}
                           </TooltipContent>
                         </Tooltip>
@@ -290,28 +304,30 @@ export function NavRail({ view }: { view: string }) {
           ))}
         </nav>
 
-        {/* Bottom: user dropdown (the collapse toggle lives in the brand row) */}
+        {/* Bottom: user card + account dropdown, then version strip */}
         <div className="shrink-0 p-2.5" style={{ borderTop: "1px solid var(--rail-border)" }}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`flex min-h-[44px] w-full items-center gap-3 text-left hover:bg-[var(--rail-hover-bg)] ${
+                className={`flex min-h-[44px] w-full items-center gap-3 rounded-[10px] text-left transition-colors hover:bg-[var(--rail-hover-bg)] ${
                   expanded ? "px-2" : "justify-center px-0"
                 }`}
                 aria-label="Account menu"
               >
                 <span
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-[#ebf0f8]"
-                  style={{ background: "#1f2025" }}
+                  className="monogram monogram-rail shrink-0"
+                  style={{ width: 34, height: 34, fontSize: 12 }}
                 >
                   {initialsOf(user)}
                 </span>
                 {expanded && (
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink">
+                    <span className="block truncate text-[13px] font-medium text-[var(--rail-text-strong)]">
                       {displayNameOf(user)}
                     </span>
-                    <span className="block truncate text-xs text-[var(--rail-text-dim)]">{user.role}</span>
+                    <span className="block truncate text-[11px] text-[var(--rail-text-dim)]">
+                      {user.role === "ADMIN" ? "Administrator" : user.role === "EVALUATOR" ? "Evaluator" : "Applicant"}
+                    </span>
                   </span>
                 )}
               </button>
@@ -336,6 +352,11 @@ export function NavRail({ view }: { view: string }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {expanded && (
+            <p className="mt-2 px-2 pb-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--rail-text-dim)]">
+              RMIS 2.0 · Secure Portal
+            </p>
+          )}
         </div>
       </aside>
     </TooltipProvider>
