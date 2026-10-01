@@ -20,6 +20,14 @@ import { Activity, Check, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Turnstile } from "@/components/turnstile";
 import type { TurnstileHandle } from "@/components/turnstile";
 import { BrandLogo } from "@/components/brand-logo";
@@ -59,6 +67,12 @@ function AuthBrandPanel() {
           <span className="text-sm font-semibold text-ink">RMIS</span>
         </div>
 
+        {/* QA 2026-02: spell out the acronym in full — the system name is
+            "Recruitment Management Information System", not "Recruitment portal". */}
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-body-gray">
+          Recruitment Management Information System
+        </p>
+
         <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] text-ink">
           Build a career that moves the nation forward.
         </h1>
@@ -92,6 +106,33 @@ export default function SignInView() {
   const [captcha, setCaptcha] = useState<CaptchaConfig>({ enabled: false, siteKey: null });
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle | null>(null);
+
+  // QA 2026-02 — Forgot password (applicants, evaluators, administrators).
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
+
+  const submitForgot = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      toast.error("Enter the email on your account");
+      return;
+    }
+    setForgotBusy(true);
+    try {
+      const res = await apiFetch<{ message: string }>("/api/auth/forgot-password", {
+        method: "POST",
+        body: { email: forgotEmail.trim() },
+      });
+      toast.success("Check your inbox", { description: res.message });
+      setForgotOpen(false);
+      setForgotEmail("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send the reset email");
+    } finally {
+      setForgotBusy(false);
+    }
+  };
 
   // Gate-aware captcha: ask the server which door we are on. If the config
   // fetch fails the widget simply stays off — the login endpoint re-checks
@@ -171,9 +212,20 @@ export default function SignInView() {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
-                  Password
-                </label>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-ink">
+                    Password
+                  </label>
+                  {/* QA 2026-02: forgot-password option for applicants,
+                      evaluators, and administrators. */}
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <Input
                   id="password"
                   name="password"
@@ -249,14 +301,59 @@ export default function SignInView() {
               Create an account
             </button>
             <button
-              onClick={() => navigate("jobs")}
+              onClick={() => navigate("vacant-positions")}
               className="min-h-[44px] text-sm text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
             >
-              Back to positions
+              Back to vacant positions
             </button>
           </div>
         </div>
       </div>
+
+      {/* Forgot password dialog (QA 2026-02) */}
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="dlg-card-plain sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl tracking-[-0.02em] text-ink">Reset your password</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-body-gray">
+              Enter the email address on your account — applicants, evaluators, and administrators
+              alike — and we'll send you a reset link. The link expires in 30 minutes.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitForgot} className="space-y-4" noValidate>
+            <div>
+              <label htmlFor="forgot-email" className="mb-1.5 block text-sm font-medium text-ink">
+                Email address
+              </label>
+              <Input
+                id="forgot-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.gov.ph"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                className="dlg-input min-h-[44px]"
+              />
+            </div>
+            <DialogFooter className="gap-2">
+              <button
+                type="button"
+                onClick={() => setForgotOpen(false)}
+                className="dlg-ghost min-h-[44px] px-5 py-2.5 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={forgotBusy}
+                className="dlg-cta min-h-[44px] px-5 py-2.5 text-sm font-medium disabled:opacity-50"
+              >
+                {forgotBusy ? "Sending…" : "Send reset link"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

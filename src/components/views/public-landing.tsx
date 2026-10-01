@@ -367,7 +367,7 @@ function JobDetail({
         <BadgeCheck className="h-[18px] w-[18px] shrink-0 text-stone" aria-label="Verified agency" />
         <button
           type="button"
-          onClick={() => navigate("jobs")}
+          onClick={() => navigate("vacant-positions")}
           className="focus-ring text-[15px] text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
         >
           View all jobs
@@ -557,22 +557,20 @@ export default function PublicLanding() {
             the charcoal capsule CTA to the full board. */}
         <section className="rounded-[32px] bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] p-6 sm:p-8 lg:px-10 lg:py-9">
           <div className="flex flex-wrap items-end justify-between gap-4">
+            {/* QA 2026-02: header renamed to "Job Opportunities" to match the
+                Positions tab; the live "N open" pill was removed — it read as
+                an unclickable button. */}
             <div className="min-w-0">
               <h1 className="text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-5xl">
-                Open Positions
+                Job Opportunities
               </h1>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-body-gray sm:text-base">
                 Current vacancies at DOST-MIRDC — pick a role to read the full posting.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {openJobs.length > 0 && (
-                <span className="dlg-pill num bg-white/80 px-3.5 py-1.5 text-xs font-medium text-ink">
-                  {openJobs.length} open
-                </span>
-              )}
               <button
-                onClick={() => navigate("jobs")}
+                onClick={() => navigate("vacant-positions")}
                 className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 text-sm font-medium"
               >
                 Browse the full board
@@ -607,7 +605,7 @@ export default function PublicLanding() {
             />
             <div className="pb-8 text-center">
               <button
-                onClick={() => navigate("jobs")}
+                onClick={() => navigate("vacant-positions")}
                 className="inline-flex min-h-[44px] items-center gap-2 text-sm text-metric-blue underline underline-offset-2 hover:text-ink"
               >
                 Go to the full positions board
@@ -629,7 +627,7 @@ export default function PublicLanding() {
                 card's outside ring on the left/top/bottom. */}
             {showList && (
               <div
-                aria-label="Open positions list"
+                aria-label="Job opportunities list"
                 className="scroll-thin min-h-0 space-y-3.5 lg:-ml-2 lg:-my-2 lg:overflow-y-auto lg:overscroll-contain lg:py-2 lg:pl-2 lg:pr-1.5"
               >
                 {openJobs.map((job) => (

@@ -43,12 +43,22 @@ export function SiteHeader() {
 
         {/* Right cluster */}
         <nav className="flex items-center gap-2" aria-label="Primary">
-          {view !== "jobs" && (
+          {/* QA 2026-02: the page/tab label must match the website slug —
+              the board lives at #/vacant-positions as "Vacant Positions". */}
+          {view !== "vacant-positions" && (
             <button
-              onClick={() => navigate("jobs")}
+              onClick={() => navigate("vacant-positions")}
               className="dlg-ghost inline-flex min-h-[44px] items-center px-4 text-sm sm:px-5"
             >
-              Positions
+              Vacant Positions
+            </button>
+          )}
+          {view !== "contact" && (
+            <button
+              onClick={() => navigate("contact")}
+              className="dlg-ghost hidden inline-flex min-h-[44px] items-center px-4 text-sm sm:inline-flex sm:px-5"
+            >
+              Contact
             </button>
           )}
 

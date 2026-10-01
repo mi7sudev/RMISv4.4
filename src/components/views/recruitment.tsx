@@ -101,12 +101,14 @@ function Field({
   label,
   required,
   error,
+  hint,
   children,
 }: {
   id: string;
   label: string;
   required?: boolean;
   error?: string | null;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -116,6 +118,7 @@ function Field({
         {required ? " *" : ""}
       </Label>
       {children}
+      {hint && !error && <p className="text-xs text-stone">{hint}</p>}
       {error && <p className="text-xs text-[var(--bad)]">{error}</p>}
     </div>
   );
@@ -175,7 +178,7 @@ export function JobFormDialog({
     }
     setTitle(job.title ?? "");
     setPositionType(job.positionType ?? "");
-    setVacancy(String(job.numberOfVacancy ?? 1));
+    setVacancy(job.numberOfVacancy == null ? "" : String(job.numberOfVacancy));
     setDivision(job.position?.division ?? "");
     setEducation(job.position?.cscEducation ?? "");
     setExperience(job.position?.cscWorkExperience ?? "");
@@ -203,8 +206,21 @@ export function JobFormDialog({
   const submit = async () => {
     const nextErrors: { title?: string | null; vacancy?: string | null } = {};
     if (!title.trim()) nextErrors.title = "Title is required";
-    const vacancyNum = Number(vacancy);
-    if (!Number.isInteger(vacancyNum) || vacancyNum < 1) nextErrors.vacancy = "Vacancies must be a whole number of at least 1";
+    // QA 2026-02: vacancy count is required for COS postings only —
+    // Plantilla positions map 1:1 to a Plantilla Item Number.
+    const typeUpper = (positionType ?? "").toUpperCase();
+    const isCos = typeUpper.includes("COS") || typeUpper.includes("CONTRACT");
+    let vacancyNum: number | null = null;
+    if (vacancy.trim() !== "") {
+      const n = Number(vacancy);
+      if (!Number.isInteger(n) || n < 1) {
+        nextErrors.vacancy = "Vacancies must be a whole number of at least 1";
+      } else {
+        vacancyNum = n;
+      }
+    } else if (isCos) {
+      nextErrors.vacancy = "COS postings must specify the number of vacancies";
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -384,7 +400,13 @@ export function JobFormDialog({
 
           <FormPanel title="Compensation & Vacancy" icon={Banknote} chipTone="amber">
             <div className="space-y-4">
-              <Field id="job-vacancy" label="Number of vacancies" required error={errors.vacancy}>
+              <Field
+                id="job-vacancy"
+                label="Number of vacancies"
+                required={(positionType ?? "").toUpperCase().includes("COS") || (positionType ?? "").toUpperCase().includes("CONTRACT")}
+                error={errors.vacancy}
+                hint="Required for COS postings. Plantilla positions map 1:1 to a Plantilla Item Number, so the count is optional."
+              >
                 <Input
                   id="job-vacancy"
                   type="number"
@@ -692,7 +714,7 @@ export default function Recruitment() {
                           </div>
                         </div>
                       </td>
-                      <td className="num px-4 py-3.5 font-medium text-stone">{j.numberOfVacancy}</td>
+                      <td className="num px-4 py-3.5 font-medium text-stone">{j.numberOfVacancy ?? "—"}</td>
                       <td className="num px-4 py-3.5 font-medium text-stone">
                         {j.position?.salaryAmount != null ? formatCurrency(j.position.salaryAmount) : "—"}
                       </td>

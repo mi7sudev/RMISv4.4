@@ -3,7 +3,7 @@
 // ============================================================================
 // RMIS — Applicant home ("My Application"): editorial welcome header over a
 // two-pane workspace grid (lg:grid-cols-12):
-//   LEFT  · Open Positions — full-width stacked list rows (metric-blue hover
+//   LEFT  · Job Openings — full-width stacked list rows (metric-blue hover
 //           rule, humanized title, pipe-separated vitals, capsule +/−
 //           quick-view toggle, in-place quick view with six QuickFacts).
 //   RIGHT · Your Applications — sticky rail with its own overflow scroll;
@@ -51,6 +51,7 @@ import { navigate, type ApplicationWire, type JobWire, type PositionWire } from 
 import { currentStageLabel, stageForStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/session-provider";
+import OnboardingTour from "@/components/onboarding-tour";
 
 // ── Small helpers ───────────────────────────────────────────────────────────
 
@@ -329,7 +330,7 @@ function ApplicationDetailModal({
   const facts: [string, string][] = [
     ["Place of Assignment", position?.placeOfAssignment ?? "—"],
     ["Employment Type", job?.positionType ? humanize(job.positionType) : position?.positionType ? humanize(position.positionType) : "—"],
-    ["Vacancies", job ? String(job.numberOfVacancy) : "—"],
+    ["Vacancies", job?.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
     ["Monthly Salary", formatCurrency(position?.salaryAmount ?? null)],
     ["Salary Grade", position?.salaryGrade ? `SG-${position.salaryGrade}${position.salaryStep ? ` Step ${position.salaryStep}` : ""}` : "—"],
     ["Item No.", position?.itemNumber ?? "—"],
@@ -753,7 +754,7 @@ export default function ApplicantHome() {
 
       {/* ===== Profile completion banner ===== */}
       {!profileComplete && (
-        <div className="dlg-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div data-tour="profile-banner" className="dlg-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="flex items-start gap-3">
             <IconChip icon={AlertCircle} tone="gold" size={36} iconSize={17} className="mt-0.5" />
             <div>
@@ -781,7 +782,7 @@ export default function ApplicantHome() {
            Open Positions. ============================================== */}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
         {/* ---- Right rail · Your Applications (first on mobile) ---- */}
-        <aside className="order-1 min-w-0 lg:order-2 lg:col-span-5">
+        <aside data-tour="my-applications" className="order-1 min-w-0 lg:order-2 lg:col-span-5">
           <div className="flex flex-col lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)]">
             {/* Rail header — pinned above the scrolling cards */}
             <div className="flex shrink-0 items-end justify-between gap-2 border-b border-border pb-4">
@@ -806,7 +807,7 @@ export default function ApplicantHome() {
                     action={
                       <button
                         type="button"
-                        onClick={() => navigate("jobs")}
+                        onClick={() => navigate("vacant-positions")}
                         className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 py-2.5 text-sm"
                       >
                         <Briefcase className="h-4 w-4" aria-hidden="true" /> Browse Positions
@@ -825,11 +826,11 @@ export default function ApplicantHome() {
           </div>
         </aside>
 
-        {/* ---- Left pane · Open Positions (browsing surface) ---- */}
-        <section className="order-2 min-w-0 lg:order-1 lg:col-span-7">
+        {/* ---- Left pane · Job Openings (browsing surface) ---- */}
+        <section data-tour="apply-now" className="order-2 min-w-0 lg:order-1 lg:col-span-7">
           <div className="flex items-end justify-between border-b border-border pb-4">
             <div>
-              <Eyebrow>Open Positions</Eyebrow>
+              <Eyebrow>Job Openings</Eyebrow>
               <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
                 Apply Now
               </h2>
@@ -837,7 +838,7 @@ export default function ApplicantHome() {
             {openJobs.length > 0 && (
               <button
                 type="button"
-                onClick={() => navigate("jobs")}
+                onClick={() => navigate("vacant-positions")}
                 className="dlg-ghost hidden min-h-[44px] items-center gap-2 px-5 py-2 text-sm sm:inline-flex"
               >
                 View All <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -856,7 +857,7 @@ export default function ApplicantHome() {
                   action={
                     <button
                       type="button"
-                      onClick={() => navigate("jobs")}
+                      onClick={() => navigate("vacant-positions")}
                       className="dlg-ghost inline-flex min-h-[44px] items-center px-5 py-2 text-sm"
                     >
                       Browse All Jobs
@@ -892,6 +893,31 @@ export default function ApplicantHome() {
           }}
         />
       )}
+
+      {/* QA 2026-02 — Guided tooltips for first-time users: proceed with the
+          tutorial or dismiss/skip it (remembered per browser). */}
+      <OnboardingTour
+        storageKey="rmis.tour.applicant.v1"
+        title="Welcome to the Applicant Portal"
+        description="This quick guided tour points out the essentials — finish your profile, apply to vacancies, and track where you stand. You can skip it anytime."
+        steps={[
+          {
+            selector: '[data-tour="profile-banner"]',
+            title: "Complete your profile",
+            body: "Fill out your Personal Data Sheet once — you can even upload your PDS and let RMIS auto-fill the forms. A complete profile is required before applying.",
+          },
+          {
+            selector: '[data-tour="apply-now"]',
+            title: "Apply Now",
+            body: "Browse every open vacancy here. Expand a posting to read the full description, then apply with one click — your profile carries over.",
+          },
+          {
+            selector: '[data-tour="my-applications"]',
+            title: "Track your applications",
+            body: "Every application you submit appears here with its live stage — from qualification screening to shortlisting, exams, and interviews.",
+          },
+        ]}
+      />
     </div>
   );
 }

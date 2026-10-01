@@ -12,6 +12,8 @@ import { AppShell, PublicShell } from "@/components/shell/app-shell";
 import PublicLanding from "@/components/views/public-landing";
 import SignInView from "@/components/views/signin-view";
 import SignUpView from "@/components/views/signup-view";
+import ResetPasswordView from "@/components/views/reset-password-view";
+import ContactView from "@/components/views/contact-view";
 import JobsView from "@/components/views/jobs-view";
 import ApplicantHome from "@/components/views/applicant-home";
 import ProfileView from "@/components/views/profile-view";
@@ -91,7 +93,14 @@ function Router() {
           <SignUpView />
         </PublicShell>
       );
-    if (view === "jobs") return <PublicShell><JobsView /></PublicShell>;
+    if (view === "reset-password")
+      return (
+        <PublicShell>
+          <ResetPasswordView />
+        </PublicShell>
+      );
+    if (view === "contact") return <PublicShell><ContactView /></PublicShell>;
+    if (view === "vacant-positions") return <PublicShell><JobsView /></PublicShell>;
     return <PublicLanding />;
   }
 
@@ -101,7 +110,7 @@ function Router() {
 
   if (role === "APPLICANT") {
     if (view === "profile") content = <ProfileView />;
-    else if (view === "jobs") content = <JobsView />;
+    else if (view === "vacant-positions") content = <JobsView />;
     else content = <ApplicantHome />;
   } else if (role === "EVALUATOR") {
     if (view === "evaluator-review") content = <ReviewWorkspace />;
@@ -110,7 +119,9 @@ function Router() {
     else if (view === "candidate") content = <CandidateDetail />;
     else if (view === "recruitment") content = <Recruitment />;
     else if (view === "job") content = <JobWorkspace />;
-    else if (view === "jobs") content = <JobsView />;
+    else if (view === "analytics") content = <Analytics />;
+    else if (view === "settings") content = <Settings />;
+    else if (view === "vacant-positions") content = <JobsView />;
     else content = <ReviewQueue />;
   } else {
     // ADMIN
@@ -123,7 +134,7 @@ function Router() {
     else if (view === "evaluator-review") content = <ReviewWorkspace />;
     else if (view === "analytics") content = <Analytics />;
     else if (view === "settings") content = <Settings />;
-    else if (view === "jobs") content = <JobsView />;
+    else if (view === "vacant-positions") content = <JobsView />;
     else content = <CommandCenter />;
   }
 

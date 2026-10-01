@@ -34,6 +34,7 @@ import {
 import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, type StageKey } from "@/lib/status";
 import { navigate } from "@/lib/router";
+import { useSession } from "@/components/session-provider";
 import { ghostBtn, iconBtn } from "@/components/views/recruitment";
 import { ReviewWorkspace, StatusPill, VerdictPill } from "@/components/views/review-workspace";
 
@@ -120,6 +121,10 @@ function useFocusRefresh(fn: () => void) {
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function ReviewQueue() {
+  // QA 2026-02: administrators can assist with review activities — the scope
+  // note below makes that access explicit to avoid evaluator overlap.
+  const { user } = useSession();
+  const isAdmin = user?.role === "ADMIN";
   const [queue, setQueue] = useState<QueueRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [qualifiedOnly, setQualifiedOnly] = useState(false);
@@ -265,6 +270,14 @@ export default function ReviewQueue() {
           </button>
         </div>
       </header>
+      {/* QA 2026-02: scope of administrator access to Review */}
+      {isAdmin && (
+        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
+          <span className="font-semibold text-ink">Administrator access:</span>{" "}
+          you can view and assist with every evaluation in this queue. Scoring decisions and
+          recommendations remain the responsibility of the assigned evaluators.
+        </p>
+      )}
 
       {/* Queue stat tiles — Bevel cloud stat cards */}
       {!error && (queue === null ? (

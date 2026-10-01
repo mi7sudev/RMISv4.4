@@ -54,6 +54,17 @@ import type { JobWire } from "@/lib/router";
 const PAGE_SIZE = 8;
 type SortKey = "newest" | "deadline" | "salary";
 
+// QA 2026-02: Position Category buckets. In the CSC vocabulary "Permanent" and
+// "Temporary" are plantilla items (1:1 with an item number), while "Contract
+// of Service" and "Job Order" are non-plantilla (COS) engagements.
+function matchesCategory(positionType: string | null, category: string): boolean {
+  const t = (positionType ?? "").toUpperCase();
+  const isCos = t.includes("COS") || t.includes("CONTRACT") || t.includes("JOB ORDER");
+  const isPlantilla = t.includes("PLANTILLA") || t.includes("PERMANENT") || t.includes("TEMPORARY");
+  if (category === "COS") return isCos;
+  return isPlantilla || (!isCos && t.length > 0); // anything else non-COS (e.g. Casual) is plantilla-graded
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function divisionShort(code: string | null | undefined): string {
@@ -159,7 +170,7 @@ function QuickView({
       : "";
   const facts: [string, string][] = [
     ["Item No.", pos?.itemNumber || "—"],
-    ["Vacancies", String(job.numberOfVacancy)],
+    ["Vacancies", job.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
     ["Salary Grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
     ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
     ["Published", formatDate(job.publishDate ?? job.publishedAt)],
@@ -279,7 +290,7 @@ function SummaryCard({
   const dl = deadlineState(job.deadlineDate);
   const applied = (job.applications?.length ?? 0) > 0;
   const rows: [string, string][] = [
-    ["Vacancies", String(job.numberOfVacancy)],
+    ["Vacancies", job.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
     ["Monthly salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
     ["Salary grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
     ["Applications", String(job.applicationCount ?? 0)],
@@ -408,7 +419,7 @@ function DetailBody({ job }: { job: JobWire }) {
   const vitals: [string, string][] = [
     ["Division", divisionShort(pos?.division)],
     ["Item No.", pos?.itemNumber || "—"],
-    ["Vacancies", String(job.numberOfVacancy)],
+    ["Vacancies", job.numberOfVacancy == null ? "—" : String(job.numberOfVacancy)],
     ["Position Type", job.positionType ? humanize(job.positionType) : "—"],
     ["Salary Grade", sgLabel(pos?.salaryGrade, pos?.salaryStep)],
     ["Monthly Salary", pos?.salaryAmount != null ? formatCurrency(pos.salaryAmount) : "—"],
@@ -545,6 +556,8 @@ export default function JobsView() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<string[]>([]);
+  // QA 2026-02: Position Category facet — Plantilla vs Contractual/COS.
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("newest");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -607,6 +620,9 @@ export default function JobsView() {
     if (divisionFilter.length > 0) {
       list = list.filter((j) => divisionFilter.includes(j.position?.division ?? ""));
     }
+    if (categoryFilter.length > 0) {
+      list = list.filter((j) => categoryFilter.some((c) => matchesCategory(j.positionType, c)));
+    }
     const deadlineTime = (j: JobWire) =>
       j.deadlineDate ? new Date(j.deadlineDate).getTime() : Number.POSITIVE_INFINITY;
     const sorted = [...list];
@@ -620,7 +636,7 @@ export default function JobsView() {
       sorted.sort((a, b) => (b.position?.salaryAmount ?? -1) - (a.position?.salaryAmount ?? -1));
     }
     return sorted;
-  }, [jobs, query, divisionFilter, sort]);
+  }, [jobs, query, divisionFilter, categoryFilter, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, totalPages);
@@ -636,13 +652,20 @@ export default function JobsView() {
     );
     setPage(1);
   };
+  const toggleCategory = (code: string) => {
+    setCategoryFilter((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+    setPage(1);
+  };
   const clearFilters = () => {
     setQuery("");
     setDivisionFilter([]);
+    setCategoryFilter([]);
     setPage(1);
   };
   const toggleExpanded = (id: number) => setExpandedId((prev) => (prev === id ? null : id));
-  const openDetail = (job: JobWire) => navigate("jobs", { job: String(job.id) });
+  const openDetail = (job: JobWire) => navigate("vacant-positions", { job: String(job.id) });
 
   const applyTo = useCallback(
     (job: JobWire) => {
@@ -681,11 +704,11 @@ export default function JobsView() {
     return (
       <div className={shellPad}>
         <button
-          onClick={() => navigate("jobs")}
+          onClick={() => navigate("vacant-positions")}
           className="mb-5 flex min-h-[44px] items-center gap-2 text-sm text-body-gray hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to Positions
+          Back to Vacant Positions
         </button>
 
         {jobs === null && error === null ? (
@@ -710,8 +733,8 @@ export default function JobsView() {
             <p className="mt-2 text-sm text-body-gray">
               This position may have closed or is no longer published.
             </p>
-            <button onClick={() => navigate("jobs")} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
-              Back to Positions
+            <button onClick={() => navigate("vacant-positions")} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
+              Back to Vacant Positions
             </button>
           </div>
         ) : (
@@ -740,7 +763,7 @@ export default function JobsView() {
   }
 
   // ── List mode ─────────────────────────────────────────────────────────────
-  const activeFilterCount = (query.trim() ? 1 : 0) + divisionFilter.length;
+  const activeFilterCount = (query.trim() ? 1 : 0) + divisionFilter.length + categoryFilter.length;
 
   // One rail definition, two mount points (mobile collapsible + lg sidebar).
   // The id suffix keeps the duplicate DOM valid — two inputs must never share
@@ -762,6 +785,29 @@ export default function JobsView() {
           placeholder="Search positions…"
           className="dlg-input min-h-[44px] pl-9"
         />
+      </div>
+
+      {/* QA 2026-02: Position Category facet — Plantilla vs COS. */}
+      <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-stone">Position Category</p>
+      <div className="mt-2 space-y-0.5">
+        {[
+          { code: "PLANTILLA", label: "Plantilla" },
+          { code: "COS", label: "COS (Contract of Service)" },
+        ].map(({ code, label }) => (
+          <label
+            key={code}
+            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-white/70"
+          >
+            <Checkbox
+              checked={categoryFilter.includes(code)}
+              onCheckedChange={() => toggleCategory(code)}
+            />
+            <span className="min-w-0 flex-1 truncate text-sm text-body-gray">{label}</span>
+            <span className="num text-xs text-stone">
+              {(jobs ?? []).filter((j) => matchesCategory(j.positionType, code)).length}
+            </span>
+          </label>
+        ))}
       </div>
 
       <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-stone">Division</p>
@@ -813,7 +859,7 @@ export default function JobsView() {
   } else if ((jobs ?? []).length === 0) {
     content = (
       <div className="dlg-card p-10 text-center">
-        <p className="font-display text-xl text-ink">No open positions</p>
+        <p className="font-display text-xl text-ink">No vacant positions</p>
         <p className="mt-2 text-sm text-body-gray">
           There are no published postings at the moment — check back soon.
         </p>
@@ -894,14 +940,11 @@ export default function JobsView() {
 
   return (
     <div className={shellPad}>
-      {/* Board header — Bevel pattern: title + supporting copy on the left,
-          result count + sort action right-aligned on the same row. */}
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        {/* QA 2026-02: page named to match its slug (#/vacant-positions);
+            the subheader sentence was removed per review. */}
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-3xl">Positions</h1>
-          <p className="mt-2 text-sm leading-relaxed text-body-gray">
-            Browse published vacancies at DOST-MIRDC and submit your application online.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-3xl">Vacant Positions</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <p className="num mr-1 text-sm text-body-gray">

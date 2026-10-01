@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import {
   AlertTriangle, Filter, History, Inbox, ChartPie as ChartPieIcon,
-  RefreshCw, TrendingUp, UsersRound, type LucideIcon,
+  RefreshCw, ShieldCheck, TrendingUp, UsersRound, type LucideIcon,
 } from "lucide-react";
 import {
   EmptyState, IconChip, Monogram, SkeletonRows, StatusPill, type ChipTone,
@@ -29,6 +29,7 @@ import { navigate } from "@/lib/router";
 import { dotClass, pillClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { ghostBtn } from "@/components/views/recruitment";
+import { useSession } from "@/components/session-provider";
 
 type Stats = {
   byStatus: { status: string; count: number }[];
@@ -36,6 +37,18 @@ type Stats = {
   pendingReview: number;
   shortlisted: number;
   rejected: number;
+  // QA 2026-02: system/web usage + security counters (admin analytics).
+  totalUsers?: number;
+  admins?: number;
+  evaluators?: number;
+  applicants?: number;
+  activeJobs?: number;
+  needsAttention?: {
+    failedLogins24h: number;
+    deadlinesThisWeek: number;
+    blockedUsers: number;
+    incompleteProfiles: number;
+  };
 };
 
 type QueueRow = {
@@ -144,6 +157,10 @@ function monogramOf(name: string): string {
 }
 
 export default function Analytics() {
+  // QA 2026-02: evaluators see recruitment analytics only — the system usage
+  // panel and the security/audit activity feed are administrator territory.
+  const { user } = useSession();
+  const isAdmin = user?.role === "ADMIN";
   const [stats, setStats] = useState<Stats | null>(null);
   const [queue, setQueue] = useState<QueueRow[] | null>(null);
   const [audit, setAudit] = useState<AuditRow[] | null>(null);
@@ -156,10 +173,14 @@ export default function Analytics() {
   const load = useCallback(async (silent = false) => {
     if (!silent) setError(null);
     try {
+      // QA 2026-02: evaluators get recruitment analytics only — the audit
+      // feed fetch is skipped entirely for them (admin-only endpoint).
       const [s, q, a] = await Promise.all([
         apiFetch<Stats>("/api/admin/stats"),
         apiFetch<{ data: QueueRow[] }>("/api/evaluator/queue?pageSize=100"),
-        apiFetch<{ data: AuditRow[]; total: number }>("/api/admin/audit-logs?pageSize=20"),
+        isAdmin
+          ? apiFetch<{ data: AuditRow[]; total: number }>("/api/admin/audit-logs?pageSize=20")
+          : Promise.resolve({ data: [] as AuditRow[], total: 0 }),
       ]);
       setStats(s);
       setQueue(q.data);
@@ -168,7 +189,7 @@ export default function Analytics() {
     } catch (e) {
       if (!silent) setError(e instanceof Error ? e.message : "Failed to load analytics");
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     void load();
@@ -505,7 +526,59 @@ export default function Analytics() {
           )}
         </Panel>
 
-        {/* 5. Recent activity (audit feed) */}
+        {/* 5a. System usage & security (QA 2026-02 — admin analytics) */}
+        {isAdmin && (
+          <Panel
+            title="System usage & security"
+            description="Web usage and security signals for the RMIS deployment"
+            icon={ShieldCheck}
+            chipTone="emerald"
+          >
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {(
+                [
+                  ["Registered accounts", stats?.totalUsers],
+                  ["Blocked accounts", stats?.needsAttention?.blockedUsers],
+                  ["Failed logins · 24h", stats?.needsAttention?.failedLogins24h],
+                  ["Incomplete profiles", stats?.needsAttention?.incompleteProfiles],
+                ] as [string, number | undefined][]
+              ).map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-cloud p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+                  <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "—"}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
+              {(
+                [
+                  ["Applicants", stats?.applicants],
+                  ["Evaluators", stats?.evaluators],
+                  ["Administrators", stats?.admins],
+                ] as [string, number | undefined][]
+              ).map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-cloud/60 p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+                  <p className="num mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink">{value ?? "—"}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-body-gray">
+              Recent system activity and the full security/audit log live in{" "}
+              <button
+                type="button"
+                onClick={() => navigate("settings", { tab: "audit" })}
+                className="text-metric-blue underline underline-offset-2 hover:text-ink"
+              >
+                Settings → Audit Log
+              </button>{" "}
+              (administrators only).
+            </p>
+          </Panel>
+        )}
+
+        {/* 5. Recent activity (audit feed) — admin only per QA 2026-02 */}
+        {isAdmin && (
         <Panel
           title="Recent activity"
           description={`${auditTotal} logged event${auditTotal === 1 ? "" : "s"}`}
@@ -539,6 +612,7 @@ export default function Analytics() {
             </div>
           )}
         </Panel>
+        )}
       </div>
     </div>
   );

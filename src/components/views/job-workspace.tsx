@@ -328,7 +328,7 @@ export default function JobWorkspace() {
                 <dl>
                   {(
                     [
-                      ["Vacancies", <span key="v" className="num text-sm font-medium text-ink">{job.numberOfVacancy}</span>],
+                      ["Vacancies", <span key="v" className="num text-sm font-medium text-ink">{job.numberOfVacancy ?? "—"}</span>],
                       ["Monthly salary", <span key="s" className="num text-sm font-medium text-ink">{salary ?? "—"}</span>],
                       ["SG · step", <span key="g" className="text-sm font-medium text-ink">{sgStep || "—"}</span>],
                       ["Applications", <span key="a" className="num text-sm font-medium text-ink">{apps.length}</span>],

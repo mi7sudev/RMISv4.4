@@ -47,7 +47,9 @@ export type JobWire = {
   id: number;
   title: string;
   positionType: string | null;
-  numberOfVacancy: number;
+  // Plantilla postings are 1:1 with a Plantilla Item Number, so the vacancy
+  // count is optional (null → render "—"); COS postings carry a real count.
+  numberOfVacancy: number | null;
   briefDescription: string | null;
   briefDescriptionHtml: string | null;
   dutiesResponsibilities: string | null;
@@ -125,6 +127,12 @@ export type ViewParams = Record<string, string>;
 export type Route = { view: string; params: ViewParams };
 
 export const VIEW_ALIASES: Record<string, string> = {
+  // QA 2026-02: page name must match the website slug — the public positions
+  // board is "Vacant Positions" at #/vacant-positions (legacy #/jobs links
+  // keep working through this alias).
+  "jobs": "vacant-positions",
+  // QA 2026-02 lists the sign-in slug as #/sign-in — accept both spellings.
+  "sign-in": "signin",
   "evaluator-queue": "review-queue",
   "admin-dashboard": "operations",
   "admin-jobs": "recruitment",

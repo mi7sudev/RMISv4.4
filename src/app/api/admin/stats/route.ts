@@ -6,7 +6,7 @@
 
 import { db } from "@/lib/db";
 import { handleApi, ok } from "@/lib/api";
-import { requireAdminFromReq } from "@/lib/auth";
+import { requireEvaluatorFromReq } from "@/lib/auth";
 import { getStatusMeta, stageForStatus, isRejectedStatus } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ const PENDING_REVIEW_STATUSES = new Set([
 ]);
 
 export const GET = handleApi(async (req: Request) => {
-  await requireAdminFromReq(req);
+  await requireEvaluatorFromReq(req);
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());

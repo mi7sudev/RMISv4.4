@@ -182,7 +182,7 @@ export function ApplyDialogs({
               <div className="dlg-pill inline-flex w-fit items-center rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">Application</div>
               <DialogTitle className="font-display text-2xl tracking-[-0.02em] text-ink">{jobTitle}</DialogTitle>
               <DialogDescription className="text-sm text-body-gray">
-                {place} · {job.positionType ? humanize(job.positionType) : "—"} · {job.numberOfVacancy} vacanc{job.numberOfVacancy === 1 ? "y" : "ies"}
+                {place} · {job.positionType ? humanize(job.positionType) : "—"}{job.numberOfVacancy != null ? ` · ${job.numberOfVacancy} vacanc${job.numberOfVacancy === 1 ? "y" : "ies"}` : ""}
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

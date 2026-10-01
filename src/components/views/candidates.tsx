@@ -33,6 +33,7 @@ import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, STAGE_DOT_CLASS,
 } from "@/components/ui/kanban";
 import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
+import { useSession } from "@/components/session-provider";
 import { PIPELINE_STAGES, isRejectedStatus, stageForStatus, type StageKey } from "@/lib/status";
 import { variantForCompletion } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
@@ -265,6 +266,10 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
 // ── Registry ────────────────────────────────────────────────────────────────
 
 export default function Candidates() {
+  // QA 2026-02: admins manage ALL registered users here ("Users"); for
+  // evaluators the same registry is framed as "Candidates" who applied.
+  const { user: sessionUser } = useSession();
+  const isAdminView = sessionUser?.role === "ADMIN";
   const { params } = useHashRoute();
   const initialStatus = params.status === "complete" || params.status === "incomplete" ? params.status : "all";
 
@@ -370,9 +375,11 @@ export default function Candidates() {
       {/* Bevel page header — shared anatomy across all workspace views */}
       <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Candidates</h1>
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{isAdminView ? "Users" : "Candidates"}</h1>
           <p className="mt-1 text-sm text-body-gray">
-            Registry of every candidate on file — profiles, logins, and pipeline activity.
+            {isAdminView
+              ? "All registered system accounts — profiles, logins, and pipeline activity."
+              : "Every candidate on file — profiles, logins, and pipeline activity."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

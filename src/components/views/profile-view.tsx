@@ -43,6 +43,7 @@ import {
 import { Monogram, SkeletonRows } from "@/components/ui/shell";
 import { apiFetch, fullName } from "@/lib/client";
 import { useSession } from "@/components/session-provider";
+import { navigate } from "@/lib/router";
 import type { DocumentWire } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import PdsUploadCard from "./profile/pds-upload-card";
@@ -581,6 +582,45 @@ export default function ProfileView() {
             {active === 7 && <DocumentsSection docs={docs} onChanged={reloadSilent} />}
           </div>
         </div>
+      </div>
+
+      {/* QA 2026-02 — Section progression footer: an explicit Back / Continue
+          affordance so it's immediately obvious how to move between the seven
+          PDS sections (the desktop step band alone wasn't discoverable).
+          handleMobileSectionChange also handles the mobile scroll-recovery. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        {activeIdx > 0 ? (
+          <button
+            type="button"
+            onClick={() => handleMobileSectionChange(SECTIONS[activeIdx - 1].n)}
+            className="dlg-ghost min-h-[44px] px-6 text-sm"
+          >
+            <ChevronLeft className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            Back to {SECTIONS[activeIdx - 1]?.label ?? "previous section"}
+          </button>
+        ) : (
+          <span aria-hidden="true" />
+        )}
+
+        {activeIdx < SECTIONS.length - 1 ? (
+          <button
+            type="button"
+            onClick={() => handleMobileSectionChange(SECTIONS[activeIdx + 1].n)}
+            className="dlg-cta min-h-[44px] px-7 text-sm font-medium"
+          >
+            Continue to {SECTIONS[activeIdx + 1]?.label ?? "next section"}
+            <ChevronRight className="ml-1.5 inline h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => navigate("home")}
+            className="dlg-cta min-h-[44px] px-7 text-sm font-medium"
+          >
+            Return to Portal
+            <ChevronRight className="ml-1.5 inline h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {/* Mark Complete confirm (§7.4) */}

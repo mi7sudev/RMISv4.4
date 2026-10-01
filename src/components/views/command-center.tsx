@@ -54,7 +54,7 @@ type JobRow = {
   id: number;
   title: string;
   positionType: string | null;
-  numberOfVacancy: number;
+  numberOfVacancy: number | null;
   deadlineDate: string | null;
   publishedAt: string;
   isActive: boolean;

@@ -146,6 +146,14 @@ export const POST = handleApi(async (req: Request) => {
   const body = await req.json().catch(() => ({}));
   const input = jobCreateSchema.parse(body);
 
+  // QA 2026-02: COS postings must carry a vacancy count — Plantilla posts are
+  // 1:1 with a Plantilla Item Number, so their count is optional (null).
+  const typeUpper = (input.positionType ?? "").toUpperCase();
+  const isCos = typeUpper.includes("COS") || typeUpper.includes("CONTRACT");
+  if (isCos && (input.numberOfVacancy == null)) {
+    throw new ApiError("COS postings must specify the number of vacancies", 422);
+  }
+
   // HTML companions are sanitized server-side before storage (spec §12.4).
   const briefDescriptionHtml = sanitizeHtml(input.briefDescriptionHtml) || null;
   const dutiesHtml = sanitizeHtml(input.dutiesHtml) || null;
@@ -174,7 +182,7 @@ export const POST = handleApi(async (req: Request) => {
     data: {
       title: input.title,
       positionType: input.positionType ?? null,
-      numberOfVacancy: input.numberOfVacancy ?? 1,
+      numberOfVacancy: input.numberOfVacancy ?? null,
       briefDescription: input.briefDescription ?? null,
       briefDescriptionHtml,
       dutiesResponsibilities: input.dutiesResponsibilities ?? null,

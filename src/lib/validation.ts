@@ -186,7 +186,9 @@ export const personalProfileSchema = z.object({
 export const jobCreateSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   positionType: optStr(100),
-  numberOfVacancy: z.number().int().min(1).max(99).default(1),
+  // QA 2026-02: Plantilla posts are 1:1 with an item number — vacancy count
+  // is optional (null). COS posts must carry a count (enforced in the route).
+  numberOfVacancy: z.number().int().min(1).max(99).nullable().optional(),
   briefDescription: optStr(5000),
   briefDescriptionHtml: optStr(20000),
   dutiesResponsibilities: optStr(8000),

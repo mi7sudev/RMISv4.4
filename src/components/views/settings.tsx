@@ -8,7 +8,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Mail, Pencil, ScrollText, Search, Send, ShieldCheck, Trash2, UsersRound } from "lucide-react";
+import { Inbox, Mail, Pencil, ScrollText, Search, Send, ShieldCheck, Trash2, UsersRound } from "lucide-react";
+import { useSession } from "@/components/session-provider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -28,14 +29,19 @@ import { useHashRoute, navigate } from "@/lib/router";
 import { pillClass } from "@/lib/status-ui";
 import { ghostBtn, ctaBtn, iconBtn, iconBtnBad } from "@/components/views/recruitment";
 
-const TABS = [
-  { key: "users", label: "Users & Roles", icon: UsersRound },
-  { key: "audit", label: "Audit Log", icon: ShieldCheck },
-  { key: "sms", label: "SMS Gateway", icon: Send },
-  { key: "email", label: "Email Notices", icon: Mail },
+// QA 2026-02: Settings contents are role-scoped — administrators get the full
+// configuration set (Users & Security, Audit Log, SMS Gateway, Email Notices,
+// Contact Requests); evaluators get Email Notices (read-only) + Contact
+// Requests, per the approved module map.
+const ALL_TABS = [
+  { key: "users", label: "Users & Security", icon: UsersRound, roles: ["ADMIN"] },
+  { key: "audit", label: "Audit Log", icon: ShieldCheck, roles: ["ADMIN"] },
+  { key: "sms", label: "SMS Gateway", icon: Send, roles: ["ADMIN"] },
+  { key: "email", label: "Email Notices", icon: Mail, roles: ["ADMIN", "EVALUATOR"] },
+  { key: "contact", label: "Contact Requests", icon: Inbox, roles: ["ADMIN", "EVALUATOR"] },
 ] as const;
 
-type TabKey = (typeof TABS)[number]["key"];
+type TabKey = (typeof ALL_TABS)[number]["key"];
 
 function labelCls() {
   return "mb-1.5 block text-xs font-medium text-stone";
@@ -149,7 +155,7 @@ function UsersPanel() {
       <div className="flex flex-wrap items-center gap-3">
         <IconChip icon={UsersRound} tone="slate" size={36} iconSize={16} />
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Users &amp; Roles</h2>
+          <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Users &amp; Security</h2>
           <p className="text-xs text-body-gray">
             <span className="num">{total}</span> account{total === 1 ? "" : "s"}
           </p>
@@ -573,7 +579,7 @@ function StatusChip({ status }: { status: string }) {
   return <StatusPill status={status} variant={variant} />;
 }
 
-function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
+function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; readOnly?: boolean }) {
   const [data, setData] = useState<MsgPanelData | null>(null);
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
@@ -654,6 +660,12 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
         </div>
       </div>
 
+      {readOnly ? (
+        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
+          <span className="font-semibold text-ink">Read-only view:</span> notification sending and
+          gateway configuration are managed by system administrators.
+        </p>
+      ) : (
       <div className="dlg-card-plain p-5 sm:p-6">
         <p className="mb-4 text-base font-semibold tracking-[-0.01em] text-ink">Test send</p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -676,6 +688,7 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
           {busy ? "Sending…" : `Send test ${kind}`}
         </button>
       </div>
+      )}
 
       <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
@@ -723,12 +736,152 @@ function MessagingPanel({ kind }: { kind: "sms" | "email" }) {
   );
 }
 
+// ────────────────────────────────────────────── Contact Requests panel (QA)
+
+type ContactRow = {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: "OPEN" | "RESOLVED";
+  createdAt: string;
+  resolvedAt: string | null;
+  handledBy?: { firstName: string | null; lastName: string | null; username: string } | null;
+};
+
+function ContactPanel() {
+  const [rows, setRows] = useState<ContactRow[] | null>(null);
+  const [filter, setFilter] = useState<"ALL" | "OPEN" | "RESOLVED">("ALL");
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setRows(null);
+    try {
+      const q = filter === "ALL" ? "" : `?status=${filter}`;
+      const res = await apiFetch<{ data: ContactRow[] }>(`/api/admin/contact-requests${q}`);
+      setRows(res.data);
+    } catch (e) {
+      if (!silent) toast.error(e instanceof Error ? e.message : "Failed to load contact requests");
+      setRows([]);
+    }
+  }, [filter]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const setStatus = async (id: number, status: "OPEN" | "RESOLVED") => {
+    setBusyId(id);
+    try {
+      await apiFetch("/api/admin/contact-requests", { method: "PATCH", body: { id, status } });
+      toast.success(status === "RESOLVED" ? "Marked as resolved" : "Reopened");
+      await load(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <IconChip icon={Inbox} tone="slate" size={36} iconSize={16} />
+        <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Contact Requests</h2>
+        <span className="status-pill status-neutral num ml-auto">{rows?.length ?? "…"}</span>
+      </div>
+      <p className="text-sm leading-relaxed text-body-gray">
+        Inquiries and requests submitted through the public Contact page. Reply to the sender
+        through their email address, then mark the request as resolved.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by status">
+        {(["ALL", "OPEN", "RESOLVED"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            aria-pressed={filter === f}
+            onClick={() => setFilter(f)}
+            className={`inline-flex min-h-[36px] items-center rounded-full px-4 text-xs font-medium transition-colors ${
+              filter === f ? "bg-charcoal text-[#ebf0f8]" : "bg-fog text-stone hover:text-ink"
+            }`}
+          >
+            {f === "ALL" ? "All" : f === "OPEN" ? "Open" : "Resolved"}
+          </button>
+        ))}
+      </div>
+
+      <div className="dlg-card-plain table-card overflow-hidden">
+        <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+              <tr>
+                <th className="px-5 py-3">From</th>
+                <th className="px-4 py-3">Subject</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Received</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows === null && <tr><td colSpan={5} className="p-4"><SkeletonRows rows={4} rowClassName="h-14" /></td></tr>}
+              {rows?.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-6">
+                    <EmptyState icon={Inbox} tone="slate" title="No contact requests yet." compact />
+                  </td>
+                </tr>
+              )}
+              {rows?.map((r) => (
+                <tr key={r.id} className="border-b border-[var(--border)] align-top transition-colors last:border-0 hover:bg-fog/60">
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-ink">{r.name}</p>
+                    <p className="mt-0.5 text-xs text-body-gray">{r.email}</p>
+                  </td>
+                  <td className="max-w-[320px] px-4 py-3.5">
+                    <p className="font-medium text-ink">{r.subject}</p>
+                    <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-body-gray">{r.message}</p>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <StatusPill status={r.status === "RESOLVED" ? "Resolved" : "Open"} variant={r.status === "RESOLVED" ? "ok" : "warn"} />
+                    {r.handledBy && (
+                      <p className="mt-1 text-xs text-stone">
+                        by {[r.handledBy.firstName, r.handledBy.lastName].filter(Boolean).join(" ") || r.handledBy.username}
+                      </p>
+                    )}
+                  </td>
+                  <td className="num px-5 py-3.5 text-right text-xs text-body-gray" title={formatDateTime(r.createdAt)}>
+                    {timeAgo(r.createdAt)}
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => void setStatus(r.id, r.status === "RESOLVED" ? "OPEN" : "RESOLVED")}
+                      className={r.status === "RESOLVED" ? `${ghostBtn} min-h-[36px] px-3 text-xs` : `${ctaBtn} min-h-[36px] px-3 text-xs`}
+                    >
+                      {busyId === r.id ? "…" : r.status === "RESOLVED" ? "Reopen" : "Resolve"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────────────────────────────────────────── Root view
 
 export default function Settings() {
+  const { user } = useSession();
+  const role = user?.role ?? "ADMIN";
+  const tabs = ALL_TABS.filter((t) => (t.roles as readonly string[]).includes(role));
   const route = useHashRoute();
   const tabParam = route.params.tab;
-  const tab: TabKey = TABS.some((t) => t.key === tabParam) ? (tabParam as TabKey) : "users";
+  const defaultTab: TabKey = role === "ADMIN" ? "users" : "email";
+  const tab: TabKey = tabs.some((t) => t.key === tabParam) ? (tabParam as TabKey) : defaultTab;
 
   return (
     <div className="space-y-6">
@@ -751,7 +904,7 @@ export default function Settings() {
             layer and silently kill the desktop pin. */}
         <nav className="dlg-card-plain min-w-0 p-2 lg:sticky lg:top-6" aria-label="Settings sections">
           <div className="flex gap-1 overflow-x-auto scroll-thin lg:flex-col lg:overflow-visible">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t.key}
                 type="button"
@@ -772,7 +925,8 @@ export default function Settings() {
           {tab === "users" && <UsersPanel />}
           {tab === "audit" && <AuditPanel />}
           {tab === "sms" && <MessagingPanel kind="sms" />}
-          {tab === "email" && <MessagingPanel kind="email" />}
+          {tab === "email" && <MessagingPanel kind="email" readOnly={role !== "ADMIN"} />}
+          {tab === "contact" && <ContactPanel />}
         </div>
       </div>
     </div>

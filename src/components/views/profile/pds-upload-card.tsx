@@ -126,7 +126,9 @@ export default function PdsUploadCard({
       if (!ext.merged) {
         const failed = ext.results?.find((r) => r.error);
         setError({
-          message: failed?.error ?? "Extraction failed. Try a clearer PDS file — filled XLSX of CS Form 212 works best.",
+          message:
+            failed?.error ??
+            "Extraction failed. Try a filled PDS file — Excel CS Form 212 (.xlsx or legacy .xls, Excel 2019 and older), PDF, or DOCX works best.",
           fileName: file.name,
         });
         setPhase("idle");
@@ -204,7 +206,7 @@ export default function PdsUploadCard({
               <span className="text-base font-semibold tracking-[-0.01em] text-ink">PDS Upload</span>
             </span>
             <span className="mt-0.5 block truncate text-xs text-body-gray">
-              Drop PDS, resume, or certificates · PDF, DOC, XLS, images · 10MB max
+              Drop PDS, resume, or certificates · XLSX / XLS (Excel 2019 and older), PDF, DOCX, images · 10MB max
             </span>
           </span>
           <ChevronDown

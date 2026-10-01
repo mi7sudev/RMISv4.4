@@ -1,15 +1,17 @@
 // ============================================================================
-// RMIS — /api/admin/email (ADMIN, spec §6.6 / §9)
+// RMIS — /api/admin/email (spec §6.6 / §9; QA 2026-02: evaluators get the
+// Email Notices view too, read-only)
 // GET:  provider info (mock|resend + configured flag), stats { total, sent,
-//       failed, skipped, mock, last24h }, last 25 email logs.
+//       failed, skipped, mock, last24h }, last 25 email logs. EVALUATOR or
+//       ADMIN.
 // POST: test send { to, subject? ≤200, message? ≤2000 } via sendEmail
-//       (never throws; auto-logged). Failure → 502.
+//       (never throws; auto-logged). Failure → 502. ADMIN only.
 // ============================================================================
 
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { handleApi, ok, err } from "@/lib/api";
-import { requireAdminFromReq } from "@/lib/auth";
+import { requireAdminFromReq, requireEvaluatorFromReq } from "@/lib/auth";
 import { sendEmail } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ const testSchema = z.object({
 });
 
 export const GET = handleApi(async (req: Request) => {
-  await requireAdminFromReq(req);
+  await requireEvaluatorFromReq(req);
 
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
   const [total, sent, failed, skipped, mock, last24h, logs] = await Promise.all([

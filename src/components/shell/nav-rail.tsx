@@ -59,7 +59,9 @@ export const NAV_CONFIG: Record<Role, NavGroup[]> = {
       group: "Recruitment",
       items: [
         { view: "recruitment", label: "Jobs", icon: Briefcase },
-        { view: "candidates", label: "Candidates", icon: UsersRound },
+        // QA 2026-02: renamed from "Candidates" — this screen lists ALL
+        // registered system users, not just applied candidates.
+        { view: "candidates", label: "Users", icon: UsersRound },
         { view: "review-queue", label: "Review", icon: ScanSearch },
       ],
     },
@@ -83,6 +85,16 @@ export const NAV_CONFIG: Record<Role, NavGroup[]> = {
         { view: "candidates", label: "Candidates", icon: UsersRound },
         { view: "recruitment", label: "Jobs", icon: Briefcase },
       ],
+    },
+    {
+      group: "Insights",
+      // QA 2026-02: evaluators see recruitment-related analytics only.
+      items: [{ view: "analytics", label: "Analytics", icon: ChartColumn }],
+    },
+    {
+      group: "Configuration",
+      // QA 2026-02: Email Notices + Contact Requests for evaluators.
+      items: [{ view: "settings", label: "Settings", icon: Settings2 }],
     },
   ],
   APPLICANT: [
