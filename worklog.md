@@ -217,3 +217,23 @@ Work Log:
 Stage Summary:
 - All implementable QA findings shipped: unified naming (Job Opportunities home / Vacant Positions page matching #/vacant-positions), discoverable forgot-password for all three roles with a real single-use email reset flow, applicant onboarding tour with skip, PDS .xls/.xlsx extraction proven working with honest error copy, explicit PDS section progression, Plantilla-vs-COS vacancy semantics end-to-end, Users rename + scoped admin/evaluator modules with Contact Requests and system-usage analytics.
 - Deployment for production = copy sources + `npm run build` + `cp .env .next/standalone/.env` + `pm2 restart rmis` (+ `npx prisma db push` once — schema changed: numberOfVacancy nullable, new ContactRequest table).
+
+---
+Task ID: 35
+Agent: Z.ai Code (main)
+Task: Enterprise layout refactor — unify layout & positioning of every page component so RMIS reads like a typical enterprise RMIS (single page-header anatomy across ALL views), building on the Bevel token pass.
+
+Work Log:
+- AUDIT: shared primitives existed in src/components/ui/shell.tsx (PageHeader/KpiCard/SectionCard) but ZERO views used PageHeader — all 13 views hand-rolled their own header with drifted classes (some sm:text-3xl, some text-heading-md, some font-display). The old PageHeader primitive itself used different classes than the views, so it was never adopted.
+- CANONICAL PageHeader (ui/shell.tsx rewritten): one enterprise anatomy = optional labelled back link ("← Back to X", detail views) → eyebrow → title row (truncate h1 text-2xl sm:text-[28px] + titleAside badge) → description (string→p / node→div) → meta row → right-aligned action cluster; stacks below title under xl; header carries the animate-in mount transition. New props: back, leading (avatar/icon), titleAside, meta.
+- STAFF LIST VIEWS → PageHeader: command-center (header const reused by error/loading/main branches), recruitment (num posting count + Refresh/Create Job), review-queue (count pill + Qualified-only toggle + Kanban/List toggle + Refresh), candidates (role-aware title/desc + List/Kanban + Refresh), analytics (3 branches), settings. 
+- DETAIL VIEWS → PageHeader back-prop: job-workspace ("Back to Jobs", status pill as titleAside, vitals description; icon-only ChevronLeft + decorative BrandLogo removed), candidate-detail ("Back to Candidates", monogram leading, meta description row, status pills as actions), review-workspace deep-link wrapper ("Back to Review Queue").
+- APPLICANT + PUBLIC → PageHeader: applicant-home (both error + main branches; "Applicant Portal" eyebrow), profile-view deliberately KEPT as the record-panel pattern (avatar+ring+CTA panel already shares the canonical h1 typography), jobs-view public board ("Vacant Positions", results count as description, Sort in actions — previously sm:text-3xl drift), contact-view ("Get in touch" eyebrow).
+- Cleanup: removed now-unused imports (ChevronLeft/BrandLogo in job-workspace, ChevronLeft in candidate-detail, ArrowLeft in review-workspace); local Eyebrow kept in applicant-home for section labels.
+- VERIFY: bun run lint clean; tsc --noEmit clean (src); agent-browser E2E — public landing + vacant-positions (h1+count+sort) + contact (eyebrow) anonymous; admin testadmin → Command Center/Recruitment/Users/Review/Analytics/Settings all h1-correct; job detail "Back to Jobs" click → #/recruitment; candidate quick-view → full profile → "Back to Candidates" (screenshot t35-candidate-detail.png); evaluator → Review Queue/Analytics/Settings + deep-link #/evaluator-review?id=2 "Back to Review Queue"; applicant → home "Welcome Back"; mobile 390px review-queue stacks action cluster under title (screenshot t35-mobile-review.png); footer below-fold push on long page (r.bottom 844 = viewport); zero console/page errors; dev.log only has expected LOGIN_FAILED audit from a test retry.
+- Screenshots: tool-results/t35-{command-center,recruitment,review-queue,candidate-detail,jobs-public,landing,mobile-review}.png
+
+Stage Summary:
+- EVERY view now renders the identical enterprise page-header anatomy in the identical position: back link → eyebrow → title (+badge) → description → actions right; typography unified to text-2xl/28px 600 -0.02em Ink with Body Gray descriptions, matching the Bevel token system. Layout is now role-agnostic: a public board, an admin queue, and an applicant portal page all share one component (PageHeader) so future pages inherit the enterprise layout for free.
+- No business logic, routing, or API changes; profile-view intentionally keeps its record-panel hero (canonical typography already shared).
+- Production deploy: copy changed sources + npm run build + cp .env .next/standalone/.env + pm2 restart rmis (no schema change in this task).

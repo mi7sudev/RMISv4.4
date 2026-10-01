@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
-  EmptyState, IconChip, SkeletonRows, type ChipTone,
+  EmptyState, IconChip, PageHeader, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, STAGE_DOT_CLASS,
@@ -372,43 +372,43 @@ export default function Candidates() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{isAdminView ? "Users" : "Candidates"}</h1>
-          <p className="mt-1 text-sm text-body-gray">
-            {isAdminView
-              ? "All registered system accounts — profiles, logins, and pipeline activity."
-              : "Every candidate on file — profiles, logins, and pipeline activity."}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
-            <button
-              type="button"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
-              onClick={() => setMode("list")}
-              aria-pressed={mode === "list"}
-            >
-              <List className="h-3.5 w-3.5" aria-hidden />
-              List
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views */}
+      <PageHeader
+        title={isAdminView ? "Users" : "Candidates"}
+        description={
+          isAdminView
+            ? "All registered system accounts — profiles, logins, and pipeline activity."
+            : "Every candidate on file — profiles, logins, and pipeline activity."
+        }
+        actions={
+          <>
+            <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
+              <button
+                type="button"
+                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+                onClick={() => setMode("list")}
+                aria-pressed={mode === "list"}
+              >
+                <List className="h-3.5 w-3.5" aria-hidden />
+                List
+              </button>
+              <button
+                type="button"
+                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+                onClick={() => setMode("kanban")}
+                aria-pressed={mode === "kanban"}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+                Kanban
+              </button>
+            </div>
+            <button type="button" className={ghostBtn} onClick={manualRefresh}>
+              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+              Refresh
             </button>
-            <button
-              type="button"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
-              onClick={() => setMode("kanban")}
-              aria-pressed={mode === "kanban"}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-              Kanban
-            </button>
-          </div>
-          <button type="button" className={ghostBtn} onClick={manualRefresh}>
-            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-            Refresh
-          </button>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {/* KPI tiles — Bevel cloud stat cards */}
       {!error && (rows === null ? (

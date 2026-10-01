@@ -10,10 +10,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, Building2, ChevronLeft, ClipboardList, Clock, FileText,
+  AlertTriangle, Building2, ClipboardList, Clock, FileText,
   MapPin, Pencil, RefreshCw, SquareKanban, Trash2, type LucideIcon,
 } from "lucide-react";
-import { IconChip, Monogram, StatusPill, type ChipTone } from "@/components/ui/shell";
+import { IconChip, Monogram, PageHeader, StatusPill, type ChipTone } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge,
 } from "@/components/ui/kanban";
@@ -29,7 +29,6 @@ import { navigate, useHashRoute, type JobWire, type ApplicantMini } from "@/lib/
 import { dotClass, variantForJobStatus, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { JobFormDialog, ghostBtn, ghostBadBtn, ctaBtn, iconBtn } from "@/components/views/recruitment";
-import { BrandLogo } from "@/components/brand-logo";
 
 type QueueRow = {
   id: number;
@@ -259,45 +258,29 @@ export default function JobWorkspace() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views, with back affordance */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="flex min-w-0 items-start gap-1.5">
-          <button
-            type="button"
-            aria-label="Back to jobs"
-            title="Back to jobs"
-            className="focus-ring -ml-2 mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink"
-            onClick={() => navigate("recruitment")}
-          >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
-          </button>
-          <div className="flex min-w-0 items-center gap-3">
-            <span aria-hidden="true" className="contents">
-              <BrandLogo logoSize={30} className="max-sm:hidden" />
-            </span>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{job.title}</h1>
-                <JobStatusPill job={job} overdue={dl.overdue} />
-              </div>
-              <p className="mt-1 text-sm text-body-gray">{vitals || "—"}</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <button type="button" className={cn(iconBtn, "h-9 w-9")} onClick={manualRefresh} aria-label="Refresh" title="Refresh">
-            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-          </button>
-          <button type="button" className={ghostBtn} onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4" aria-hidden />
-            Edit
-          </button>
-          <button type="button" className={ghostBadBtn} onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="h-4 w-4" aria-hidden />
-            Delete
-          </button>
-        </div>
-      </header>
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views,
+          with the labelled back affordance for detail pages */}
+      <PageHeader
+        back={{ label: "Back to Jobs", onClick: () => navigate("recruitment") }}
+        title={job.title}
+        titleAside={<JobStatusPill job={job} overdue={dl.overdue} />}
+        description={vitals || "—"}
+        actions={
+          <>
+            <button type="button" className={cn(iconBtn, "h-9 w-9")} onClick={manualRefresh} aria-label="Refresh" title="Refresh">
+              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+            </button>
+            <button type="button" className={ghostBtn} onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" aria-hidden />
+              Edit
+            </button>
+            <button type="button" className={ghostBadBtn} onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4" aria-hidden />
+              Delete
+            </button>
+          </>
+        }
+      />
 
       <Tabs
         value={tab}

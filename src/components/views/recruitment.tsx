@@ -24,7 +24,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  EmptyState, IconChip, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, PageHeader, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate } from "@/lib/client";
 import type { JobWire } from "@/lib/router";
@@ -574,25 +574,27 @@ export default function Recruitment() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Recruitment</h1>
-          <p className="num mt-1 text-sm text-body-gray">
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views */}
+      <PageHeader
+        title="Recruitment"
+        description={
+          <span className="num">
             {filtered.length} posting{filtered.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className={ghostBtn} onClick={manualRefresh}>
-            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-            Refresh
-          </button>
-          <button type="button" className={ctaBtn} onClick={openCreate}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Create Job
-          </button>
-        </div>
-      </header>
+          </span>
+        }
+        actions={
+          <>
+            <button type="button" className={ghostBtn} onClick={manualRefresh}>
+              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+              Refresh
+            </button>
+            <button type="button" className={ctaBtn} onClick={openCreate}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Create Job
+            </button>
+          </>
+        }
+      />
 
       {/* Filter toolbar — white card row: search grows, capsule selects fixed */}
       <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">

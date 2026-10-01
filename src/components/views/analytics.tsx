@@ -18,7 +18,7 @@ import {
   RefreshCw, ShieldCheck, TrendingUp, UsersRound, type LucideIcon,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, Monogram, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -262,12 +262,10 @@ export default function Analytics() {
   if (error) {
     return (
       <div className="space-y-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Analytics</h1>
-            <p className="mt-1 text-sm text-body-gray">Pipeline health, application volume, and audit activity.</p>
-          </div>
-        </header>
+        <PageHeader
+          title="Analytics"
+          description="Pipeline health, application volume, and audit activity."
+        />
         <div className="dlg-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
           <p className="text-sm text-body-gray">{error}</p>
@@ -282,12 +280,10 @@ export default function Analytics() {
   if (!stats || queue === null || audit === null) {
     return (
       <div className="space-y-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Analytics</h1>
-            <p className="mt-1 text-sm text-body-gray">Pipeline health, application volume, and audit activity.</p>
-          </div>
-        </header>
+        <PageHeader
+          title="Analytics"
+          description="Pipeline health, application volume, and audit activity."
+        />
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="dlg-card p-6">
@@ -307,19 +303,17 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Analytics</h1>
-          <p className="mt-1 text-sm text-body-gray">Pipeline health, application volume, and audit activity.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views */}
+      <PageHeader
+        title="Analytics"
+        description="Pipeline health, application volume, and audit activity."
+        actions={
           <button type="button" className={ghostBtn} onClick={manualRefresh}>
             <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
             Refresh
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* 1. Pipeline funnel + 3. Status distribution */}

@@ -7,47 +7,87 @@
 // ============================================================================
 
 import * as React from "react";
+import { ArrowLeft } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pillClass, type StatusVariant } from "@/lib/status-ui";
 
 // ── PageHeader ──────────────────────────────────────────────────────────────
+// The single enterprise page-header anatomy used by EVERY view (Task 35):
+// optional labelled back link (detail views) → eyebrow → title row
+// (title + titleAside badge) → description → meta row, with the action
+// cluster right-aligned and stacked below the title below xl.
+// ────────────────────────────────────────────────────────────────────────────
 
 export function PageHeader({
   title,
   description,
   actions,
   eyebrow,
+  back,
+  leading,
+  titleAside,
+  meta,
   className,
 }: {
-  title: string;
+  title: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
   eyebrow?: React.ReactNode;
+  /** Detail-view affordance: labelled back link rendered above the title. */
+  back?: { label: string; onClick: () => void };
+  /** Avatar / icon lockup rendered left of the title block. */
+  leading?: React.ReactNode;
+  /** Badge / status pill rendered inline after the title. */
+  titleAside?: React.ReactNode;
+  /** Secondary row under the description (pills, stamps, counts). */
+  meta?: React.ReactNode;
   className?: string;
 }) {
   return (
-    // Stacks below xl so wide action clusters (filters, toggles, refresh) can
-    // never squeeze the title into a truncated stub on tablet widths.
-    <div
-      className={cn(
-        "flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between animate-in fade-in slide-in-from-bottom-2 duration-300",
-        className
-      )}
-    >
-      <div className="min-w-0">
-        {eyebrow ? (
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-pebble">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1 className="font-display text-heading-md tracking-[-0.01em] truncate">{title}</h1>
-        {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone">{description}</p>
-        ) : null}
+    <header className={cn("animate-in fade-in slide-in-from-bottom-2 duration-300", className)}>
+      {back ? (
+        <button
+          type="button"
+          onClick={back.onClick}
+          className="focus-ring -ml-3 mb-3 inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-sm font-medium text-stone transition-colors hover:bg-cloud hover:text-ink"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {back.label}
+        </button>
+      ) : null}
+      {/* Stacks below xl so wide action clusters (filters, toggles, refresh) can
+          never squeeze the title into a truncated stub on tablet widths. */}
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          {leading ? <div className="shrink-0">{leading}</div> : null}
+          <div className="min-w-0">
+            {eyebrow ? (
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-pebble">
+                {eyebrow}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
+                {title}
+              </h1>
+              {titleAside}
+            </div>
+            {description ? (
+              typeof description === "string" ? (
+                <p className="mt-1 text-sm text-body-gray">{description}</p>
+              ) : (
+                <div className="mt-1 text-sm text-body-gray">{description}</div>
+              )
+            ) : null}
+            {meta ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">{meta}</div>
+            ) : null}
+          </div>
+        </div>
+        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-    </div>
+    </header>
   );
 }
 

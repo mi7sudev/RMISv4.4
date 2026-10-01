@@ -14,10 +14,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  AlertTriangle, ArrowUpRight, BriefcaseBusiness, ChevronLeft, ClipboardList,
+  AlertTriangle, ArrowUpRight, BriefcaseBusiness, ClipboardList,
   FileText, ExternalLink, FolderOpen, GraduationCap, Mail, UserRound, type LucideIcon,
 } from "lucide-react";
-import { EmptyState, IconChip, Monogram, SkeletonRows, type ChipTone } from "@/components/ui/shell";
+import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone } from "@/components/ui/shell";
 import { apiFetch, formatDate, formatDateTime, fullName } from "@/lib/client";
 import { dotClass, pillClass, variantForCompletion, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
@@ -314,50 +314,41 @@ export default function CandidateDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views, with
-          back affordance, identity monogram, and status pills */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="flex min-w-0 items-start gap-1.5">
-          <button
-            type="button"
-            aria-label="Back to candidates"
-            onClick={() => navigate("candidates")}
-            className="focus-ring -ml-2 mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink"
-          >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
-          </button>
-          <div className="flex min-w-0 items-center gap-4">
-            <MonogramAvatar name={name} size={48} warm />
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{name}</h1>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-body-gray">
-                {latestPosition && <span>{latestPosition}</span>}
-                {latestApp && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span className="num">Applied {formatDate(latestApp.dateApplied)}</span>
-                  </>
-                )}
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views,
+          with the labelled back affordance, identity monogram, and status pills */}
+      <PageHeader
+        back={{ label: "Back to Candidates", onClick: () => navigate("candidates") }}
+        leading={<MonogramAvatar name={name} size={48} warm />}
+        title={name}
+        description={
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {latestPosition && <span>{latestPosition}</span>}
+            {latestApp && (
+              <>
                 <span aria-hidden>·</span>
-                <span className="num">#{detail.id}</span>
-                {detail.user && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span>{detail.user.username}</span>
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <StatusPill
-            status={detail.isProfileComplete ? "Complete profile" : "Incomplete profile"}
-            variant={variantForCompletion(detail.isProfileComplete)}
-          />
-          {latestApp && <StatusPill status={latestApp.status} />}
-        </div>
-      </header>
+                <span className="num">Applied {formatDate(latestApp.dateApplied)}</span>
+              </>
+            )}
+            <span aria-hidden>·</span>
+            <span className="num">#{detail.id}</span>
+            {detail.user && (
+              <>
+                <span aria-hidden>·</span>
+                <span>{detail.user.username}</span>
+              </>
+            )}
+          </span>
+        }
+        actions={
+          <>
+            <StatusPill
+              status={detail.isProfileComplete ? "Complete profile" : "Incomplete profile"}
+              variant={variantForCompletion(detail.isProfileComplete)}
+            />
+            {latestApp && <StatusPill status={latestApp.status} />}
+          </>
+        }
+      />
 
       {/* Bevel cloud stat grid */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

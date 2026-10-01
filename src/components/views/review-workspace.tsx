@@ -31,7 +31,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowLeft, Award, BadgeCheck, BookOpen, BriefcaseBusiness,
+  AlertTriangle, Award, BadgeCheck, BookOpen, BriefcaseBusiness,
   Check, Eye, FileText, Gavel, GraduationCap, History, IdCard, ListChecks, Mail,
   CheckCircle2, Minus, Mails, Paperclip, RotateCcw, ScanSearch, Send, UserRound, X, XCircle,
 } from "lucide-react";
@@ -48,7 +48,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  EmptyState, IconChip, Monogram, SkeletonRows, type ChipTone,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import { apiFetch, formatDate, formatDateTime, fullName, timeAgo } from "@/lib/client";
 import { getStatusMeta, stageForStatus, type Tone } from "@/lib/status";
@@ -1531,21 +1531,12 @@ function ReviewWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — back affordance + title, shared anatomy */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <button
-            type="button"
-            aria-label="Back to review queue"
-            onClick={close}
-            className="-ml-2 mt-0.5 inline-flex h-11 w-11 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink focus-ring"
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden />
-          </button>
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Review Workspace</h1>
-          <p className="mt-1 text-sm text-body-gray">Applicant dossier and decision rail.</p>
-        </div>
-      </header>
+      {/* Enterprise page header (PageHeader) — labelled back affordance + title */}
+      <PageHeader
+        back={{ label: "Back to Review Queue", onClick: close }}
+        title="Review Workspace"
+        description="Applicant dossier and decision rail."
+      />
       {valid ? (
         <ReviewWorkspace applicationId={id} onClose={close} />
       ) : (

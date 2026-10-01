@@ -26,7 +26,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  EmptyState, IconChip, SkeletonKanban, SkeletonRows, type ChipTone,
+  EmptyState, IconChip, PageHeader, SkeletonKanban, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot,
@@ -228,48 +228,46 @@ export default function ReviewQueue() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Review Queue</h1>
-          <p className="mt-1 text-sm text-body-gray">
-            Screen applications, verify minimum qualifications, and advance candidates through the pipeline.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="status-pill status-neutral num">
-            {filtered.length} application{filtered.length === 1 ? "" : "s"}
-          </span>
-          <label className="dlg-ghost focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 px-3.5 text-sm text-stone">
-            <Switch checked={qualifiedOnly} onCheckedChange={setQualifiedOnly} aria-label="Qualified only" />
-            Qualified only
-          </label>
-          <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
-            <button
-              type="button"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
-              onClick={() => setMode("kanban")}
-              aria-pressed={mode === "kanban"}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-              Kanban
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views */}
+      <PageHeader
+        title="Review Queue"
+        description="Screen applications, verify minimum qualifications, and advance candidates through the pipeline."
+        actions={
+          <>
+            <span className="status-pill status-neutral num">
+              {filtered.length} application{filtered.length === 1 ? "" : "s"}
+            </span>
+            <label className="dlg-ghost focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 px-3.5 text-sm text-stone">
+              <Switch checked={qualifiedOnly} onCheckedChange={setQualifiedOnly} aria-label="Qualified only" />
+              Qualified only
+            </label>
+            <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
+              <button
+                type="button"
+                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+                onClick={() => setMode("kanban")}
+                aria-pressed={mode === "kanban"}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+                Kanban
+              </button>
+              <button
+                type="button"
+                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+                onClick={() => setMode("list")}
+                aria-pressed={mode === "list"}
+              >
+                <List className="h-3.5 w-3.5" aria-hidden />
+                List
+              </button>
+            </div>
+            <button type="button" className={ghostBtn} onClick={manualRefresh}>
+              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+              Refresh
             </button>
-            <button
-              type="button"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
-              onClick={() => setMode("list")}
-              aria-pressed={mode === "list"}
-            >
-              <List className="h-3.5 w-3.5" aria-hidden />
-              List
-            </button>
-          </div>
-          <button type="button" className={ghostBtn} onClick={manualRefresh}>
-            <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
-            Refresh
-          </button>
-        </div>
-      </header>
+          </>
+        }
+      />
       {/* QA 2026-02: scope of administrator access to Review */}
       {isAdmin && (
         <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">

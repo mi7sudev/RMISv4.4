@@ -13,7 +13,7 @@ import {
   Inbox, LayoutDashboard, RefreshCw, ShieldAlert, UserRound, UserX, type LucideIcon,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, Monogram, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, deadlineState, formatDate, fullName } from "@/lib/client";
@@ -236,17 +236,14 @@ export default function CommandCenter() {
     </button>
   );
 
-  // Shared Bevel page header — identical anatomy on every admin workspace view.
+  // Shared enterprise page header (PageHeader) — identical anatomy on every
+  // workspace view across all roles (Task 35 layout refactor).
   const header = (
-    <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Command Center</h1>
-        <p className="mt-1 text-sm text-body-gray">
-          Live operational snapshot of recruitment, pipeline health, and system activity.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">{refreshButton}</div>
-    </header>
+    <PageHeader
+      title="Command Center"
+      description="Live operational snapshot of recruitment, pipeline health, and system activity."
+      actions={refreshButton}
+    />
   );
 
   if (error) {

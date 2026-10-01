@@ -50,6 +50,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { divisionName } from "@/lib/constants";
 import { navigate, useHashRoute } from "@/lib/router";
 import type { JobWire } from "@/lib/router";
+import { PageHeader } from "@/components/ui/shell";
 
 const PAGE_SIZE = 8;
 type SortKey = "newest" | "deadline" | "salary";
@@ -940,38 +941,42 @@ export default function JobsView() {
 
   return (
     <div className={shellPad}>
-        {/* QA 2026-02: page named to match its slug (#/vacant-positions);
-            the subheader sentence was removed per review. */}
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-3xl">Vacant Positions</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <p className="num mr-1 text-sm text-body-gray">
-            {filtered.length} Result{filtered.length === 1 ? "" : "s"}
-          </p>
-          <span className="hidden text-sm text-body-gray sm:inline">Sort</span>
-          <Select
-            value={sort}
-            onValueChange={(v) => {
-              setSort(v as SortKey);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger
-              className="dlg-input min-h-[44px] w-[140px] sm:w-[170px]"
-              aria-label="Sort results"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="deadline">Deadline</SelectItem>
-              <SelectItem value="salary">Salary desc</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        {/* QA 2026-02: page named to match its slug (#/vacant-positions).
+            Enterprise page header (PageHeader) — shared anatomy across ALL
+            pages, public board included (Task 35 layout refactor). */}
+        <PageHeader
+          className="mb-8"
+          title="Vacant Positions"
+          description={
+            <span className="num">
+              {filtered.length} Result{filtered.length === 1 ? "" : "s"}
+            </span>
+          }
+          actions={
+            <>
+              <span className="hidden text-sm text-body-gray sm:inline">Sort</span>
+              <Select
+                value={sort}
+                onValueChange={(v) => {
+                  setSort(v as SortKey);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="dlg-input min-h-[44px] w-[140px] sm:w-[170px]"
+                  aria-label="Sort results"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="deadline">Deadline</SelectItem>
+                  <SelectItem value="salary">Salary desc</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          }
+        />
 
       <div className="items-start lg:flex lg:gap-6">
         {/* Search rail — sticky on desktop, collapsible on mobile */}

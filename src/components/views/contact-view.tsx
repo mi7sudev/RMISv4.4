@@ -13,6 +13,7 @@ import { LifeBuoy, Mail, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/ui/shell";
 import { apiFetch } from "@/lib/client";
 
 type Status = "idle" | "busy" | "sent";
@@ -53,17 +54,13 @@ export default function ContactView() {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 pb-14 pt-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone">Get in touch</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-3xl">
-          Contact the Recruitment Team
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-body-gray">
-          Questions about a posting, your application, or your account? Send us an inquiry and the
-          MIRDC Human Resources team will respond through email.
-        </p>
-      </div>
+      {/* Enterprise page header (PageHeader) — shared anatomy across ALL pages */}
+      <PageHeader
+        className="max-w-2xl"
+        eyebrow="Get in touch"
+        title="Contact the Recruitment Team"
+        description="Questions about a posting, your application, or your account? Send us an inquiry and the MIRDC Human Resources team will respond through email."
+      />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Form */}

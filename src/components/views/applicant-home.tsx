@@ -45,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EmptyState, IconChip, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize } from "@/lib/client";
 import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
 import { currentStageLabel, stageForStatus } from "@/lib/status";
@@ -713,12 +713,7 @@ export default function ApplicantHome() {
   if (error && apps === null) {
     return (
       <div className="space-y-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <Eyebrow>Applicant Portal</Eyebrow>
-            <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">My Application</h1>
-          </div>
-        </header>
+        <PageHeader eyebrow="Applicant Portal" title="My Application" />
         <div className="dlg-card p-6 sm:p-10">
           <EmptyState
             icon={AlertCircle}
@@ -738,19 +733,17 @@ export default function ApplicantHome() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* ===== Header — shared Bevel anatomy ===== */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <Eyebrow>Applicant Portal</Eyebrow>
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
-            Welcome Back, {firstName}
-          </h1>
-          <p className="mt-1 text-sm text-body-gray">
-            Track your applications and discover new opportunities at DOST-MIRDC.
-          </p>
-          <p className="mt-1 text-sm italic text-body-gray">Your recruitment journey, structured and transparent.</p>
-        </div>
-      </header>
+      {/* ===== Enterprise page header (PageHeader) — shared anatomy ===== */}
+      <PageHeader
+        eyebrow="Applicant Portal"
+        title={<>Welcome Back, {firstName}</>}
+        description={
+          <>
+            <p>Track your applications and discover new opportunities at DOST-MIRDC.</p>
+            <p className="italic">Your recruitment journey, structured and transparent.</p>
+          </>
+        }
+      />
 
       {/* ===== Profile completion banner ===== */}
       {!profileComplete && (

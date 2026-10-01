@@ -23,7 +23,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { EmptyState, IconChip, Monogram, SkeletonRows, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill } from "@/components/ui/shell";
 import { apiFetch, formatDateTime, humanize, timeAgo } from "@/lib/client";
 import { useHashRoute, navigate } from "@/lib/router";
 import { pillClass } from "@/lib/status-ui";
@@ -885,15 +885,11 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      {/* Bevel page header — shared anatomy across all workspace views */}
-      <header className="flex flex-wrap items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">Settings</h1>
-          <p className="mt-1 text-sm text-body-gray">
-            Manage accounts, review the audit trail, and configure notification channels.
-          </p>
-        </div>
-      </header>
+      {/* Enterprise page header (PageHeader) — shared anatomy across all views */}
+      <PageHeader
+        title="Settings"
+        description="Manage accounts, review the audit trail, and configure notification channels."
+      />
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:items-start">
         {/* Left vertical tab rail (white card); horizontal scroll pills on mobile.
