@@ -9,8 +9,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, Briefcase, CalendarClock, ChartColumn, ClipboardCheck, Clock,
-  Inbox, LayoutDashboard, RefreshCw, ShieldAlert, UserRound, UserX, type LucideIcon,
+  AlertTriangle, Briefcase, CalendarClock, ChartColumn, Clock,
+  Inbox, LayoutDashboard, RefreshCw, UserX,
 } from "lucide-react";
 import {
   EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
@@ -115,25 +115,15 @@ function summaryTone(count: number, alertTone: "warn" | "bad"): "ok" | "warn" | 
   return count === 0 ? "ok" : alertTone;
 }
 
-/** Stat card tone → Bevel chip tone. */
-const TONE_CHIP: Record<"ok" | "warn" | "bad" | "info" | "neutral", ChipTone> = {
-  ok: "emerald",
-  warn: "gold",
-  bad: "rose",
-  info: "plum",
-  neutral: "slate",
-};
-
 /**
- * Bevel stat card (shared workspace layout system): cloud surface, 24px,
- * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
- * Clickable variant keeps the same surface (no borders, no shadows).
+ * Editorial stat cell (Statsig-style stat strip): the number is the hero —
+ * stone eyebrow label, 40px ink .num, body-gray caption — sitting on a white
+ * cell of a hairline grid (the parent strip paints 1px gaps with the divider
+ * color), no card chrome, no icon chip. Clickable cells tint to fog.
  */
 function StatTile({
   label,
   value,
-  icon,
-  tone = "neutral",
   hint,
   aside,
   onClick,
@@ -141,8 +131,6 @@ function StatTile({
 }: {
   label: string;
   value: React.ReactNode;
-  icon: LucideIcon;
-  tone?: "ok" | "warn" | "bad" | "info" | "neutral";
   hint?: string;
   aside?: React.ReactNode;
   onClick?: () => void;
@@ -150,12 +138,9 @@ function StatTile({
 }) {
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
-        <IconChip icon={icon} tone={TONE_CHIP[tone]} size={40} />
-      </div>
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <p className="num text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <p className="num text-[40px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
         {aside}
       </div>
       {hint ? <p className="mt-2 text-xs text-body-gray">{hint}</p> : null}
@@ -167,13 +152,13 @@ function StatTile({
         type="button"
         onClick={onClick}
         aria-label={ariaLabel ?? label}
-        className="dlg-card lift focus-ring block w-full p-6 text-left"
+        className="focus-ring block w-full bg-white p-5 text-left transition-colors hover:bg-fog sm:p-6"
       >
         {body}
       </button>
     );
   }
-  return <div className="dlg-card p-6">{body}</div>;
+  return <div className="bg-white p-5 sm:p-6">{body}</div>;
 }
 
 export default function CommandCenter() {
@@ -265,14 +250,12 @@ export default function CommandCenter() {
     return (
       <div className="space-y-6">
         {header}
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[24px] bg-[var(--divider)] xl:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="dlg-card p-6">
-              <div className="flex items-start justify-between">
-                <div className="skel h-3 w-20" />
-                <div className="skel h-10 w-10" />
-              </div>
-              <div className="skel mt-4 h-8 w-16" />
+            <div key={i} className="bg-white p-6">
+              <div className="skel h-3 w-20" />
+              <div className="skel mt-4 h-9 w-16" />
+              <div className="skel mt-3 h-3 w-24" />
             </div>
           ))}
         </div>
@@ -306,12 +289,12 @@ export default function CommandCenter() {
                 <span className="num">{attentionTotal}</span> item{attentionTotal === 1 ? "" : "s"} across the board
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {/* Statsig-style stat strip: one white band, hairline gaps, the
+                numbers carry the hierarchy — no boxed cards, no icon chips. */}
+            <div className="dlg-card-plain grid grid-cols-2 gap-px overflow-hidden bg-[var(--divider)] xl:grid-cols-4">
               <StatTile
                 label="Awaiting review"
                 value={stats.pendingReview}
-                icon={ClipboardCheck}
-                tone="warn"
                 hint="Open →"
                 onClick={() => navigate("review-queue")}
                 aside={<PipelineSpark byStatus={stats.byStatus} />}
@@ -319,24 +302,18 @@ export default function CommandCenter() {
               <StatTile
                 label="Deadlines this week"
                 value={stats.needsAttention.deadlinesThisWeek}
-                icon={CalendarClock}
-                tone="bad"
                 hint="Open →"
                 onClick={() => navigate("recruitment")}
               />
               <StatTile
                 label="Incomplete profiles"
                 value={stats.needsAttention.incompleteProfiles}
-                icon={UserRound}
-                tone="info"
                 hint="Open →"
                 onClick={() => navigate("candidates", { status: "incomplete" })}
               />
               <StatTile
                 label="Failed logins"
                 value={stats.needsAttention.failedLogins24h}
-                icon={ShieldAlert}
-                tone="bad"
                 hint="Last 24 h · Open →"
                 onClick={() => navigate("settings", { tab: "audit" })}
               />

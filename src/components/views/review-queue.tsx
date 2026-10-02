@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowUpRight, BadgeCheck, Building2, Clock, Inbox, LayoutGrid, List, MailX, MapPin,
-  RefreshCw, UserCheck, UserRound, type LucideIcon,
+  AlertTriangle, ArrowUpRight, Building2, Clock, Inbox, LayoutGrid, List, MailX, MapPin, UserRound,
+  RefreshCw,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -26,7 +26,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  EmptyState, IconChip, PageHeader, SkeletonKanban, SkeletonRows, type ChipTone,
+  EmptyState, PageHeader, SkeletonKanban, SkeletonRows,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot,
@@ -78,29 +78,23 @@ type RegretSummary = {
 // ── Small shared visuals ────────────────────────────────────────────────────
 
 /**
- * Bevel stat card (shared workspace layout system): cloud surface, 24px,
- * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
+ * Editorial stat cell (Statsig-style stat strip) — the Command Center strip's
+ * twin: stone eyebrow label, 40px ink .num value, body-gray caption, on a
+ * white cell of the parent hairline grid. No card chrome, no icon chip.
  */
 function StatCard({
   label,
   value,
-  icon,
-  chipTone,
   hint,
 }: {
   label: string;
   value: React.ReactNode;
-  icon: LucideIcon;
-  chipTone: ChipTone;
   hint: string;
 }) {
   return (
-    <div className="dlg-card p-6">
-      <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
-        <IconChip icon={icon} tone={chipTone} size={40} />
-      </div>
-      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+    <div className="bg-white p-5 sm:p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+      <p className="num mt-3 text-[40px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
       <p className="mt-2 text-xs text-body-gray">{hint}</p>
     </div>
   );
@@ -277,25 +271,24 @@ export default function ReviewQueue() {
         </p>
       )}
 
-      {/* Queue stat tiles — Bevel cloud stat cards */}
+      {/* Queue stat strip — twin of the Command Center band: one white
+          surface, hairline gaps, editorial numbers (no boxed cards). */}
       {!error && (queue === null ? (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[24px] bg-[var(--divider)] xl:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="dlg-card p-6">
-              <div className="flex items-start justify-between">
-                <div className="skel h-3 w-20" />
-                <div className="skel h-10 w-10" />
-              </div>
-              <div className="skel mt-4 h-8 w-16" />
+            <div key={i} className="bg-white p-6">
+              <div className="skel h-3 w-20" />
+              <div className="skel mt-4 h-9 w-16" />
+              <div className="skel mt-3 h-3 w-24" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          <StatCard label="In queue" value={applications.length} icon={Inbox} chipTone="slate" hint="applications on file" />
-          <StatCard label="Qualified" value={stat.qualified} icon={BadgeCheck} chipTone="emerald" hint="meet all minimum requirements" />
-          <StatCard label="Under review" value={stat.underReview} icon={Clock} chipTone="gold" hint="being screened" />
-          <StatCard label="Shortlisted" value={stat.shortlisted} icon={UserCheck} chipTone="plum" hint="advanced by evaluators" />
+        <div className="dlg-card-plain grid grid-cols-2 gap-px overflow-hidden bg-[var(--divider)] xl:grid-cols-4">
+          <StatCard label="In queue" value={applications.length} hint="applications on file" />
+          <StatCard label="Qualified" value={stat.qualified} hint="meet all minimum requirements" />
+          <StatCard label="Under review" value={stat.underReview} hint="being screened" />
+          <StatCard label="Shortlisted" value={stat.shortlisted} hint="advanced by evaluators" />
         </div>
       ))}
 

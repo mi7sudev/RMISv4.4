@@ -3,8 +3,10 @@
 // ============================================================================
 // RMIS — Public landing (spec §7.1): a two-pane job explorer in the
 // reference-board style — TOP: a Bevel "Hero Sky" rounded-32 gradient field
-// carrying the display headline, live open-count pill and the charcoal
-// capsule CTA to the full board; LEFT: a scrollable register of Cloud Card
+// in a split composition (Google-Workspace rhythm): display headline + copy
+// + charcoal capsule CTA on the left, the official DOST/MIRDC seal lockup
+// with the agency authority line as the institutional proof block on the
+// right; LEFT: a scrollable register of Cloud Card
 // job cards (title · company · place · salary · clamped snippet · posted
 // age · chevron quick-view + bookmark); RIGHT: the full posting pane
 // (display title, verified company row + "View all jobs", icon meta rows,
@@ -36,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/shell/site-header";
 import { Footer } from "@/components/shell/footer";
+import { BrandLogo } from "@/components/brand-logo";
 import { useApplyFlow } from "@/components/apply/apply-dialogs";
 import { EmptyState } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
@@ -552,30 +555,44 @@ export default function PublicLanding() {
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
-        {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer:
-            ink display headline + body-gray copy, live open-count pill and
-            the charcoal capsule CTA to the full board. */}
-        <section className="rounded-[32px] bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] p-6 sm:p-8 lg:px-10 lg:py-9">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+        {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer,
+            arranged as a split: display headline + copy + single charcoal
+            capsule CTA left; official seal lockup + authority line right as
+            the quiet institutional proof strip (real marks only). */}
+        <section className="rounded-[32px] bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] p-6 sm:p-8 lg:px-10 lg:py-10">
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
             {/* QA 2026-02: header renamed to "Job Opportunities" to match the
                 Positions tab; the live "N open" pill was removed — it read as
                 an unclickable button. */}
             <div className="min-w-0">
-              <h1 className="text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-5xl">
+              <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.03em] text-ink sm:text-6xl">
                 Job Opportunities
               </h1>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-body-gray sm:text-base">
+              <p className="mt-3 max-w-xl text-base leading-relaxed text-body-gray">
                 Current vacancies at DOST-MIRDC. Pick a role to read the full posting.
               </p>
+              <div className="mt-6">
+                <button
+                  onClick={() => navigate("vacant-positions")}
+                  className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 text-sm font-medium"
+                >
+                  Browse the full board
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => navigate("vacant-positions")}
-                className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 text-sm font-medium"
-              >
-                Browse the full board
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </button>
+            {/* Institutional proof — the same emblems and authority line the
+                footer carries, moved into the hero as the trust anchor. */}
+            <div className="flex items-center gap-4 lg:flex-col lg:items-end lg:gap-3 lg:text-right">
+              <BrandLogo logoSize={36} tone="light" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-snug text-ink">
+                  Metals Industry Research and Development Center
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-body-gray">
+                  An agency of the Department of Science and Technology, Republic of the Philippines
+                </p>
+              </div>
             </div>
           </div>
         </section>
