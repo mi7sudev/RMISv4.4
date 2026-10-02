@@ -290,3 +290,25 @@ Work Log:
 Stage Summary:
 - Current tree = Task 37 state (V9 Bevel + antislop) + the table-card containing-block fix. Head: 180691c. Executive Ink remains abandoned per user rollback.
 - Screenshots: tool-results/t38-{landing,command-center,recruitment,settings,desktop-review,mobile-final}.png
+
+---
+Task ID: 39
+Agent: Z.ai Code (main)
+Task: User instruction: "IMPROVE THE CURRENT DESIGN FIND AN INSPIRATION ON THIS npx -y inspo-mcp install" - use the inspo-mcp reference archive to source real-site composition patterns and apply them to RMIS (arrangement-only, Bevel palette stays, antislop rules apply).
+
+Work Log:
+- INSPo-mcp: no local MCP client, so spoke MCP JSON-RPC over HTTP directly to https://inspomcp.dev/api/mcp (initialize, notifications/initialized, tools/list, tools/call). Filters are SCALAR strings (arrays 400).
+- Study (per server budget: 1 recommend, 2 search_screens, 4 get_screen + full-page captures reviewed): statsig-com, workspace-google-com, atlassian-design, ecologi-com. The recommend orchestrator mis-inferred dark mode + Marquee Hero; per its own rule the project direction won - searched light/swiss/saas and light/editorial instead.
+- Patterns adopted: (1) Statsig "stat strip with hairline dividers" - eyebrow label / 40px number / caption on one white band, no boxed cards, no icon chips; (2) Google Workspace split hero - left display headline + copy + single capsule CTA, visual/trust block right; (3) Ecologi institutional proof strip - real official seals + authority line (R-18 satisfied: DOST + MIRDC emblems are the agency's real marks).
+- EDITS (arrangement only, zero new features/data):
+  - public-landing.tsx: hero interior -> grid split; headline bumped to text-4xl/6xl leading-[1.02]; BrandLogo (36px) + "Metals Industry Research and Development Center / An agency of the DOST, Republic of the Philippines" as right-column proof block; CTA unchanged.
+  - command-center.tsx: StatTile -> editorial stat cell (no dlg-card, no IconChip, num 40px); band = dlg-card-plain grid gap-px bg-[var(--divider)] (hairline-grid trick, breakpoint-proof); skeleton band matched; removed TONE_CHIP + unused imports.
+  - review-queue.tsx: StatCard -> twin cell of Command Center strip (same anatomy); band + skeleton matched; removed unused imports.
+- VERIFY: lint PASS, tsc clean for src/. agent-browser: desktop 1600x900 landing + command-center + review-queue screenshots; mobile 390x844 overflow sweep 390==390 on /,operations,review-queue; screenshots t39-*.png.
+- GOLDEN PATH: all four stat tiles verified navigating (Awaiting review->review-queue, Deadlines->recruitment, Incomplete profiles->candidates?status=incomplete, Failed logins->settings?tab=audit); anonymous hero CTA "Browse the full board" -> vacant-positions verified (cookies cleared). NOTE: agent-browser REAL input (CDP mouse) silently stopped delivering events app-wide this session (global capture listeners receive nothing even after browser restart) - verified NOT an app defect; golden path exercised via element.click() + direct hash nav, which drive the identical handlers.
+- SIGN-IN NOTE for future sessions: to authenticate a fresh browser context when real input is dead, run fetch('/api/auth/login',{method:'POST',body:JSON.stringify({identifier,password})}) inside the page, then reload. Session bootstrap is async (GET /api/session) - a freshly opened staff hash may briefly render the public landing until it resolves; evaluate h1 AFTER resolution (or navigate by hash inside the live SPA).
+
+Stage Summary:
+- Head: 08bd550 on top of the Task 38 recovery line. Current design = Bevel + antislop + inspo composition pass (hero split, stat strips). All numbers/links/data identical; only arrangement changed.
+- The stat-strip anatomy is now the shared workspace KPI pattern (command-center + review-queue twins); future views should reuse these cell markups instead of boxed cards.
+- Production deploy unchanged: copy sources, npm run build, cp .env .next/standalone/, pm2 restart rmis.
