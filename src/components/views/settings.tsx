@@ -163,13 +163,13 @@ function UsersPanel() {
         <button type="button" className={ctaBtn} onClick={() => setCreateOpen(true)}>Create User</button>
       </div>
 
-      <div className="rounded-2xl bg-fog p-3 sm:flex sm:items-center sm:gap-3">
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
-          <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search name, email or username…" className="dlg-input min-h-[40px] pl-10" />
+      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
+          <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search name, email or username…" className="dlg-input min-h-[44px] pl-9" />
         </div>
         <Select value={role} onValueChange={(v) => { setRole(v); setPage(1); }}>
-          <SelectTrigger className="dlg-input mt-3 min-h-[40px] w-full sm:mt-0 sm:w-44"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All roles</SelectItem>
             <SelectItem value="APPLICANT">Applicant</SelectItem>
@@ -179,15 +179,15 @@ function UsersPanel() {
         </Select>
       </div>
 
-      <div className="table-frame overflow-hidden">
+      <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
-            <thead className="sticky top-0 z-10 bg-fog">
-              <tr className="border-b border-[var(--border)]">
-                <th scope="col" className="thead-cell px-4 py-3 pl-5 text-left font-semibold">User</th>
-                <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Role</th>
-                <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Active</th>
-                <th scope="col" className="thead-cell px-4 py-3 pr-5 text-right font-semibold"><span className="sr-only">Actions</span></th>
+            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+              <tr>
+                <th className="px-5 py-3">User</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Active</th>
+                <th className="px-5 py-3 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -202,13 +202,15 @@ function UsersPanel() {
                 </tr>
               )}
               {rows?.map((u) => (
-                <tr key={u.id} className="group/row">
-                  <td className="px-4 py-3 pl-5">
+                <tr key={u.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
+                  <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <Monogram size={32}>{monogramOf([u.firstName, u.lastName].filter(Boolean).join(" ") || u.username)}</Monogram>
+                      <span aria-hidden="true" className="contents">
+                        <Monogram size={32} className="rounded-full">{monogramOf([u.firstName, u.lastName].filter(Boolean).join(" ") || u.username)}</Monogram>
+                      </span>
                       <div className="min-w-0">
-                        <p className="truncate text-[13.5px] font-medium text-ink">{[u.firstName, u.lastName].filter(Boolean).join(" ") || u.username}</p>
-                        <p className="num truncate text-xs text-stone">{u.email} · @{u.username}</p>
+                        <p className="text-sm font-medium text-ink">{[u.firstName, u.lastName].filter(Boolean).join(" ") || u.username}</p>
+                        <p className="num text-xs text-pebble">{u.email} · @{u.username}</p>
                       </div>
                     </div>
                   </td>
@@ -216,7 +218,7 @@ function UsersPanel() {
                   <td className="px-4 py-3">
                     <Switch checked={!u.blocked} disabled={busyId === u.id} onCheckedChange={() => void toggleActive(u)} aria-label={`Toggle ${u.username}`} />
                   </td>
-                  <td className="px-4 py-3 pr-5 text-right">
+                  <td className="px-5 py-3">
                     <div className="flex justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
                       <button
                         type="button"
@@ -246,10 +248,10 @@ function UsersPanel() {
       </div>
 
       {pages > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-          <span className="num text-xs text-stone">Page {page} of {pages}</span>
-          <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
+        <div className="flex items-center justify-center gap-2">
+          <button type="button" className={ghostBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
+          <span className="num text-sm text-stone">Page {page} of {pages}</span>
+          <button type="button" className={ghostBtn} disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
         </div>
       )}
 
@@ -492,26 +494,20 @@ function AuditPanel() {
             ...(["ADMIN", "EVALUATOR", "APPLICANT"] as const).map((r) => [humanize(r), summary?.byRole?.[r] ?? 0] as const),
           ] as [string, number | undefined][]
         ).map(([label, value]) => (
-<<<<<<< Updated upstream
-          <div key={label} className="data-card p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
-            <p className="num mt-3 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink">{value ?? "—"}</p>
-=======
           <div key={label} className="dlg-card p-6">
             <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
             <p className="num mt-4 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
->>>>>>> Stashed changes
           </div>
         ))}
       </div>
 
-      <div className="rounded-2xl bg-fog p-3 sm:flex sm:items-center sm:gap-3">
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
-          <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search descriptions and actors…" className="dlg-input min-h-[40px] pl-10" />
+      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
+          <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search descriptions and actors…" className="dlg-input min-h-[44px] pl-9" />
         </div>
         <Select value={action} onValueChange={(v) => { setAction(v); setPage(1); }}>
-          <SelectTrigger className="dlg-input mt-3 min-h-[40px] w-full sm:mt-0 sm:w-56"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-56"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All actions</SelectItem>
             {actions.map((a) => <SelectItem key={a} value={a}>{humanize(a)}</SelectItem>)}
@@ -519,12 +515,12 @@ function AuditPanel() {
         </Select>
       </div>
 
-      <div className="table-frame overflow-hidden">
-        <div className="max-h-96 divide-y divide-[#eef1f7] overflow-y-auto scroll-thin">
-          {rows === null && <div className="p-5"><SkeletonRows rows={6} rowClassName="h-11" /></div>}
+      <div className="dlg-card-plain overflow-hidden">
+        <div className="max-h-96 overflow-y-auto scroll-thin p-2">
+          {rows === null && <div className="p-2"><SkeletonRows rows={6} rowClassName="h-11" /></div>}
           {rows?.length === 0 && <EmptyState icon={ScrollText} tone="plum" title="No audit events match." compact />}
           {rows?.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 transition-colors hover:bg-fog/60">
+            <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-fog/60">
               <span className="num w-24 shrink-0 text-xs text-body-gray" title={formatDateTime(r.timestamp)}>
                 {timeAgo(r.timestamp)}
               </span>
@@ -542,10 +538,10 @@ function AuditPanel() {
       </div>
 
       {pages > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-          <span className="num text-xs text-stone">Page {page} of {pages}</span>
-          <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
+        <div className="flex items-center justify-center gap-2">
+          <button type="button" className={ghostBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
+          <span className="num text-sm text-stone">Page {page} of {pages}</span>
+          <button type="button" className={ghostBtn} disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
         </div>
       )}
     </div>
@@ -639,10 +635,10 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
           {kind === "sms" ? "SMS Gateway" : "Email Notices"}
         </h2>
       </div>
-      <div className="data-card p-5 sm:p-6">
+      <div className="dlg-card-plain p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">Active provider</p>
+            <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Active provider</p>
             <p className="num mt-1 text-lg font-semibold text-ink">{humanize(data?.provider ?? "…")}</p>
             {data?.provider === "mock" ? (
               <p className="mt-1 text-xs text-body-gray">Messages are logged only.</p>
@@ -656,27 +652,21 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {tiles.map(([label, value]) => (
-<<<<<<< Updated upstream
-            <div key={label} className="rounded-xl bg-fog p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
-              <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "—"}</p>
-=======
             <div key={label} className="rounded-lg bg-cloud p-4">
               <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
               <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
->>>>>>> Stashed changes
             </div>
           ))}
         </div>
       </div>
 
       {readOnly ? (
-        <p className="rounded-xl bg-fog px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
+        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
           <span className="font-semibold text-ink">Read-only view:</span> notification sending and
           gateway configuration are managed by system administrators.
         </p>
       ) : (
-      <div className="data-card p-5 sm:p-6">
+      <div className="dlg-card-plain p-5 sm:p-6">
         <p className="mb-4 text-base font-semibold tracking-[-0.01em] text-ink">Test send</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -700,15 +690,15 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
       </div>
       )}
 
-      <div className="table-frame overflow-hidden">
+      <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
-            <thead className="sticky top-0 z-10 bg-fog">
-              <tr className="border-b border-[var(--border)]">
-                <th scope="col" className="thead-cell px-4 py-3 pl-5 text-left font-semibold">To</th>
-                <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">{kind === "sms" ? "Message" : "Subject"}</th>
-                <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Status</th>
-                <th scope="col" className="thead-cell px-4 py-3 pr-5 text-right font-semibold">When</th>
+            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+              <tr>
+                <th className="px-5 py-3">To</th>
+                <th className="px-4 py-3">{kind === "sms" ? "Message" : "Subject"}</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-5 py-3 text-right">When</th>
               </tr>
             </thead>
             <tbody>
@@ -726,20 +716,14 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
                 </tr>
               )}
               {data?.logs.map((l) => (
-<<<<<<< Updated upstream
-                <tr key={l.id} className="align-top">
-                  <td className="px-4 py-3 pl-5 font-medium text-ink">{l.to}</td>
-                  <td className="max-w-[280px] truncate px-4 py-3 text-body-gray">{l.subject ?? l.message ?? "—"}</td>
-=======
                 <tr key={l.id} className="border-b border-[var(--border)] align-top transition-colors last:border-0 hover:bg-fog/60">
                   <td className="px-5 py-3 font-medium text-ink">{l.to}</td>
                   <td className="max-w-[280px] truncate px-4 py-3 text-body-gray">{l.subject ?? l.message ?? "-"}</td>
->>>>>>> Stashed changes
                   <td className="px-4 py-3">
                     <StatusChip status={l.status} />
                     {l.error && <p className="mt-1 text-xs text-body-gray">{l.error}</p>}
                   </td>
-                  <td className="num px-4 py-3 pr-5 text-right text-xs text-body-gray" title={formatDateTime(l.createdAt)}>
+                  <td className="num px-5 py-3 text-right text-xs text-body-gray" title={formatDateTime(l.createdAt)}>
                     {timeAgo(l.createdAt)}
                   </td>
                 </tr>
@@ -803,7 +787,7 @@ function ContactPanel() {
       <div className="flex items-center gap-3">
         <IconChip icon={Inbox} tone="slate" size={36} iconSize={16} />
         <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Contact Requests</h2>
-        <span className="dlg-pill num ml-auto bg-fog px-2.5 py-1 text-xs font-medium text-stone">{rows?.length ?? "…"}</span>
+        <span className="status-pill status-neutral num ml-auto">{rows?.length ?? "…"}</span>
       </div>
       <p className="text-sm leading-relaxed text-body-gray">
         Inquiries and requests submitted through the public Contact page. Reply to the sender
@@ -826,47 +810,62 @@ function ContactPanel() {
         ))}
       </div>
 
-      <div className="table-frame overflow-hidden">
-        {/* Compact 52px rows — monogram, subject + sender, time, status pill,
-            ghost resolve/reopen. Full message + handler ride the hover title
-            (row height budget); nothing about the data or handlers changes. */}
-        <div className="max-h-96 divide-y divide-[#eef1f7] overflow-x-auto overflow-y-auto scroll-thin">
-          {rows === null && <div className="p-5"><SkeletonRows rows={4} rowClassName="h-14" /></div>}
-          {rows?.length === 0 && (
-            <EmptyState icon={Inbox} tone="slate" title="No contact requests yet." compact />
-          )}
-          {rows?.map((r) => (
-            <div
-              key={r.id}
-              className="flex min-h-[52px] items-center gap-3 px-5 py-2 transition-colors hover:bg-fog/60"
-              title={[
-                r.message,
-                r.handledBy
-                  ? `Handled by ${[r.handledBy.firstName, r.handledBy.lastName].filter(Boolean).join(" ") || r.handledBy.username}`
-                  : null,
-              ].filter(Boolean).join("\n\n") || undefined}
-            >
-              <Monogram size={36}>{monogramOf(r.name)}</Monogram>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13.5px] font-medium text-ink">{r.subject}</p>
-                <p className="truncate text-xs text-stone">{r.name} · {r.email}</p>
-              </div>
-              <span className="num hidden shrink-0 text-xs text-stone sm:block" title={formatDateTime(r.createdAt)}>
-                {timeAgo(r.createdAt)}
-              </span>
-              <div className="flex shrink-0 items-center gap-2">
-                <StatusPill status={r.status === "RESOLVED" ? "Resolved" : "Open"} variant={r.status === "RESOLVED" ? "ok" : "warn"} />
-                <button
-                  type="button"
-                  disabled={busyId === r.id}
-                  onClick={() => void setStatus(r.id, r.status === "RESOLVED" ? "OPEN" : "RESOLVED")}
-                  className={ghostBtn + " min-h-[36px] px-3 text-xs"}
-                >
-                  {busyId === r.id ? "…" : r.status === "RESOLVED" ? "Reopen" : "Resolve"}
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="dlg-card-plain table-card overflow-hidden">
+        <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+              <tr>
+                <th className="px-5 py-3">From</th>
+                <th className="px-4 py-3">Subject</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Received</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows === null && <tr><td colSpan={5} className="p-4"><SkeletonRows rows={4} rowClassName="h-14" /></td></tr>}
+              {rows?.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-6">
+                    <EmptyState icon={Inbox} tone="slate" title="No contact requests yet." compact />
+                  </td>
+                </tr>
+              )}
+              {rows?.map((r) => (
+                <tr key={r.id} className="border-b border-[var(--border)] align-top transition-colors last:border-0 hover:bg-fog/60">
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-ink">{r.name}</p>
+                    <p className="mt-0.5 text-xs text-body-gray">{r.email}</p>
+                  </td>
+                  <td className="max-w-[320px] px-4 py-3.5">
+                    <p className="font-medium text-ink">{r.subject}</p>
+                    <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-body-gray">{r.message}</p>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <StatusPill status={r.status === "RESOLVED" ? "Resolved" : "Open"} variant={r.status === "RESOLVED" ? "ok" : "warn"} />
+                    {r.handledBy && (
+                      <p className="mt-1 text-xs text-stone">
+                        by {[r.handledBy.firstName, r.handledBy.lastName].filter(Boolean).join(" ") || r.handledBy.username}
+                      </p>
+                    )}
+                  </td>
+                  <td className="num px-5 py-3.5 text-right text-xs text-body-gray" title={formatDateTime(r.createdAt)}>
+                    {timeAgo(r.createdAt)}
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => void setStatus(r.id, r.status === "RESOLVED" ? "OPEN" : "RESOLVED")}
+                      className={r.status === "RESOLVED" ? `${ghostBtn} min-h-[36px] px-3 text-xs` : `${ctaBtn} min-h-[36px] px-3 text-xs`}
+                    >
+                      {busyId === r.id ? "…" : r.status === "RESOLVED" ? "Reopen" : "Resolve"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -893,13 +892,13 @@ export default function Settings() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:items-start">
-        {/* Left vertical tab rail (white data-card); horizontal scroll pills on
-            mobile. min-w-0: the nowrap tab buttons' min-content must not widen
-            the auto track on phones (observed OV 231-286 at 320/375).
-            data-card (not .dlg-card): .dlg-card sets position:relative in
+        {/* Left vertical tab rail (white card); horizontal scroll pills on mobile.
+            min-w-0: the nowrap tab buttons' min-content must not widen the auto
+            track on phones (observed OV 231-286 at 320/375). */}
+        {/* dlg-card-plain (not dlg-card): .dlg-card sets position:relative in
             unlayered CSS, which would override lg:sticky from the utilities
             layer and silently kill the desktop pin. */}
-        <nav className="data-card min-w-0 p-2 lg:sticky lg:top-6" aria-label="Settings sections">
+        <nav className="dlg-card-plain min-w-0 p-2 lg:sticky lg:top-6" aria-label="Settings sections">
           <div className="flex gap-1 overflow-x-auto scroll-thin lg:flex-col lg:overflow-visible">
             {tabs.map((t) => (
               <button
@@ -908,7 +907,7 @@ export default function Settings() {
                 onClick={() => navigate("settings", { tab: t.key })}
                 aria-current={tab === t.key ? "page" : undefined}
                 className={`focus-ring inline-flex h-11 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-4 text-sm transition-colors ${
-                  tab === t.key ? "bg-fog font-medium text-ink" : "text-stone hover:bg-fog/60 hover:text-ink"
+                  tab === t.key ? "bg-cloud text-ink" : "text-stone hover:bg-fog hover:text-ink"
                 }`}
               >
                 <t.icon className="h-4 w-4 shrink-0" aria-hidden />

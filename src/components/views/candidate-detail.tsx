@@ -160,7 +160,7 @@ function StatCard({
   value: number;
 }) {
   return (
-    <div className="data-card p-6">
+    <div className="dlg-card p-6">
       <div className="flex items-start justify-between gap-3">
         <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
         <IconChip icon={icon} tone={chipTone} size={40} />
@@ -192,7 +192,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("data-card min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
       {title ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -248,7 +248,7 @@ export default function CandidateDetail() {
 
   if (!valid) {
     return (
-      <div className="data-card py-6">
+      <div className="dlg-card py-6">
         <EmptyState
           icon={UserRound}
           tone="slate"
@@ -266,7 +266,7 @@ export default function CandidateDetail() {
 
   if (error) {
     return (
-      <div className="data-card p-8">
+      <div className="dlg-card p-8">
         <EmptyState
           icon={AlertTriangle}
           tone="rose"
@@ -297,7 +297,7 @@ export default function CandidateDetail() {
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="data-card p-6">
+            <div key={i} className="dlg-card p-6">
               <div className="skel h-3 w-20" />
               <div className="skel mt-4 h-8 w-16" />
             </div>

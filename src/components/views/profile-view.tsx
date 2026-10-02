@@ -1,17 +1,17 @@
 "use client";
 
 // ============================================================================
-// RMIS — Profile builder (Executive Ink edition):
-// ONE cohesive record panel — a white data-card with hairline framing —
-// identity (monogram · name · status pill · document count) with the
-// completion ring pinned right on phones and a hairline-separated completion
-// lockup (ring · "N of 7 sections" · Mark Complete CTA) on desktop — above
-// the quiet completion note (fog inset) and the framed PDS import card.
-// Section navigation is breakpoint-split: desktop (lg+)
+// RMIS — Profile builder (Bevel edition):
+// ONE cohesive record panel — identity (monogram · name · status pill ·
+// document count) with the completion ring pinned right on phones and a
+// hairline-separated completion lockup (ring · "N of 7 sections" · Mark
+// Complete CTA) on desktop — above the quiet completion note and the cloud
+// PDS import card. Section navigation is breakpoint-split: desktop (lg+)
 // pins a numbered workflow band (capsule done/current/ahead chips joined by
 // hairline connectors, two-line labels with time estimates); phones get a
 // sticky 7-cell segmented strip with a sliding active cell plus a prev/next
-// caption bar. Sections render as white panels in one full-width column.
+// caption bar. Sections render as white dlg-card-plain panels in one
+// full-width column.
 // Data logic unchanged: parallel loads, silent reloads, session refresh.
 // ============================================================================
 
@@ -239,7 +239,7 @@ export default function ProfileView() {
     return (
       <div className="space-y-6">
         {/* Record panel skeleton */}
-        <div className="data-card p-5 sm:p-6">
+        <div className="dlg-card-plain p-5 sm:p-6">
           <div className="flex items-center gap-4">
             <div className="skel h-14 w-14 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">
@@ -258,7 +258,7 @@ export default function ProfileView() {
             ))}
           </div>
         </div>
-        <div className="data-card p-2 lg:hidden">
+        <div className="dlg-card-plain p-2 lg:hidden">
           <div className="flex gap-2 overflow-hidden">
             {SECTIONS.map((s) => (
               <div key={s.n} className="skel h-11 w-12 shrink-0" />
@@ -275,7 +275,7 @@ export default function ProfileView() {
   if (error && !profile) {
     return (
       <div className="space-y-6">
-        <div className="data-card flex flex-col items-center gap-3 p-6 text-center sm:p-10">
+        <div className="dlg-card flex flex-col items-center gap-3 p-6 text-center sm:p-10">
           <AlertCircle className="h-6 w-6 text-[var(--bad)]" />
           <p className="text-sm text-body-gray">{error}</p>
           <button type="button" onClick={() => void loadAll(false)} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
@@ -291,7 +291,7 @@ export default function ProfileView() {
       {/* ── A–C. Employee record — ONE cohesive panel: identity + completion
               indicator, the quiet completion note, and the PDS import
               card. ── */}
-      <section aria-label="Profile record" className="data-card p-5 sm:p-6">
+      <section aria-label="Profile record" className="dlg-card-plain p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
           {/* Identity — avatar + name/status/documents. The completion ring
               is pinned to the RIGHT of this row on phones (shrink-0, and
@@ -367,7 +367,7 @@ export default function ProfileView() {
 
         {/* ── B. Completion note — quiet informational banner (never an alert). ── */}
         {!isComplete && (
-          <div className="mt-5 flex items-start gap-3 rounded-lg bg-fog px-4 py-3">
+          <div className="mt-5 flex items-start gap-3 rounded-lg bg-cloud/60 px-4 py-3">
             <Info className="h-4 w-4 shrink-0 text-stone" aria-hidden="true" />
             <p className="min-w-0 flex-1 text-sm leading-relaxed text-body-gray">
               Profile completion requires your Personal Information (first name, last name, and email) and at least one
@@ -376,12 +376,8 @@ export default function ProfileView() {
           </div>
         )}
 
-        {/* ── C. Import workspace — PDS Upload · AI Auto-Fill. The upload
-            card is its own component (out of this file's scope); its cloud
-            root is re-skinned from here into a framed fog inset (hairline
-            + 16px radius + data-card shadow) so it reads as an inset
-            workspace on the white record panel. ── */}
-        <div className="mt-4 sm:mt-5 [&>*]:rounded-2xl! [&>*]:border! [&>*]:border-[#e7ebf3]! [&>*]:bg-fog! [&>*]:shadow-[0_1px_2px_rgba(31,32,37,0.04)]!">
+        {/* ── C. Import workspace — PDS Upload · AI Auto-Fill ── */}
+        <div className="mt-4 sm:mt-5">
           <PdsUploadCard docs={docs} onProfileReplaced={onProfileReplaced} onDocsChanged={reloadSilent} />
         </div>
       </section>
@@ -457,7 +453,7 @@ export default function ProfileView() {
           containing block is its own grid area (exactly the strip's own
           height), which left it zero stick range. As a root sibling it
           pins under the mobile top bar (top-16) for the whole scroll. */}
-      <nav ref={mobileNavRef} aria-label="Profile sections" className="data-card sticky top-16 z-30 p-1.5 shadow-[0_12px_28px_-14px_rgba(31,32,37,0.28)]! lg:hidden">
+      <nav ref={mobileNavRef} aria-label="Profile sections" className="dlg-card-plain sticky top-16 z-30 p-1.5 shadow-e2 lg:hidden">
         <div className="grid grid-cols-7 gap-0.5">
           {SECTIONS.map((s, i) => {
             const isActive = active === s.n;
@@ -619,7 +615,7 @@ export default function ProfileView() {
           <button
             type="button"
             onClick={() => navigate("home")}
-            className="dlg-ghost min-h-[44px] px-7 text-sm font-medium"
+            className="dlg-cta min-h-[44px] px-7 text-sm font-medium"
           >
             Return to Portal
             <ChevronRight className="ml-1.5 inline h-4 w-4" aria-hidden="true" />

@@ -91,7 +91,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("data-card min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
       {title || actions ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -217,7 +217,7 @@ export default function JobWorkspace() {
 
   if (!valid) {
     return (
-      <div className="data-card p-8 text-center space-y-3">
+      <div className="dlg-card p-8 text-center space-y-3">
         <p className="text-sm text-body-gray">No job selected.</p>
         <button type="button" className={ctaBtn} onClick={() => navigate("recruitment")}>
           Go to recruitment
@@ -228,7 +228,7 @@ export default function JobWorkspace() {
 
   if (error) {
     return (
-      <div className="data-card p-8 text-center space-y-4">
+      <div className="dlg-card p-8 text-center space-y-4">
         <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
         <p className="text-sm text-body-gray">{error}</p>
         <button type="button" className={ghostBtn} onClick={() => void load()}>
@@ -410,11 +410,11 @@ export default function JobWorkspace() {
         {/* Candidates */}
         <TabsContent value="candidates" className="mt-4">
           {apps.length === 0 ? (
-            <div className="data-card p-6 sm:p-10">
+            <div className="dlg-card p-6 sm:p-10">
               <p className="py-6 text-center text-sm text-body-gray">No applications for this posting yet.</p>
             </div>
           ) : (
-            <div className="data-card overflow-hidden">
+            <div className="dlg-card-plain overflow-hidden">
               {apps.map((app) => (
                 <button
                   key={app.id}

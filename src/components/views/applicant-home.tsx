@@ -1,20 +1,21 @@
 "use client";
 
 // ============================================================================
-// RMIS — Applicant home ("My Application"): enterprise header (warm monogram
-// + shared PageHeader) over a two-pane workspace grid (lg:grid-cols-12):
-//   LEFT  · Job Openings — data-card-hover posting cards (metric-blue hover
-//           rule, font-medium title, pipe-separated vitals with .num salary,
-//           Apply ghost CTA, +/− quick view with six QuickFacts).
+// RMIS — Applicant home ("My Application"): editorial welcome header over a
+// two-pane workspace grid (lg:grid-cols-12):
+//   LEFT  · Job Openings — full-width stacked list rows (metric-blue hover
+//           rule, humanized title, pipe-separated vitals, capsule +/−
+//           quick-view toggle, in-place quick view with six QuickFacts).
 //   RIGHT · Your Applications — sticky rail with its own overflow scroll;
-//           one white data-card of hairline-divided 56px rows (stage-dot ·
-//           title · meta · status pill). The rail stacks FIRST on mobile.
-// Clicking an application row opens the full Application detail modal (§7.7)
+//           journey cards (No. kicker · status pill · chevron · 3-checkpoint
+//           .stage-dot timeline · next-step hint). The rail stacks FIRST on
+//           mobile.
+// Clicking a journey card opens the full Application detail modal (§7.7)
 // with Cancel Application while the journey is still at "Submitted".
 // Data: parallel /api/applications + /api/jobs — 15 s silent poll + refetch on
 // focus (never flips skeletons or clobbers good data on transient failure).
-// Executive Ink pass: data-card white surfaces + hairlines, fog insets,
-// stage-dot rows, .num vitals, capsule CTAs, body-gray copy.
+// Bevel pass: shared page-header anatomy, cloud journey/position cards, white
+// interior tiles inside the detail modal, capsule CTAs, body-gray copy.
 // ============================================================================
 
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
@@ -25,8 +26,10 @@ import {
   ArrowRight,
   BadgeCheck,
   Briefcase,
+  CalendarDays,
   ChevronRight,
   Inbox,
+  MapPin,
   Minus,
   Plus,
   RefreshCw,
@@ -42,10 +45,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EmptyState, IconChip, Monogram, PageHeader, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize } from "@/lib/client";
 import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
-import { currentStageLabel } from "@/lib/status";
+import { currentStageLabel, stageForStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/session-provider";
 import OnboardingTour from "@/components/onboarding-tour";
@@ -83,6 +86,16 @@ function stageVariant(label: string): "ok" | "warn" | "bad" | "info" | "neutral"
   return STAGE_VARIANT[label] ?? "neutral";
 }
 
+/** §7.3 Next Step hint paragraph per pipeline stage. */
+function nextStepHint(stage: string): string {
+  if (stage === "Rejected")
+    return "Your application was not shortlisted. You may apply for other open positions.";
+  if (stage === "Shortlisted")
+    return "A notice has been sent to your registered email. HR will contact you for the next steps.";
+  if (stage === "Under Review") return "HR is currently evaluating your application. You will be notified of the outcome.";
+  return "Your application has been received and is awaiting evaluation by the Human Resource Office.";
+}
+
 const PLACE_FALLBACK = "DOST Compound, Taguig";
 
 /** Display place — nested position read, then the agency address. */
@@ -90,12 +103,100 @@ function jobPlace(job: JobWire): string {
   return job.position?.placeOfAssignment ?? PLACE_FALLBACK;
 }
 
-// ── Application row (right rail) ────────────────────────────────────────────
+type CheckpointState = "done" | "current" | "pending" | "failed";
 
-/** One hairline-divided row in the Your Applications card: status-colored
- *  stage-dot · job title · meta (place · applied date) · status pill. The
- *  whole row opens the full posting in the Application detail modal. */
-function ApplicationRow({ app, onOpen }: { app: ApplicationWire; onOpen: () => void }) {
+/** Status-colored checkpoint dot resting in a small white ring with a soft
+ *  glow (glow ships in the .stage-dot primitives). The current stage gets a
+ *  pulsing halo — motion-safe only. */
+function CheckpointDot({ state }: { state: CheckpointState }) {
+  const dot =
+    state === "done"
+      ? "dot-ok"
+      : state === "current"
+        ? "dot-warn"
+        : state === "failed"
+          ? "dot-bad"
+          : "dot-neutral";
+  return (
+    <span
+      className={cn(
+        "inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-white shadow-[0_1px_3px_rgba(24,24,37,0.16),0_0_0_1px_rgba(24,24,37,0.05)]",
+        state === "current" && "motion-safe:animate-pulse"
+      )}
+    >
+      <span className={cn("stage-dot", dot)} />
+    </span>
+  );
+}
+
+/** 3-checkpoint tracking timeline: Submitted → Review → Decision (§7.3). */
+function JourneyTimeline({ status }: { status: string }) {
+  const stage = stageForStatus(status);
+  const decided = stage === "Shortlisted" || stage === "Rejected";
+
+  const steps: { label: string; short?: string; state: CheckpointState }[] = [
+    { label: "Submitted", state: "done" },
+    {
+      label: "Review",
+      state: stage === "Under Review" ? "current" : decided ? "done" : "pending",
+    },
+    {
+      label:
+        stage === "Shortlisted" ? "Shortlisted" : stage === "Rejected" ? "Not Shortlisted" : "Awaiting the shortlist decision",
+      // Responsive copy swap (3-d, presentation-only): the full label wraps to 4+ lines
+      // inside a 3-up timeline at 320px; "Shortlisted"/"Not Shortlisted" stay verbatim.
+      short: stage === "Shortlisted" || stage === "Rejected" ? undefined : "Awaiting decision",
+      state: stage === "Shortlisted" ? "done" : stage === "Rejected" ? "failed" : "pending",
+    },
+  ];
+
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-1">
+      {steps.map((s, i) => {
+        const reached = s.state !== "pending";
+        return (
+          <div key={`${s.label}-${i}`} className="flex flex-col items-center gap-1.5 text-center">
+            <div className="flex w-full items-center">
+              {/* Traversed connectors pick up a subtle ok→warn gradient tint. */}
+              <div
+                className={cn(
+                  "h-px flex-1",
+                  i === 0 ? "bg-transparent" : reached ? "bg-gradient-to-r from-[var(--ok)]/60 to-[var(--warn)]/45" : "bg-divider"
+                )}
+              />
+              <CheckpointDot state={s.state} />
+              <div
+                className={cn(
+                  "h-px flex-1",
+                  i === steps.length - 1
+                    ? "bg-transparent"
+                    : steps[i + 1].state !== "pending"
+                      ? "bg-gradient-to-r from-[var(--ok)]/60 to-[var(--warn)]/45"
+                      : "bg-divider"
+                )}
+              />
+            </div>
+            <span className={cn("text-[10px] leading-tight", s.state === "current" ? "font-medium text-ink" : "text-stone")}>
+              {s.short ? (
+                <>
+                  <span className="sm:hidden">{s.short}</span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </>
+              ) : (
+                s.label
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Application journey card (right rail) ───────────────────────────────────
+
+function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; index: number; onOpen: () => void }) {
+  const stage = stageForStatus(app.status);
   const label = currentStageLabel(app.status);
   const place = app.job?.position?.placeOfAssignment ?? null;
 
@@ -104,40 +205,42 @@ function ApplicationRow({ app, onOpen }: { app: ApplicationWire; onOpen: () => v
       type="button"
       onClick={onOpen}
       aria-haspopup="dialog"
-<<<<<<< Updated upstream
-      aria-label={`View complete posting and application details — ${app.job?.title ?? "position"}`}
-      className="data-card-hover focus-ring group flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-fog/60 sm:px-5"
-=======
       aria-label={`View complete posting and application details: ${app.job?.title ?? "position"}`}
       className="dlg-card lift focus-ring min-h-[44px] w-full p-4 text-left sm:p-5"
->>>>>>> Stashed changes
     >
-      <span aria-hidden="true" className={cn("stage-dot", `dot-${stageVariant(label)}`)} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium tracking-[-0.01em] text-ink">
-          {app.job?.title ?? "Position"}
+      {/* Header — the chevron is the whole-card affordance: the card opens
+          the full posting in the detail modal. */}
+      <div className="flex items-start justify-between gap-2">
+        <span className="num text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">
+          No. {String(index + 1).padStart(2, "0")}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-body-gray">
-          {place && (
-            <>
-              <span className="max-w-[18ch] truncate">{place}</span>
-              <span aria-hidden="true" className="select-none text-pebble">
-                ·
-              </span>
-            </>
-          )}
-          <span>
-            Applied <span className="num">{formatDate(app.dateApplied)}</span>
-          </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <StatusPill status={label} variant={stageVariant(label)} />
+          <ChevronRight
+            aria-hidden="true"
+            className="h-4 w-4 text-pebble transition-all duration-200 group-hover:translate-x-0.5"
+          />
         </span>
-      </span>
-      <span className="flex shrink-0 items-center gap-1">
-        <StatusPill status={label} variant={stageVariant(label)} />
-        <ChevronRight
-          aria-hidden="true"
-          className="h-4 w-4 text-pebble transition-transform duration-200 group-hover:translate-x-0.5"
-        />
-      </span>
+      </div>
+      <h3 className="mt-3 text-base font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-lg">{app.job?.title ?? "Position"}</h3>
+      {place && (
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-body-gray">
+          <MapPin className="h-4 w-4" aria-hidden="true" /> {place}
+        </p>
+      )}
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-body-gray">
+        <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Applied{" "}
+        <span className="num">{formatDate(app.dateApplied)}</span>
+      </p>
+
+      <JourneyTimeline status={app.status} />
+
+      {/* Next hint — the card's closing block (the full posting lives one
+          click away, in the application detail modal). */}
+      <div className="mt-3 border-t border-divider pt-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">Next Step</p>
+        <p className="mt-1 text-xs leading-relaxed text-body-gray">{nextStepHint(stage)}</p>
+      </div>
     </button>
   );
 }
@@ -180,7 +283,7 @@ function MqrLedger({ position }: { position: PositionWire | null }) {
       <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Minimum Qualification Requirements</h4>
       <div className="space-y-2">
         {visible.map((r) => (
-          <div key={r.label} className="rounded-lg bg-fog p-3">
+          <div key={r.label} className="rounded-lg bg-cloud/60 p-3">
             <p className="text-xs font-medium text-stone">{r.label}</p>
             <p className="mt-0.5 whitespace-pre-line text-sm text-body-gray">{r.value}</p>
           </div>
@@ -252,7 +355,7 @@ function ApplicationDetailModal({
           </DialogHeader>
 
           {/* Successfully-applied strip (§7.7) */}
-          <div className="mt-4 flex items-center gap-3 rounded-lg bg-fog p-3">
+          <div className="mt-4 flex items-center gap-3 rounded-lg bg-cloud/60 p-3">
             <IconChip icon={BadgeCheck} tone="emerald" size={36} iconSize={17} />
             <div>
               <p className="text-sm font-medium text-ink">Successfully Applied</p>
@@ -265,7 +368,7 @@ function ApplicationDetailModal({
           {/* Vitals summary grid */}
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {facts.map(([k, v]) => (
-              <div key={k} className="rounded-lg bg-fog p-3">
+              <div key={k} className="rounded-lg bg-cloud/60 p-3">
                 <p className="text-[11px] text-stone">{k}</p>
                 <p className="num mt-0.5 truncate text-sm text-ink" title={v}>
                   {v}
@@ -349,13 +452,11 @@ function QuickFact({ label, value, danger }: { label: string; value: string; dan
   );
 }
 
-/** The board card register, Executive Ink edition: white data-card-hover
- *  surface, metric-blue hover rule, font-medium title + Applied pill,
- *  pipe-separated vitals at text-xs (place | type | pay | closes, .num
- *  figures), Apply ghost CTA + quiet round "+/−" quick-view toggle, and the
- *  in-place quick view on a fog inset (clamped description · six QuickFacts
- *  · actions). "Apply now" and "Read full description" both deep-link into
- *  the job's full posting on the Positions board. */
+/** The board card register, ported: momentum rule, humanized title + gold
+ *  Applied pill, pipe-separated vitals (place | type | pay | closes), square
+ *  ember "+/−" toggle and the in-place quick view (clamped description ·
+ *  six QuickFacts · actions). "Apply now" and "Read full description" both
+ *  deep-link into the job's full posting on the Positions board. */
 function JobListCard({
   job,
   applied,
@@ -388,7 +489,7 @@ function JobListCard({
   });
 
   return (
-    <div className="data-card data-card-hover group relative overflow-hidden">
+    <div className="dlg-card lift group relative overflow-hidden">
       {/* Metric-blue rule — wipes in across the card on hover */}
       <span
         aria-hidden="true"
@@ -399,19 +500,14 @@ function JobListCard({
           type="button"
           onClick={onToggle}
           aria-expanded={expanded}
-<<<<<<< Updated upstream
-          aria-label={expanded ? `Collapse — ${title}` : `Expand — ${title}`}
-          className="focus-ring min-w-0 flex-1 px-5 py-4 text-left sm:px-6 sm:py-5"
-=======
           aria-label={expanded ? `Collapse: ${title}` : `Expand: ${title}`}
           className="focus-ring min-w-0 flex-1 px-5 py-6 text-left sm:px-8 sm:py-7"
->>>>>>> Stashed changes
         >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h3 className="min-w-0 text-[17px] font-medium leading-snug tracking-[-0.01em] text-ink sm:text-lg">{humanize(title)}</h3>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <h3 className="min-w-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-ink sm:text-2xl">{humanize(title)}</h3>
             {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-body-gray">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-body-gray">
             {meta.map((m, idx) => (
               <Fragment key={idx}>
                 {idx > 0 && (
@@ -424,30 +520,15 @@ function JobListCard({
             ))}
           </div>
         </button>
-        <div className="flex shrink-0 items-center gap-2 pr-4 sm:pr-5">
-          {!applied && (
-            <button
-              type="button"
-              onClick={onOpen}
-              disabled={overdue}
-              className="dlg-ghost focus-ring hidden h-9 items-center gap-1.5 px-4 text-sm disabled:opacity-50 sm:inline-flex"
-            >
-              Apply <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          )}
+        <div className="flex shrink-0 items-center pr-4 sm:pr-6">
           <button
             type="button"
             onClick={onToggle}
             aria-expanded={expanded}
-<<<<<<< Updated upstream
-            aria-label={expanded ? `Hide quick view — ${title}` : `Quick view — ${title}`}
-            className="dlg-ghost focus-ring grid h-9 w-9 shrink-0 place-items-center"
-=======
             aria-label={expanded ? `Hide quick view: ${title}` : `Quick view: ${title}`}
             className="dlg-cta focus-ring grid h-11 w-11 shrink-0 place-items-center"
->>>>>>> Stashed changes
           >
-            {expanded ? <Minus className="h-4 w-4" strokeWidth={2} /> : <Plus className="h-4 w-4" strokeWidth={2} />}
+            {expanded ? <Minus className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-5 w-5" strokeWidth={2.5} />}
           </button>
         </div>
       </div>
@@ -466,7 +547,7 @@ function JobListCard({
             transition={reduced ? { duration: 0.15, ease: "linear" } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="border-t border-[#eef1f7] bg-fog px-5 pb-6 pt-4 sm:px-6 sm:pb-7 sm:pt-5">
+            <div className="border-t border-divider px-5 pb-7 pt-5 sm:px-8 sm:pb-8 sm:pt-6">
               {job.briefDescription && (
                 <div>
                   <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Job description</h4>
@@ -539,19 +620,19 @@ function HomeSkeleton() {
         <div className="skel mt-3 h-8 w-72 sm:h-9" />
         <div className="skel mt-3 h-4 w-1/2" />
       </div>
-      {/* Two-pane skeleton — applications (right, row rail) · positions (left) */}
+      {/* Two-pane skeleton — positions (left, register rows) · applications (right) */}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
         <div className="space-y-4 lg:order-1 lg:col-span-7">
           <div className="skel h-3 w-44" />
           <div className="skel h-6 w-36" />
           <div className="space-y-4 sm:space-y-5">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="data-card flex items-center gap-5 px-5 py-4 sm:px-6 sm:py-5">
-                <div className="min-w-0 flex-1 space-y-2.5">
-                  <div className="skel h-5 w-3/4" />
-                  <div className="skel h-4 w-1/2" />
+              <div key={i} className="dlg-card flex items-center gap-5 px-6 py-7 sm:px-8">
+                <div className="min-w-0 flex-1 space-y-3.5">
+                  <div className="skel h-7 w-3/4" />
+                  <div className="skel h-5 w-1/2" />
                 </div>
-                <div className="skel h-9 w-9 shrink-0 rounded-full" />
+                <div className="skel h-11 w-11 shrink-0" />
               </div>
             ))}
           </div>
@@ -559,18 +640,9 @@ function HomeSkeleton() {
         <div className="space-y-4 lg:order-2 lg:col-span-5">
           <div className="skel h-3 w-40" />
           <div className="skel h-6 w-32" />
-          <div className="data-card divide-y divide-[#eef1f7]">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-4 sm:px-5">
-                <div className="skel h-2 w-2 rounded-full" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="skel h-4 w-2/3" />
-                  <div className="skel h-3 w-1/3" />
-                </div>
-                <div className="skel h-6 w-16 rounded-full" />
-              </div>
-            ))}
-          </div>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skel h-64" />
+          ))}
         </div>
       </div>
     </div>
@@ -623,7 +695,6 @@ export default function ApplicantHome() {
 
   const loading = apps === null && jobs === null;
   const firstName = user?.firstName || "there";
-  const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "A";
 
   // Right rail — every application on record, newest first. The rail has its
   // own overflow scroll, so no cap is needed.
@@ -643,7 +714,7 @@ export default function ApplicantHome() {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Applicant Portal" title="My Application" />
-        <div className="data-card p-6 sm:p-10">
+        <div className="dlg-card p-6 sm:p-10">
           <EmptyState
             icon={AlertCircle}
             tone="rose"
@@ -665,7 +736,6 @@ export default function ApplicantHome() {
       {/* ===== Enterprise page header (PageHeader) — shared anatomy ===== */}
       <PageHeader
         eyebrow="Applicant Portal"
-        leading={<Monogram size={40} warm>{initials}</Monogram>}
         title={<>Welcome Back, {firstName}</>}
         description={
           <>
@@ -675,29 +745,25 @@ export default function ApplicantHome() {
         }
       />
 
-      {/* ===== Profile completion strip — white data-card banner (the compact
-           completion readout + Complete Profile CTA; the tour anchors here) ===== */}
+      {/* ===== Profile completion banner ===== */}
       {!profileComplete && (
-        <div data-tour="profile-banner" className="data-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5">
-          <div className="flex min-w-0 items-start gap-3">
-            <IconChip icon={AlertCircle} tone="gold" size={36} iconSize={17} className="mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[15px] font-semibold tracking-[-0.01em] text-ink">Complete Your Profile</p>
-              <p className="mt-0.5 text-[13px] text-body-gray">
+        <div data-tour="profile-banner" className="dlg-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex items-start gap-3">
+            <IconChip icon={AlertCircle} tone="gold" size={36} iconSize={17} className="mt-0.5" />
+            <div>
+              <p className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Complete Your Profile</p>
+              <p className="mt-0.5 text-sm text-body-gray">
                 Finish your applicant profile to apply for positions and speed up processing.
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <StatusPill status="Incomplete" variant="neutral" />
-            <button
-              type="button"
-              onClick={() => navigate("profile")}
-              className="dlg-ghost focus-ring inline-flex min-h-[44px] w-fit shrink-0 items-center gap-2 px-5 py-2 text-sm"
-            >
-              Complete Profile <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate("profile")}
+            className="dlg-cta focus-ring inline-flex min-h-[44px] w-fit shrink-0 items-center gap-2 px-6 py-2.5 text-sm"
+          >
+            Complete Profile <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -722,11 +788,10 @@ export default function ApplicantHome() {
               {sortedApps.length > 0 && <span className="status-pill status-neutral num">{sortedApps.length}</span>}
             </div>
 
-            {/* Independently scrollable application rows — one white card of
-                hairline-divided rows */}
+            {/* Independently scrollable application cards */}
             <div className="scroll-thin mt-6 min-h-0 flex-1 lg:overflow-y-auto lg:pr-1">
               {sortedApps.length === 0 ? (
-                <div className="data-card">
+                <div className="dlg-card">
                   <EmptyState
                     icon={Inbox}
                     tone="plum"
@@ -744,9 +809,9 @@ export default function ApplicantHome() {
                   />
                 </div>
               ) : (
-                <div className="data-card divide-y divide-[#eef1f7] overflow-hidden">
-                  {sortedApps.map((app) => (
-                    <ApplicationRow key={app.id} app={app} onOpen={() => setDetail(app)} />
+                <div className="space-y-4 pb-1">
+                  {sortedApps.map((app, i) => (
+                    <ApplicationJourneyCard key={app.id} app={app} index={i} onOpen={() => setDetail(app)} />
                   ))}
                 </div>
               )}
@@ -756,7 +821,7 @@ export default function ApplicantHome() {
 
         {/* ---- Left pane · Job Openings (browsing surface) ---- */}
         <section data-tour="apply-now" className="order-2 min-w-0 lg:order-1 lg:col-span-7">
-          <div className="flex items-end justify-between gap-3 border-b border-border pb-4">
+          <div className="flex items-end justify-between border-b border-border pb-4">
             <div>
               <Eyebrow>Job Openings</Eyebrow>
               <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
@@ -764,22 +829,19 @@ export default function ApplicantHome() {
               </h2>
             </div>
             {openJobs.length > 0 && (
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="status-pill status-neutral num">{openJobs.length}</span>
-                <button
-                  type="button"
-                  onClick={() => navigate("vacant-positions")}
-                  className="dlg-ghost hidden min-h-[44px] items-center gap-2 px-5 py-2 text-sm sm:inline-flex"
-                >
-                  View All <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate("vacant-positions")}
+                className="dlg-ghost hidden min-h-[44px] items-center gap-2 px-5 py-2 text-sm sm:inline-flex"
+              >
+                View All <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
             )}
           </div>
 
           <div className="mt-6">
             {openJobs.length === 0 ? (
-              <div className="data-card">
+              <div className="dlg-card">
                 <EmptyState
                   icon={Briefcase}
                   tone="amber"

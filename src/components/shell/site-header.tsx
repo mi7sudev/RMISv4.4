@@ -10,9 +10,7 @@
 //   • "Sign up" removed from the nav — "Sign in" is now the single orange CTA
 //     (hidden while already on the sign-in view to avoid a dead control).
 //   • Container widened to the system-wide 1600px grid (wide-screen fix).
-// Presentation pass v3 (Executive Ink): nav links became quiet capsule text
-//   buttons (fog hover) and "Sign in" / "Dashboard" the charcoal dlg-cta —
-//   one loud control per bar. All navigation behavior is preserved exactly.
+// All navigation behavior is preserved exactly.
 // ============================================================================
 
 import { useSession } from "@/components/session-provider";
@@ -50,7 +48,7 @@ export function SiteHeader() {
           {view !== "vacant-positions" && (
             <button
               onClick={() => navigate("vacant-positions")}
-              className="inline-flex min-h-[44px] items-center rounded-full px-3 py-2 text-[13.5px] font-medium text-stone transition-colors hover:bg-fog hover:text-ink sm:px-4"
+              className="dlg-ghost inline-flex min-h-[44px] items-center px-4 text-sm sm:px-5"
             >
               Vacant Positions
             </button>
@@ -58,7 +56,7 @@ export function SiteHeader() {
           {view !== "contact" && (
             <button
               onClick={() => navigate("contact")}
-              className="hidden min-h-[44px] items-center rounded-full px-3 py-2 text-[13.5px] font-medium text-stone transition-colors hover:bg-fog hover:text-ink sm:inline-flex sm:px-4"
+              className="dlg-ghost hidden inline-flex min-h-[44px] items-center px-4 text-sm sm:inline-flex sm:px-5"
             >
               Contact
             </button>
@@ -67,7 +65,7 @@ export function SiteHeader() {
           {user ? (
             <button
               onClick={() => navigate(ROLE_HOME[user.role])}
-              className="dlg-cta inline-flex h-9 items-center whitespace-nowrap px-5 text-[13.5px]"
+              className="dlg-cta inline-flex min-h-[44px] items-center whitespace-nowrap px-6 text-sm"
             >
               Dashboard
             </button>
@@ -75,7 +73,7 @@ export function SiteHeader() {
             !onSignInView && (
               <button
                 onClick={() => navigate("signin")}
-                className="dlg-cta inline-flex h-9 items-center whitespace-nowrap px-5 text-[13.5px]"
+                className="dlg-cta inline-flex min-h-[44px] items-center whitespace-nowrap px-4 text-sm sm:px-6"
                 aria-label="Sign in to RMIS"
               >
                 Sign in

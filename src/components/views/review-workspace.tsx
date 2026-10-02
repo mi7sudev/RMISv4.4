@@ -406,7 +406,7 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
   const allMet = report.requiredCount > 0 && report.metCount === report.requiredCount;
   const summaryCls = allMet ? "text-[var(--ok)]" : report.metCount > 0 ? "text-[var(--warn)]" : "text-stone";
   return (
-    <div className="data-card p-4">
+    <div className="dlg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <IconChip icon={ListChecks} tone="gold" size={36} iconSize={16} />
@@ -466,7 +466,7 @@ function CredentialsRow({ payload }: { payload: ReviewPayload }) {
     ["Awards", payload.snapshots.awards.length],
   ];
   return (
-    <div className="data-card p-4">
+    <div className="dlg-card p-4">
       <div className="flex items-center gap-2.5">
         <IconChip icon={IdCard} tone="slate" size={28} iconSize={13} />
         <h3 className="text-[15px] font-semibold leading-6 text-ink">Credentials on file</h3>
@@ -966,7 +966,7 @@ function DirectEmailCard({
   const [composerOpen, setComposerOpen] = useState(false);
 
   return (
-    <div className="data-card p-4">
+    <div className="dlg-card p-4">
       <div className="flex items-center gap-2.5">
         <IconChip icon={Mail} tone="slate" size={28} iconSize={13} />
         <h3 className="text-[15px] font-semibold leading-6 text-ink">Direct email</h3>
@@ -1145,7 +1145,7 @@ export function ReviewWorkspace({
 
   if (error) {
     return (
-      <div className="data-card p-8">
+      <div className="dlg-card p-8">
         <EmptyState
           icon={AlertTriangle}
           tone="rose"
@@ -1171,7 +1171,7 @@ export function ReviewWorkspace({
   if (!payload) {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
-        <div className="data-card space-y-5 p-5 sm:p-6">
+        <div className="dlg-card-plain space-y-5 p-5 sm:p-6">
           <div className="space-y-2.5">
             <Skeleton className="h-7 w-1/2" />
             <Skeleton className="h-4 w-1/3" />
@@ -1184,11 +1184,11 @@ export function ReviewWorkspace({
           <SkeletonRows rows={6} />
         </div>
         <div className="space-y-4">
-          <div className="data-card p-4">
+          <div className="dlg-card p-4">
             <Skeleton className="mb-3 h-4 w-32" />
             <SkeletonRows rows={3} rowClassName="h-6" />
           </div>
-          <div className="data-card p-4">
+          <div className="dlg-card p-4">
             <Skeleton className="mb-3 h-4 w-24" />
             <SkeletonRows rows={4} rowClassName="h-6" />
           </div>
@@ -1207,7 +1207,7 @@ export function ReviewWorkspace({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
       {/* ── LEFT: frozen dossier ── */}
-      <div className="data-card space-y-4 p-5 sm:p-6">
+      <div className="dlg-card-plain space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <MonogramAvatar name={applicantName} size={48} warm />
@@ -1307,7 +1307,7 @@ export function ReviewWorkspace({
         </div>
 
         {(stage === "Applied" || stage === "Under Review") && (
-          <div className="data-card space-y-3 p-4">
+          <div className="dlg-card space-y-3 p-4">
             <div className="flex items-center gap-2.5">
               <IconChip icon={Gavel} tone="slate" size={28} iconSize={13} />
               <h3 className="text-[15px] font-semibold leading-6 text-ink">Decision</h3>
@@ -1339,7 +1339,7 @@ export function ReviewWorkspace({
         )}
 
         {(stage === "Shortlisted" || stage === "Rejected") && (
-          <div className="data-card space-y-3 p-4">
+          <div className="dlg-card space-y-3 p-4">
             <div className="flex items-center gap-2.5">
               <IconChip icon={History} tone="slate" size={28} iconSize={13} />
               <h3 className="text-[15px] font-semibold leading-6 text-ink">Revise decision</h3>
@@ -1399,7 +1399,7 @@ export function ReviewWorkspace({
         )}
 
         {/* Notices */}
-        <div className="data-card space-y-3 p-4">
+        <div className="dlg-card space-y-3 p-4">
           <div className="flex items-center gap-2.5">
             <IconChip icon={Mails} tone="slate" size={28} iconSize={13} />
             <h3 className="text-[15px] font-semibold leading-6 text-ink">Notices</h3>
@@ -1540,7 +1540,7 @@ function ReviewWorkspacePage() {
       {valid ? (
         <ReviewWorkspace applicationId={id} onClose={close} />
       ) : (
-        <div className="data-card py-6">
+        <div className="dlg-card py-6">
           <EmptyState
             icon={FileText}
             title="No application selected"

@@ -26,10 +26,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonKanban, SkeletonRows, type ChipTone,
+  EmptyState, IconChip, PageHeader, SkeletonKanban, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import {
-  KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot, initialsOf,
+  KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot,
 } from "@/components/ui/kanban";
 import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, type StageKey } from "@/lib/status";
@@ -78,8 +78,8 @@ type RegretSummary = {
 // ── Small shared visuals ────────────────────────────────────────────────────
 
 /**
- * Stat card — Executive Ink white surface (matches shared KpiCard rhythm):
- * data-card hairline, uppercase stone label, ink 28px .num value, hint row.
+ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+ * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
  */
 function StatCard({
   label,
@@ -95,12 +95,12 @@ function StatCard({
   hint: string;
 }) {
   return (
-    <div className="data-card p-5">
+    <div className="dlg-card p-6">
       <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
-        <IconChip icon={icon} tone={chipTone} size={32} />
+        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <IconChip icon={icon} tone={chipTone} size={40} />
       </div>
-      <p className="num mt-3 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
       <p className="mt-2 text-xs text-body-gray">{hint}</p>
     </div>
   );
@@ -234,10 +234,10 @@ export default function ReviewQueue() {
         description="Screen applications, verify minimum qualifications, and advance candidates through the pipeline."
         actions={
           <>
-            <span className="dlg-pill num bg-fog px-2.5 py-1 text-xs font-medium text-stone">
+            <span className="status-pill status-neutral num">
               {filtered.length} application{filtered.length === 1 ? "" : "s"}
             </span>
-            <label className="dlg-pill focus-ring inline-flex min-h-[36px] cursor-pointer items-center gap-2 bg-fog px-3 text-xs font-medium text-stone">
+            <label className="dlg-ghost focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 px-3.5 text-sm text-stone">
               <Switch checked={qualifiedOnly} onCheckedChange={setQualifiedOnly} aria-label="Qualified only" />
               Qualified only
             </label>
@@ -270,7 +270,7 @@ export default function ReviewQueue() {
       />
       {/* QA 2026-02: scope of administrator access to Review */}
       {isAdmin && (
-        <p className="rounded-xl bg-fog px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
+        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
           <span className="font-semibold text-ink">Administrator access:</span>{" "}
           you can view and assist with every evaluation in this queue. Scoring decisions and
           recommendations remain the responsibility of the assigned evaluators.
@@ -281,12 +281,12 @@ export default function ReviewQueue() {
       {!error && (queue === null ? (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="data-card p-5">
+            <div key={i} className="dlg-card p-6">
               <div className="flex items-start justify-between">
                 <div className="skel h-3 w-20" />
-                <div className="skel h-8 w-8 rounded-lg" />
+                <div className="skel h-10 w-10" />
               </div>
-              <div className="skel mt-4 h-7 w-16" />
+              <div className="skel mt-4 h-8 w-16" />
             </div>
           ))}
         </div>
@@ -334,7 +334,7 @@ export default function ReviewQueue() {
 
       {/* Error */}
       {error && (
-        <div className="data-card p-8">
+        <div className="dlg-card p-8">
           <EmptyState
             icon={AlertTriangle}
             tone="rose"
@@ -352,7 +352,7 @@ export default function ReviewQueue() {
       {/* Loading skeleton */}
       {!error && queue === null && (
         <>
-          {mode === "kanban" ? <SkeletonKanban columns={4} /> : <div className="data-card p-5"><SkeletonRows rows={8} rowClassName="h-16" /></div>}
+          {mode === "kanban" ? <SkeletonKanban columns={4} /> : <SkeletonRows rows={8} rowClassName="h-16" />}
         </>
       )}
 
@@ -378,7 +378,7 @@ export default function ReviewQueue() {
                         aria-label={`Review application from ${name}`}
                       >
                         <div className="flex items-start gap-2.5">
-                          <Monogram size={38}>{initialsOf(name)}</Monogram>
+                          <KanbanAvatar name={name} />
                           <div className="min-w-0 flex-1">
                             <p className="min-w-0 truncate text-sm font-semibold text-ink">{name}</p>
                             <p className="mt-1.5 flex items-center gap-1.5 text-xs text-stone">
@@ -426,7 +426,7 @@ export default function ReviewQueue() {
       {!error && queue !== null && mode === "list" && (
         <div className="space-y-3">
           {listRows.length === 0 ? (
-            <div className="data-card p-6 sm:p-10">
+            <div className="dlg-card p-6 sm:p-10">
               <EmptyState
                 icon={Inbox}
                 title="No applications in the queue"
@@ -434,17 +434,17 @@ export default function ReviewQueue() {
               />
             </div>
           ) : (
-            <section className="table-frame overflow-hidden">
+            <div className="dlg-card-plain table-card overflow-hidden">
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[760px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th scope="col" className="thead-cell px-4 py-3 pl-5 text-left font-semibold">Candidate</th>
-                      <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Position</th>
-                      <th scope="col" className="thead-cell px-4 py-3 text-right font-semibold">Applied</th>
-                      <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Status</th>
-                      <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Verdict</th>
-                      <th scope="col" className="thead-cell px-4 py-3 pr-5 text-right font-semibold"><span className="sr-only">Open</span></th>
+                    <tr className="border-b border-[var(--border)] text-left">
+                      <th scope="col" className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Candidate</th>
+                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Position</th>
+                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Applied</th>
+                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Status</th>
+                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Verdict</th>
+                      <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -454,12 +454,12 @@ export default function ReviewQueue() {
                       const place = row.job.position?.placeOfAssignment ?? null;
                       const name = fullName(row.applicant);
                       return (
-                        <tr key={row.id} className="group/row">
-                          <td className="px-4 py-3 pl-5">
+                        <tr key={row.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
+                          <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
-                              <Monogram size={32}>{initialsOf(name)}</Monogram>
+                              <KanbanAvatar name={name} size={32} />
                               <div className="min-w-0">
-                                <p className="truncate text-[13.5px] font-medium text-ink">{name}</p>
+                                <p className="truncate text-sm font-medium text-ink">{name}</p>
                                 <p className="truncate text-xs text-stone">{row.applicant.emailAddress || "No email on record"}</p>
                               </div>
                             </div>
@@ -468,10 +468,10 @@ export default function ReviewQueue() {
                             <p className="truncate text-[13px] text-ink">{humanize(position)}</p>
                             <p className="truncate text-xs text-stone">{place || "-"}</p>
                           </td>
-                          <td className="num whitespace-nowrap px-4 py-3 text-right text-stone">{formatDate(row.dateApplied)}</td>
+                          <td className="num whitespace-nowrap px-4 py-3 text-[13px] text-stone">{formatDate(row.dateApplied)}</td>
                           <td className="px-4 py-3"><StatusPill status={row.status} /></td>
                           <td className="px-4 py-3"><VerdictPill verdict={row.match?.verdict} /></td>
-                          <td className="px-4 py-3 pr-5 text-right">
+                          <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
                               <button
                                 type="button"
@@ -499,7 +499,7 @@ export default function ReviewQueue() {
                   </tbody>
                 </table>
               </div>
-            </section>
+            </div>
           )}
         </div>
       )}

@@ -27,10 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone,
+  EmptyState, IconChip, PageHeader, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
 import {
-  KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, STAGE_DOT_CLASS, initialsOf,
+  KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, STAGE_DOT_CLASS,
 } from "@/components/ui/kanban";
 import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
 import { useSession } from "@/components/session-provider";
@@ -94,8 +94,8 @@ function s(v: unknown): string {
 }
 
 /**
- * Stat card — Executive Ink white surface (matches shared KpiCard rhythm):
- * data-card hairline, uppercase stone label, ink 28px .num value, hint row.
+ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+ * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
  */
 function StatCard({
   label,
@@ -111,12 +111,12 @@ function StatCard({
   hint: string;
 }) {
   return (
-    <div className="data-card p-5">
+    <div className="dlg-card p-6">
       <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
-        <IconChip icon={icon} tone={chipTone} size={32} />
+        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <IconChip icon={icon} tone={chipTone} size={40} />
       </div>
-      <p className="num mt-3 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
       <p className="mt-2 text-xs text-body-gray">{hint}</p>
     </div>
   );
@@ -169,7 +169,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Monogram size={40}>{initialsOf(fullName(detail))}</Monogram>
+              <KanbanAvatar name={fullName(detail)} size={40} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-ink">{fullName(detail)}</p>
                 <p className="num text-xs text-pebble">#{detail.id}</p>
@@ -414,12 +414,12 @@ export default function Candidates() {
       {!error && (rows === null ? (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="data-card p-5">
+            <div key={i} className="dlg-card p-6">
               <div className="flex items-start justify-between">
                 <div className="skel h-3 w-20" />
-                <div className="skel h-8 w-8 rounded-lg" />
+                <div className="skel h-10 w-10" />
               </div>
-              <div className="skel mt-4 h-7 w-16" />
+              <div className="skel mt-4 h-8 w-16" />
             </div>
           ))}
         </div>
@@ -432,16 +432,18 @@ export default function Candidates() {
         </div>
       ))}
 
-      {/* Filter well — search grows with the leading icon inside the input
-          shell; compact selects right-aligned. bg-fog = subtle inset. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-fog p-3">
+      {/* Filter toolbar — white card row */}
+      <div className="dlg-card-plain flex flex-wrap items-center gap-3 p-3 sm:p-4">
         <div className="relative min-w-0 flex-1 basis-56">
-          <Search
-            className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-pebble"
-            aria-hidden
+          <IconChip
+            icon={Search}
+            tone="slate"
+            size={28}
+            iconSize={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2"
           />
           <Input
-            className="dlg-input min-h-[40px] pl-10"
+            className="dlg-input min-h-[44px] pl-12"
             placeholder="Search name, email, employee no., mobile…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -455,7 +457,7 @@ export default function Candidates() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="dlg-input min-h-[40px] w-40 shrink-0" aria-label="Profile status">
+          <SelectTrigger className="dlg-input min-h-[44px] w-40 shrink-0" aria-label="Profile status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -471,7 +473,7 @@ export default function Candidates() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="dlg-input min-h-[40px] w-40 shrink-0" aria-label="Has account">
+          <SelectTrigger className="dlg-input min-h-[44px] w-40 shrink-0" aria-label="Has account">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -483,7 +485,7 @@ export default function Candidates() {
       </div>
 
       {error ? (
-        <div className="data-card p-8">
+        <div className="dlg-card p-8">
           <EmptyState
             icon={AlertTriangle}
             tone="rose"
@@ -497,13 +499,11 @@ export default function Candidates() {
           />
         </div>
       ) : rows === null ? (
-        <div className="data-card p-5">
-          <SkeletonRows rows={6} rowClassName="h-16 rounded-lg" />
-        </div>
+        <SkeletonRows rows={6} rowClassName="h-16 rounded-lg" />
       ) : mode === "list" ? (
         <div className="space-y-3">
           {list.length === 0 ? (
-            <div className="data-card p-6 sm:p-10">
+            <div className="dlg-card p-6 sm:p-10">
               <EmptyState
                 icon={UsersRound}
                 title="No candidates match"
@@ -511,27 +511,27 @@ export default function Candidates() {
               />
             </div>
           ) : (
-            <section className="table-frame overflow-hidden">
+            <div className="dlg-card-plain table-card overflow-hidden">
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th scope="col" className="thead-cell px-4 py-3 pl-5 text-left font-semibold">Candidate</th>
-                      <th scope="col" className="thead-cell px-4 py-3 text-left font-semibold">Profile</th>
-                      <th scope="col" className="thead-cell px-4 py-3 text-right font-semibold">Applications</th>
-                      <th scope="col" className="thead-cell px-4 py-3 pr-5 text-right font-semibold"><span className="sr-only">Open</span></th>
+                    <tr className="border-b border-[var(--border)] text-left">
+                      <th scope="col" className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Candidate</th>
+                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Profile</th>
+                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Applications</th>
+                      <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
                     </tr>
                   </thead>
                   <tbody>
                     {list.map((r) => {
                       const name = fullName(r);
                       return (
-                        <tr key={r.id} className="group/row">
-                          <td className="px-4 py-3 pl-5">
+                        <tr key={r.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
+                          <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
-                              <Monogram size={32}>{initialsOf(name)}</Monogram>
+                              <KanbanAvatar name={name} size={28} />
                               <div className="min-w-0">
-                                <p className="truncate text-[13.5px] font-medium text-ink">{name}</p>
+                                <p className="truncate text-sm font-medium text-ink">{name}</p>
                                 <p className="num truncate text-xs text-stone">
                                   {[r.emailAddress, r.mobileNumber].filter(Boolean).join(" · ") || "No contact on file"} · #{r.id}
                                 </p>
@@ -544,10 +544,10 @@ export default function Candidates() {
                               variant={variantForCompletion(r.isProfileComplete)}
                             />
                           </td>
-                          <td className="num px-4 py-3 text-right text-stone">
+                          <td className="num px-4 py-3 text-[13px] text-stone">
                             {r.applicationCount} application{r.applicationCount === 1 ? "" : "s"}
                           </td>
-                          <td className="px-4 py-3 pr-5 text-right">
+                          <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
                               <button
                                 type="button"
@@ -569,17 +569,17 @@ export default function Candidates() {
                   </tbody>
                 </table>
               </div>
-            </section>
+            </div>
           )}
 
-          {/* Pagination — outside the frame, right-aligned, subtle ghost buttons */}
+          {/* Pagination */}
           {total > PAGE_SIZE && (
             <div className="flex items-center justify-between gap-3 pt-1">
               <p className="num text-xs text-body-gray">
                 {start}–{end} of {total}
               </p>
               <div className="flex items-center gap-2">
-                <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <button type="button" className={ghostBtn + " min-h-[44px] px-3 text-xs"} disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   Previous
                 </button>
                 <span className="num text-xs text-stone">
@@ -587,7 +587,7 @@ export default function Candidates() {
                 </span>
                 <button
                   type="button"
-                  className={ghostBtn + " min-h-[36px] px-3 text-xs"}
+                  className={ghostBtn + " min-h-[44px] px-3 text-xs"}
                   disabled={page >= Math.ceil(total / PAGE_SIZE)}
                   onClick={() => setPage(page + 1)}
                 >
@@ -617,7 +617,7 @@ export default function Candidates() {
                         aria-label={`Open ${name}'s candidate profile`}
                       >
                         <div className="flex items-start gap-2.5">
-                          <Monogram size={38}>{initialsOf(name)}</Monogram>
+                          <KanbanAvatar name={name} />
                           <div className="min-w-0 flex-1">
                             <p className="min-w-0 truncate text-sm font-semibold text-ink">{name}</p>
                             <p className="mt-1.5 flex items-center gap-1.5 text-xs text-stone">

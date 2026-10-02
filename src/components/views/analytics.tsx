@@ -3,10 +3,9 @@
 // ============================================================================
 // RMIS — Analytics (spec §7.13, `#/analytics`). Pipeline conversion funnel
 // (clickable → drill filter), application volume chart (last 30 days,
-// recharts), status distribution donut, drill-down candidate list, and the
-// audit activity feed. "Executive Ink" chart pass: viz-series palette,
-// .chart-tip tooltips, hairline dividers. Sources: /api/admin/stats +
-// evaluator queue + audit logs.
+// recharts), status distribution bar chart, drill-down candidate list, and the
+// audit activity feed. Sources: /api/admin/stats + evaluator queue + audit
+// logs.
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,10 +15,10 @@ import {
 } from "recharts";
 import {
   AlertTriangle, Filter, History, Inbox, ChartPie as ChartPieIcon,
-  RefreshCw, ShieldCheck, TrendingUp, UsersRound,
+  RefreshCw, ShieldCheck, TrendingUp, UsersRound, type LucideIcon,
 } from "lucide-react";
 import {
-  EmptyState, Monogram, PageHeader, SectionCard, SkeletonKpis, SkeletonRows, StatusPill,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -27,7 +26,8 @@ import {
 import { apiFetch, formatDate, fullName, humanize, timeAgo } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, getStatusMeta, type StageKey } from "@/lib/status";
 import { navigate } from "@/lib/router";
-import { dotClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { dotClass, pillClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { cn } from "@/lib/utils";
 import { ghostBtn } from "@/components/views/recruitment";
 import { useSession } from "@/components/session-provider";
 
@@ -75,27 +75,19 @@ type Drill = "All" | StageKey;
 
 // ── Data-viz tokens (Bevel viz series — globals.css --viz-1..5) & chrome ────
 
-<<<<<<< Updated upstream
-const GRID = "#eef1f7";
-const TICK = { fontSize: 11, fill: "#8d939e" };
-=======
 const GRID = "#e6ebf3";
 const TICK = { fontSize: 11, fill: "#5d6067" };
 const VIZ_1 = "#415eee"; // Metric Blue
->>>>>>> Stashed changes
 
-/** Metric Blue from the viz series — funnel track fill + volume area stroke. */
-const VIZ_1 = "var(--viz-1)";
-
-/** Donut slice fill per stage — Bevel viz series (no raw neon greens/golds). */
+/** Funnel bar fill per stage — Bevel metric accents (blue/gold/green/coral). */
 const STAGE_BAR: Record<StageKey, string> = {
-  "Applied": "var(--viz-1)", // Metric Blue
-  "Under Review": "var(--viz-3)", // Signal Gold
-  "Shortlisted": "var(--viz-2)", // Recovery Green
-  "Rejected": "var(--viz-5)", // Coral Signal
+  "Applied": "#415eee", // Metric Blue
+  "Under Review": "#ffca00", // Signal Gold
+  "Shortlisted": "#31ce01", // Recovery Green
+  "Rejected": "#ffab94", // Coral Signal
 };
 
-/** Stage-dot variant per stage (mirrors STAGE_BAR hues). */
+/** Stage-dot variant per stage (mirrors STAGE_BAR). */
 const STAGE_VARIANT: Record<StageKey, StatusVariant> = {
   "Applied": "info",
   "Under Review": "warn",
@@ -109,54 +101,46 @@ function statusSliceColor(status: string): string {
   return key ?? "#d5dce8";
 }
 
-/** Audit line dot: red for failures, green for creating actions, graphite otherwise. */
-function auditDotClass(action: string): string {
-  const a = action.toUpperCase();
-  if (a.includes("FAIL") || a.includes("DENY") || a.includes("BLOCK") || a.includes("DELETE")) return "dot-bad";
-  if (
-    a.includes("CREATE") || a.includes("APPROVE") || a.includes("PUBLISH") ||
-    a.includes("RESOLVE") || a.includes("SUBMIT")
-  ) {
-    return "dot-ok";
-  }
-  return "dot-info";
-}
-
-// ── Recharts tooltips — wrapped in the shared .chart-tip chrome ─────────────
-
-type TipEntry = { value?: number | string; name?: string | number };
-
-function VolumeTip({
-  active,
-  payload,
-  label,
+/**
+ * Bevel content panel (shared workspace layout system): white 24px card,
+ * p-5 → sm:p-6, ink section heading with body-gray caption and trailing
+ * actions. Chart containers re-skin to this card; series keep the viz palette.
+ */
+function Panel({
+  title,
+  description,
+  actions,
+  icon,
+  chipTone = "slate",
+  className,
+  bodyClassName,
+  children,
 }: {
-  active?: boolean;
-  label?: string | number;
-  payload?: TipEntry[];
+  title?: string;
+  description?: string;
+  actions?: React.ReactNode;
+  icon?: LucideIcon;
+  chipTone?: ChipTone;
+  className?: string;
+  bodyClassName?: string;
+  children: React.ReactNode;
 }) {
-  if (!active || !payload?.length) return null;
   return (
-    <div className="chart-tip">
-      <p className="tip-label">{label}</p>
-      <div className="tip-row">
-        <span>Applications</span>
-        <span className="num">{payload[0].value}</span>
-      </div>
-    </div>
-  );
-}
-
-function DonutTip({ active, payload }: { active?: boolean; payload?: TipEntry[] }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="chart-tip">
-      <p className="tip-label">{payload[0].name}</p>
-      <div className="tip-row">
-        <span>Applications</span>
-        <span className="num">{payload[0].value}</span>
-      </div>
-    </div>
+    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+      {title || actions ? (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {icon ? <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} /> : null}
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
+              {description ? <p className="mt-0.5 text-xs text-body-gray">{description}</p> : null}
+            </div>
+          </div>
+          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+      ) : null}
+      <div className={bodyClassName}>{children}</div>
+    </section>
   );
 }
 
@@ -282,7 +266,7 @@ export default function Analytics() {
           title="Analytics"
           description="Pipeline health, application volume, and audit activity."
         />
-        <div className="data-card space-y-4 p-8 text-center">
+        <div className="dlg-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
           <p className="text-sm text-body-gray">{error}</p>
           <button type="button" className={ghostBtn} onClick={() => void load()}>
@@ -300,20 +284,19 @@ export default function Analytics() {
           title="Analytics"
           description="Pipeline health, application volume, and audit activity."
         />
-        <div className="space-y-6">
-          <SkeletonKpis count={4} />
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="data-card p-5 sm:p-6">
-              <SkeletonRows rows={4} rowClassName="h-14 rounded-lg" />
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="dlg-card p-6">
+              <div className="skel h-3 w-20" />
+              <div className="skel mt-4 h-8 w-16" />
             </div>
-            <div className="data-card p-5 sm:p-6">
-              <SkeletonRows rows={4} rowClassName="h-14 rounded-lg" />
-            </div>
-          </div>
-          <div className="data-card p-5 sm:p-6">
-            <SkeletonRows rows={4} rowClassName="h-14 rounded-lg" />
-          </div>
+          ))}
         </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SkeletonRows rows={5} rowClassName="h-16 rounded-lg" />
+          <SkeletonRows rows={5} rowClassName="h-16 rounded-lg" />
+        </div>
+        <SkeletonRows rows={4} rowClassName="h-16 rounded-lg" />
       </div>
     );
   }
@@ -333,9 +316,9 @@ export default function Analytics() {
       />
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* 1. Pipeline funnel + 2. Applications per day + 3. Status distribution */}
+        {/* 1. Pipeline funnel + 3. Status distribution */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <SectionCard
+          <Panel
             title="Pipeline conversion"
             description="Click a stage to drill into its applicants. Percentages are of Applied."
             icon={Filter}
@@ -348,63 +331,67 @@ export default function Analytics() {
                   <button
                     key={f.stage}
                     type="button"
-                    className={`focus-ring min-h-12 w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
-                      active ? "bg-fog" : "hover:bg-fog/60"
+                    className={`focus-ring min-h-[44px] w-full rounded-lg px-3 py-3 text-left transition-colors ${
+                      active ? "bg-cloud" : "hover:bg-fog/60"
                     }`}
                     onClick={() => setDrill(drill === f.stage ? "All" : f.stage)}
                     aria-pressed={active}
                   >
                     <div className="flex items-center gap-2.5">
                       <span className={`stage-dot ${dotClass(STAGE_VARIANT[f.stage])}`} aria-hidden />
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{f.stage}</span>
-                      <span className="num text-sm font-semibold text-ink">{f.count}</span>
-                      <span className="num w-10 shrink-0 text-right text-xs text-body-gray">{f.pct}%</span>
+                      <span className="flex-1 text-sm text-ink">{f.stage}</span>
+                      <span className="num text-sm font-medium text-ink">{f.count}</span>
                     </div>
-                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-fog">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${Math.min(100, f.pct)}%`, background: VIZ_1 }}
-                      />
+                    <div className="mt-2 flex items-center gap-2.5">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fog">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${Math.min(100, f.pct)}%`, background: STAGE_BAR[f.stage] }}
+                        />
+                      </div>
+                      <span className="num w-10 shrink-0 text-right text-xs text-body-gray">{f.pct}%</span>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </SectionCard>
+          </Panel>
 
           <div className="space-y-6">
-            <SectionCard
+            <Panel
               title="Applications per day"
               description="Last 30 days, from the review queue."
               icon={TrendingUp}
               chipTone="plum"
             >
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={volume} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                  <defs>
-                    <linearGradient id="analytics-volume-fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgba(65,94,238,0.22)" />
-                      <stop offset="100%" stopColor="rgba(65,94,238,0)" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tick={TICK} tickMargin={8} interval={6} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={TICK} axisLine={false} tickLine={false} />
-                  <RTooltip content={<VolumeTip />} cursor={{ fill: "rgba(31,32,37,0.04)" }} />
-                  <Area
-                    type="monotone"
-                    dataKey="applications"
-                    stroke={VIZ_1}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                    fill="url(#analytics-volume-fill)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </SectionCard>
+              <div className="mt-2">
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={volume} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                    <defs>
+                      <linearGradient id="analytics-volume-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={VIZ_1} stopOpacity={0.12} />
+                        <stop offset="100%" stopColor={VIZ_1} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="day" tick={TICK} tickMargin={8} interval={6} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={TICK} axisLine={false} tickLine={false} />
+                    <RTooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="applications"
+                      stroke={VIZ_1}
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                      fill="url(#analytics-volume-fill)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
 
-            <SectionCard
+            <Panel
               title="Status distribution"
               description="All applications by stored status."
               icon={ChartPieIcon}
@@ -415,20 +402,20 @@ export default function Analytics() {
               ) : (
                 // minmax(0,1fr): the legend rows' nowrap labels must not floor
                 // the 1fr track's auto minimum (observed OV=61 at 1024px).
-                <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[200px_minmax(0,1fr)]">
+                <div className="mt-2 grid grid-cols-1 items-center gap-6 sm:grid-cols-[200px_minmax(0,1fr)]">
                   {/* Donut with centered total — the award-dash staple */}
                   <div className="relative mx-auto h-[200px] w-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <RTooltip content={<DonutTip />} />
+                        <RTooltip />
                         <Pie
                           data={donutData}
                           dataKey="count"
                           nameKey="status"
-                          innerRadius={58}
+                          innerRadius={64}
                           outerRadius={92}
-                          paddingAngle={3}
-                          cornerRadius={6}
+                          paddingAngle={2}
+                          cornerRadius={4}
                           strokeWidth={0}
                           startAngle={90}
                           endAngle={-270}
@@ -451,14 +438,18 @@ export default function Analytics() {
                     </div>
                   </div>
 
-                  {/* Legend — stage dot + label + right-aligned count & %, hairline rows */}
-                  <ul className="divide-y divide-[#eef1f7]">
+                  {/* Legend — stage dot + label + count, mirrors funnel rows */}
+                  <ul className="space-y-2.5">
                     {donutData.map((d) => (
-                      <li key={d.status} className="flex items-center gap-2.5 py-2.5 text-sm first:pt-0 last:pb-0">
-                        <span aria-hidden className={`stage-dot ${dotClass(variantForStatus(d.status))}`} />
+                      <li key={d.status} className="flex items-center gap-2.5 text-sm">
+                        <span
+                          aria-hidden
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: statusSliceColor(d.status) }}
+                        />
                         <span className="min-w-0 flex-1 truncate text-body-gray">{d.status}</span>
-                        <span className="num font-semibold text-ink">{d.count}</span>
-                        <span className="num w-12 shrink-0 text-right text-xs text-body-gray">
+                        <span className="num font-medium text-ink">{d.count}</span>
+                        <span className="num w-12 text-right text-xs text-body-gray">
                           {donutTotal > 0 ? `${Math.round((d.count / donutTotal) * 100)}%` : "0%"}
                         </span>
                       </li>
@@ -466,12 +457,12 @@ export default function Analytics() {
                   </ul>
                 </div>
               )}
-            </SectionCard>
+            </Panel>
           </div>
         </div>
 
         {/* 4. Drill-down */}
-        <SectionCard
+        <Panel
           title="Drill-down"
           description={drill === "All" ? "All stages." : `Filtered to ${drill}.`}
           icon={UsersRound}
@@ -505,20 +496,20 @@ export default function Analytics() {
           {drillRows.length === 0 ? (
             <EmptyState icon={UsersRound} tone="plum" title="No applicants in this selection." compact />
           ) : (
-            <div className="max-h-96 divide-y divide-[#eef1f7] overflow-y-auto scroll-thin pr-1">
+            <div className="max-h-96 space-y-1 overflow-y-auto scroll-thin pr-1">
               {drillRows.map((r) => (
                 <button
                   key={r.id}
                   type="button"
-                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-fog/60 focus-ring"
+                  className="flex min-h-[44px] w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-fog/60 focus-ring"
                   onClick={() => navigate("candidate", { id: String(r.applicantId) })}
                 >
                   <span aria-hidden="true" className="contents">
-                    <Monogram size={32}>{monogramOf(fullName(r.applicant))}</Monogram>
+                    <Monogram size={32} className="rounded-full">{monogramOf(fullName(r.applicant))}</Monogram>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13.5px] font-medium text-ink">{fullName(r.applicant)}</p>
-                    <p className="truncate text-xs text-stone">
+                    <p className="truncate text-sm font-medium text-ink">{fullName(r.applicant)}</p>
+                    <p className="truncate text-xs text-body-gray">
                       {r.job.title} · Applied {formatDate(r.dateApplied)}
                     </p>
                   </div>
@@ -527,63 +518,16 @@ export default function Analytics() {
               ))}
             </div>
           )}
-        </SectionCard>
+        </Panel>
 
         {/* 5a. System usage & security (QA 2026-02 — admin analytics) */}
         {isAdmin && (
-          <SectionCard
+          <Panel
             title="System usage & security"
             description="Web usage and security signals for the RMIS deployment"
             icon={ShieldCheck}
             chipTone="emerald"
           >
-<<<<<<< Updated upstream
-            <div className="grid gap-x-10 gap-y-2 lg:grid-cols-2">
-              <div>
-                <p className="thead-cell mb-1.5">Security</p>
-                <dl className="divide-y divide-[#eef1f7]">
-                  {(
-                    [
-                      ["Registered accounts", stats?.totalUsers, "info"],
-                      ["Blocked accounts", stats?.needsAttention?.blockedUsers, "bad"],
-                      ["Failed logins · 24h", stats?.needsAttention?.failedLogins24h, "bad"],
-                      ["Incomplete profiles", stats?.needsAttention?.incompleteProfiles, "warn"],
-                    ] as [string, number | undefined, "info" | "warn" | "bad"][]
-                  ).map(([label, value, tone]) => (
-                    <div key={label} className="flex items-center justify-between gap-3 py-2.5">
-                      <dt className="flex items-center gap-2.5 text-[13px] text-stone">
-                        <span
-                          aria-hidden
-                          className={`stage-dot ${tone === "info" ? "dot-info" : value ? `dot-${tone}` : "dot-ok"}`}
-                        />
-                        {label}
-                      </dt>
-                      <dd className="num text-sm font-semibold text-ink">{value ?? "—"}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-              <div>
-                <p className="thead-cell mb-1.5">Usage</p>
-                <dl className="divide-y divide-[#eef1f7]">
-                  {(
-                    [
-                      ["Applicants", stats?.applicants],
-                      ["Evaluators", stats?.evaluators],
-                      ["Administrators", stats?.admins],
-                    ] as [string, number | undefined][]
-                  ).map(([label, value]) => (
-                    <div key={label} className="flex items-center justify-between gap-3 py-2.5">
-                      <dt className="flex items-center gap-2.5 text-[13px] text-stone">
-                        <span aria-hidden className="stage-dot dot-info" />
-                        {label}
-                      </dt>
-                      <dd className="num text-sm font-semibold text-ink">{value ?? "—"}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-=======
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               {(
                 [
@@ -612,7 +556,6 @@ export default function Analytics() {
                   <p className="num mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
                 </div>
               ))}
->>>>>>> Stashed changes
             </div>
             <p className="mt-4 text-xs leading-relaxed text-body-gray">
               Recent system activity and the full security/audit log live in{" "}
@@ -625,44 +568,30 @@ export default function Analytics() {
               </button>{" "}
               (administrators only).
             </p>
-          </SectionCard>
+          </Panel>
         )}
 
         {/* 5. Recent activity (audit feed) — admin only per QA 2026-02 */}
         {isAdmin && (
-          <SectionCard
-            title="Recent activity"
-            description={`${auditTotal} logged event${auditTotal === 1 ? "" : "s"}`}
-            icon={History}
-            chipTone="plum"
-          >
-            {audit.length === 0 ? (
-              <EmptyState icon={Inbox} tone="plum" title="No audit events recorded yet." compact />
-            ) : (
-              <div className="max-h-96 divide-y divide-[#eef1f7] overflow-y-auto scroll-thin pr-1">
-                {audit.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2 py-2.5 transition-colors hover:bg-fog/60"
+        <Panel
+          title="Recent activity"
+          description={`${auditTotal} logged event${auditTotal === 1 ? "" : "s"}`}
+          icon={History}
+          chipTone="plum"
+        >
+          {audit.length === 0 ? (
+            <EmptyState icon={Inbox} tone="plum" title="No audit events recorded yet." compact />
+          ) : (
+            <div className="max-h-96 space-y-1 overflow-y-auto scroll-thin pr-1">
+              {audit.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-fog/60"
+                >
+                  <span
+                    className={`${pillClass("neutral")} shrink-0 uppercase tracking-[0.06em]`}
+                    style={{ fontSize: "10px" }}
                   >
-<<<<<<< Updated upstream
-                    <span aria-hidden className={`stage-dot ${auditDotClass(a.action)}`} />
-                    <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-ash">
-                      {humanize(a.action)}
-                    </span>
-                    <span className="max-w-[240px] shrink-0 truncate text-[13px] font-medium text-ink">
-                      {a.userLabel || "System"}
-                    </span>
-                    <span className="min-w-[160px] flex-1 truncate text-[13px] text-body-gray">
-                      {a.description || "—"}
-                    </span>
-                    <span className="num shrink-0 text-xs text-body-gray">{timeAgo(a.timestamp)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-=======
                     {humanize(a.action)}
                   </span>
                   <span className="max-w-[240px] truncate text-[13px] font-medium text-ink">
@@ -677,7 +606,6 @@ export default function Analytics() {
             </div>
           )}
         </Panel>
->>>>>>> Stashed changes
         )}
       </div>
     </div>
