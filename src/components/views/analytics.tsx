@@ -316,22 +316,27 @@ export default function Analytics() {
       />
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* 1. Pipeline funnel + 3. Status distribution */}
+        {/* 1. Pipeline funnel + 3. Status distribution — the funnel card
+            stretches to its column height (h-full + flex body) so the pair
+            stays balanced; its rows are a hairline ledger (divide-y) whose
+            equal-height cells echo the StatLedger band language. */}
         <div className="grid gap-6 lg:grid-cols-2">
           <Panel
             title="Pipeline conversion"
             description="Click a stage to drill into its applicants. Percentages are of Applied."
             icon={Filter}
             chipTone="plum"
+            className="h-full lg:flex lg:flex-col"
+            bodyClassName="lg:flex lg:flex-1 lg:flex-col"
           >
-            <div className="space-y-1">
+            <div className="flex flex-col divide-y divide-[var(--border)] lg:h-full">
               {funnel.map((f) => {
                 const active = drill === f.stage;
                 return (
                   <button
                     key={f.stage}
                     type="button"
-                    className={`focus-ring min-h-[44px] w-full rounded-lg px-3 py-3 text-left transition-colors ${
+                    className={`focus-ring flex min-h-[44px] w-full flex-col justify-center px-3 py-3 text-left transition-colors lg:flex-1 ${
                       active ? "bg-cloud" : "hover:bg-fog/60"
                     }`}
                     onClick={() => setDrill(drill === f.stage ? "All" : f.stage)}
@@ -431,7 +436,7 @@ export default function Analytics() {
                         <p className="num font-display text-[32px] font-semibold leading-none tracking-[-0.02em] text-ink">
                           {donutTotal}
                         </p>
-                        <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">
+                        <p className="eyebrow mt-1">
                           Applications
                         </p>
                       </div>
@@ -538,7 +543,7 @@ export default function Analytics() {
                 ] as [string, number | undefined][]
               ).map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-cloud p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+                  <p className="eyebrow">{label}</p>
                   <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
                 </div>
               ))}
@@ -552,7 +557,7 @@ export default function Analytics() {
                 ] as [string, number | undefined][]
               ).map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-cloud/60 p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+                  <p className="eyebrow">{label}</p>
                   <p className="num mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
                 </div>
               ))}

@@ -162,7 +162,7 @@ function StatCard({
   return (
     <div className="dlg-card p-6">
       <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <p className="eyebrow pt-0.5">{label}</p>
         <IconChip icon={icon} tone={chipTone} size={40} />
       </div>
       <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>

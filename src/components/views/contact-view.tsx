@@ -166,7 +166,7 @@ export default function ContactView() {
                 <c.icon className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-stone">{c.label}</p>
+                <p className="eyebrow">{c.label}</p>
                 <p className="mt-1 text-sm leading-relaxed text-body-gray">{c.value}</p>
               </div>
             </div>

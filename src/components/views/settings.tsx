@@ -182,7 +182,7 @@ function UsersPanel() {
       <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
-            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+            <thead className="sticky top-0 z-10 bg-fog text-left eyebrow">
               <tr>
                 <th className="px-5 py-3">User</th>
                 <th className="px-4 py-3">Role</th>
@@ -495,7 +495,7 @@ function AuditPanel() {
           ] as [string, number | undefined][]
         ).map(([label, value]) => (
           <div key={label} className="dlg-card p-6">
-            <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+            <p className="eyebrow">{label}</p>
             <p className="num mt-4 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
           </div>
         ))}
@@ -638,7 +638,7 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
       <div className="dlg-card-plain p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Active provider</p>
+            <p className="eyebrow">Active provider</p>
             <p className="num mt-1 text-lg font-semibold text-ink">{humanize(data?.provider ?? "…")}</p>
             {data?.provider === "mock" ? (
               <p className="mt-1 text-xs text-body-gray">Messages are logged only.</p>
@@ -653,7 +653,7 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {tiles.map(([label, value]) => (
             <div key={label} className="rounded-lg bg-cloud p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+              <p className="eyebrow">{label}</p>
               <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
             </div>
           ))}
@@ -693,7 +693,7 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
       <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
-            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+            <thead className="sticky top-0 z-10 bg-fog text-left eyebrow">
               <tr>
                 <th className="px-5 py-3">To</th>
                 <th className="px-4 py-3">{kind === "sms" ? "Message" : "Subject"}</th>
@@ -813,7 +813,7 @@ function ContactPanel() {
       <div className="dlg-card-plain table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[720px] text-sm">
-            <thead className="sticky top-0 z-10 bg-fog text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+            <thead className="sticky top-0 z-10 bg-fog text-left eyebrow">
               <tr>
                 <th className="px-5 py-3">From</th>
                 <th className="px-4 py-3">Subject</th>

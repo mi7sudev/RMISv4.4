@@ -439,6 +439,17 @@
 
 /* ── Enterprise polish additions ─────────────────────────────────────────── */
 
+/* Institutional micro-label — the Bevel eyebrow: stat ledgers, rail group
+   labels, card eyebrows. 11px caps, stone, one letterspacing across the app
+   so micro-typography never drifts between hand-rolled call sites. */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
 /* Numerals: every value, date, currency, table metric */
 .num {
   font-variant-numeric: tabular-nums;
@@ -655,4 +666,11 @@
 }
 .table-card thead th {
   border-bottom: 1px solid var(--border);
+  /* Guarantee the institutional micro-label anatomy on every hairline table,
+     even where a call site's utility classes drift: 11px caps, stone. */
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stone);
 }

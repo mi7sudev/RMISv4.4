@@ -26,7 +26,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  EmptyState, PageHeader, SkeletonKanban, SkeletonRows,
+  EmptyState, PageHeader, SkeletonKanban, SkeletonRows, StatCell, StatLedger, StatLedgerSkeleton,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot,
@@ -76,29 +76,6 @@ type RegretSummary = {
 };
 
 // ── Small shared visuals ────────────────────────────────────────────────────
-
-/**
- * Editorial stat cell (Statsig-style stat strip) — the Command Center strip's
- * twin: stone eyebrow label, 40px ink .num value, body-gray caption, on a
- * white cell of the parent hairline grid. No card chrome, no icon chip.
- */
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: React.ReactNode;
-  hint: string;
-}) {
-  return (
-    <div className="bg-white p-5 sm:p-6">
-      <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
-      <p className="num mt-3 text-[40px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
-      <p className="mt-2 text-xs text-body-gray">{hint}</p>
-    </div>
-  );
-}
 
 function useFocusRefresh(fn: () => void) {
   useEffect(() => {
@@ -271,25 +248,18 @@ export default function ReviewQueue() {
         </p>
       )}
 
-      {/* Queue stat strip — twin of the Command Center band: one white
-          surface, hairline gaps, editorial numbers (no boxed cards). */}
+      {/* Queue stat band — the shared institutional StatLedger (one white
+          surface, hairline gaps, editorial numbers; same primitive as the
+          Command Center so the anatomy can never drift). */}
       {!error && (queue === null ? (
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[24px] bg-[var(--divider)] xl:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white p-6">
-              <div className="skel h-3 w-20" />
-              <div className="skel mt-4 h-9 w-16" />
-              <div className="skel mt-3 h-3 w-24" />
-            </div>
-          ))}
-        </div>
+        <StatLedgerSkeleton />
       ) : (
-        <div className="dlg-card-plain grid grid-cols-2 gap-px overflow-hidden bg-[var(--divider)] xl:grid-cols-4">
-          <StatCard label="In queue" value={applications.length} hint="applications on file" />
-          <StatCard label="Qualified" value={stat.qualified} hint="meet all minimum requirements" />
-          <StatCard label="Under review" value={stat.underReview} hint="being screened" />
-          <StatCard label="Shortlisted" value={stat.shortlisted} hint="advanced by evaluators" />
-        </div>
+        <StatLedger>
+          <StatCell label="In queue" value={applications.length} hint="applications on file" />
+          <StatCell label="Qualified" value={stat.qualified} hint="meet all minimum requirements" />
+          <StatCell label="Under review" value={stat.underReview} hint="being screened" />
+          <StatCell label="Shortlisted" value={stat.shortlisted} hint="advanced by evaluators" />
+        </StatLedger>
       ))}
 
       {/* Stage tabs (list mode only) */}
@@ -432,11 +402,11 @@ export default function ReviewQueue() {
                 <table className="w-full min-w-[760px] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left">
-                      <th scope="col" className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Candidate</th>
-                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Position</th>
-                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Applied</th>
-                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Status</th>
-                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Verdict</th>
+                      <th scope="col" className="eyebrow px-5 py-3">Candidate</th>
+                      <th scope="col" className="eyebrow px-4 py-3">Position</th>
+                      <th scope="col" className="eyebrow px-4 py-3">Applied</th>
+                      <th scope="col" className="eyebrow px-4 py-3">Status</th>
+                      <th scope="col" className="eyebrow px-4 py-3">Verdict</th>
                       <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
                     </tr>
                   </thead>

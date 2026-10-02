@@ -523,7 +523,7 @@ export default function ProfileView() {
           </button>
           <p
             aria-live="polite"
-            className="min-w-0 flex-1 truncate py-2.5 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-stone"
+            className="eyebrow min-w-0 flex-1 truncate py-2.5 text-center"
           >
             {`Section ${activeIdx + 1} of ${SECTIONS.length} · ${SECTIONS[activeIdx]?.label ?? ""}`}
           </p>

@@ -230,6 +230,94 @@ export function KpiCard({
   return <div className={base}>{body}</div>;
 }
 
+// ── StatLedger ──────────────────────────────────────────────────────────────
+// The institutional stat band (Watershed / Statsig school, absorbed from the
+// inspo study): ONE white ledger whose cells are separated by hairline 1px
+// gaps painted with the divider color — no floating cards, no icon chips.
+// The oversized tabular numeral is the hero; a stone eyebrow labels it and a
+// body-gray caption quietly qualifies it. Shared by every workspace view so
+// the anatomy can never drift (previously hand-rolled twice).
+// ────────────────────────────────────────────────────────────────────────────
+
+export function StatLedger({
+  children,
+  className,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** Pass "none" when the caller renders its own skeleton geometry. */
+  ariaLabel?: string;
+}) {
+  return (
+    <div
+      aria-label={ariaLabel}
+      className={cn(
+        "dlg-card-plain grid grid-cols-2 gap-px overflow-hidden bg-[var(--divider)] xl:grid-cols-4",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function StatCell({
+  label,
+  value,
+  hint,
+  aside,
+  onClick,
+  ariaLabel,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+  /** Trailing node on the numeral baseline (sparkline, delta, pill). */
+  aside?: React.ReactNode;
+  onClick?: () => void;
+  ariaLabel?: string;
+}) {
+  const body = (
+    <>
+      <p className="eyebrow">{label}</p>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <p className="num text-[44px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+        {aside}
+      </div>
+      {hint ? <p className="mt-2 text-xs text-body-gray">{hint}</p> : null}
+    </>
+  );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel ?? label}
+        className="focus-ring block w-full bg-white p-5 text-left transition-colors hover:bg-fog sm:p-6"
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className="bg-white p-5 sm:p-6">{body}</div>;
+}
+
+/** Skeleton twin of StatLedger — identical geometry, shimmer cells. */
+export function StatLedgerSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <StatLedger aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="bg-white p-5 sm:p-6">
+          <div className="skel h-3 w-20" />
+          <div className="skel mt-4 h-10 w-16" />
+          <div className="skel mt-3 h-3 w-24" />
+        </div>
+      ))}
+    </StatLedger>
+  );
+}
+
 // ── EmptyState ──────────────────────────────────────────────────────────────
 
 export function EmptyState({

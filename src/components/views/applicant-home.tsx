@@ -70,7 +70,7 @@ function notRequired(v: string | null | undefined): boolean {
 /** Section label (eyebrow) — quiet uppercase kicker above headings. */
 function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn("text-xs font-medium uppercase tracking-[0.08em] text-stone", className)}>{children}</p>
+    <p className={cn("eyebrow", className)}>{children}</p>
   );
 }
 
@@ -439,7 +439,7 @@ function ApplicationDetailModal({
 function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd
         className={cn(
           "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",

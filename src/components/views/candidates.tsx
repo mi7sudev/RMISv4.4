@@ -113,7 +113,7 @@ function StatCard({
   return (
     <div className="dlg-card p-6">
       <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
+        <p className="eyebrow pt-0.5">{label}</p>
         <IconChip icon={icon} tone={chipTone} size={40} />
       </div>
       <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
@@ -516,9 +516,9 @@ export default function Candidates() {
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left">
-                      <th scope="col" className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Candidate</th>
-                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Profile</th>
-                      <th scope="col" className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">Applications</th>
+                      <th scope="col" className="eyebrow px-5 py-3">Candidate</th>
+                      <th scope="col" className="eyebrow px-4 py-3">Profile</th>
+                      <th scope="col" className="eyebrow px-4 py-3">Applications</th>
                       <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
                     </tr>
                   </thead>

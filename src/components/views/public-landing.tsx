@@ -105,7 +105,7 @@ function useSavedJobs() {
 function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd
         className={cn(
           "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",

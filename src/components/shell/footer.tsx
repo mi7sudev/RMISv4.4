@@ -44,7 +44,7 @@ export function Footer() {
               to authorized DOST-MIRDC personnel.
             </p>
           </div>
-          <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.08em] text-stone">
+          <p className="eyebrow shrink-0">
             © {new Date().getFullYear()} RMIS
           </p>
         </div>

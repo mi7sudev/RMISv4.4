@@ -681,7 +681,7 @@ export default function Recruitment() {
           <div className="overflow-x-auto scroll-thin">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-[0.08em] text-stone">
+                <tr className="eyebrow border-b border-[var(--border)] text-left">
                   <th className="px-5 py-3.5">Position</th>
                   <th className="px-4 py-3.5">Vacancies</th>
                   <th className="px-4 py-3.5">Monthly salary</th>

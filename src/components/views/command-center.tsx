@@ -13,7 +13,8 @@ import {
   Inbox, LayoutDashboard, RefreshCw, UserX,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatCell, StatLedger,
+  StatLedgerSkeleton, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, deadlineState, formatDate, fullName } from "@/lib/client";
@@ -115,52 +116,6 @@ function summaryTone(count: number, alertTone: "warn" | "bad"): "ok" | "warn" | 
   return count === 0 ? "ok" : alertTone;
 }
 
-/**
- * Editorial stat cell (Statsig-style stat strip): the number is the hero —
- * stone eyebrow label, 40px ink .num, body-gray caption — sitting on a white
- * cell of a hairline grid (the parent strip paints 1px gaps with the divider
- * color), no card chrome, no icon chip. Clickable cells tint to fog.
- */
-function StatTile({
-  label,
-  value,
-  hint,
-  aside,
-  onClick,
-  ariaLabel,
-}: {
-  label: string;
-  value: React.ReactNode;
-  hint?: string;
-  aside?: React.ReactNode;
-  onClick?: () => void;
-  ariaLabel?: string;
-}) {
-  const body = (
-    <>
-      <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone">{label}</p>
-      <div className="mt-3 flex items-end justify-between gap-3">
-        <p className="num text-[40px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
-        {aside}
-      </div>
-      {hint ? <p className="mt-2 text-xs text-body-gray">{hint}</p> : null}
-    </>
-  );
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={ariaLabel ?? label}
-        className="focus-ring block w-full bg-white p-5 text-left transition-colors hover:bg-fog sm:p-6"
-      >
-        {body}
-      </button>
-    );
-  }
-  return <div className="bg-white p-5 sm:p-6">{body}</div>;
-}
-
 export default function CommandCenter() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [jobs, setJobs] = useState<JobRow[] | null>(null);
@@ -250,15 +205,7 @@ export default function CommandCenter() {
     return (
       <div className="space-y-6">
         {header}
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[24px] bg-[var(--divider)] xl:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white p-6">
-              <div className="skel h-3 w-20" />
-              <div className="skel mt-4 h-9 w-16" />
-              <div className="skel mt-3 h-3 w-24" />
-            </div>
-          ))}
-        </div>
+        <StatLedgerSkeleton />
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <SkeletonRows rows={2} rowClassName="h-6 w-40" />
@@ -289,35 +236,36 @@ export default function CommandCenter() {
                 <span className="num">{attentionTotal}</span> item{attentionTotal === 1 ? "" : "s"} across the board
               </span>
             </div>
-            {/* Statsig-style stat strip: one white band, hairline gaps, the
-                numbers carry the hierarchy — no boxed cards, no icon chips. */}
-            <div className="dlg-card-plain grid grid-cols-2 gap-px overflow-hidden bg-[var(--divider)] xl:grid-cols-4">
-              <StatTile
+            {/* Institutional stat ledger (shared StatLedger): one white band,
+                hairline gaps, the numbers carry the hierarchy — no boxed
+                cards, no icon chips. */}
+            <StatLedger>
+              <StatCell
                 label="Awaiting review"
                 value={stats.pendingReview}
                 hint="Open →"
                 onClick={() => navigate("review-queue")}
                 aside={<PipelineSpark byStatus={stats.byStatus} />}
               />
-              <StatTile
+              <StatCell
                 label="Deadlines this week"
                 value={stats.needsAttention.deadlinesThisWeek}
                 hint="Open →"
                 onClick={() => navigate("recruitment")}
               />
-              <StatTile
+              <StatCell
                 label="Incomplete profiles"
                 value={stats.needsAttention.incompleteProfiles}
                 hint="Open →"
                 onClick={() => navigate("candidates", { status: "incomplete" })}
               />
-              <StatTile
+              <StatCell
                 label="Failed logins"
                 value={stats.needsAttention.failedLogins24h}
                 hint="Last 24 h · Open →"
                 onClick={() => navigate("settings", { tab: "audit" })}
               />
-            </div>
+            </StatLedger>
           </section>
 
           {/* Active recruitment */}
@@ -455,7 +403,9 @@ export default function CommandCenter() {
               Open Analytics
             </button>
           </div>
-          <div className="space-y-2.5 rounded-lg bg-white/70 p-4">
+          {/* Quiet ledger tile — fog panel so the alerts read as one anchored
+              group under the cloud Overview card, not loose text on paper. */}
+          <div className="space-y-2.5 rounded-[16px] bg-fog p-4">
             {(
               [
                 [CalendarClock, stats.needsAttention.deadlinesThisWeek, "posting deadline(s) within 7 days", "warn"],
