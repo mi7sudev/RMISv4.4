@@ -646,6 +646,13 @@
 }
 
 /* Hairline table polish */
+.table-card {
+  /* Establish the containing block for absolutely-positioned descendants
+     (e.g. sr-only header labels). Without it those spans anchor to the
+     initial containing block, escape the card's overflow clip, and widen
+     the root scroller on mobile (R-03: zero horizontal scroll). */
+  position: relative;
+}
 .table-card thead th {
   border-bottom: 1px solid var(--border);
 }
