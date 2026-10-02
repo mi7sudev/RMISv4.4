@@ -273,3 +273,20 @@ Stage Summary:
 - Known documented exceptions to R-02: REGRET_LEGACY_PREFIX (data-compat with stored subjects), jwt console.warn (dev log), pds-extract LLM prompt (internal), code comments (non-UI).
 - No business logic, routing, or schema changes; regret idempotency is the only behavioral nuance (now matches both subject prefixes).
 - Production deploy: copy changed sources + npm run build + cp .env .next/standalone/.env + pm2 restart rmis (no schema change).
+
+---
+Task ID: 38
+Agent: Z.ai Code (main)
+Task: Recover broken working tree (git stash-pop conflict markers, app 500) and restore the user-approved Task 37 state; then verify and fix what the browser surfaced.
+
+Work Log:
+- DIAGNOSIS: working tree had unresolved conflict markers in 7 views + globals.css + worklog.md (server 500 on /). History check showed the conflict = accidental Executive Ink re-apply (HEAD 4ea6e49) vs the auto-checkout-recovery stash containing Task 37 (V9 Bevel + antislop 3.2.20, stash parent = 476192f exactly).
+- RECOVERY: rebuilt the exact Task 37 tree = `git checkout 476192f -- .` (V9 base) + overlay all 40 tracked stash files except db/custom.db + restore untracked AGENTS.md / DESIGN.md / antislop.md from stash^3. Zero conflict markers remain. Committed as ebde630 so the version system cannot silently lose it again (4ea6e49 still reachable if ever wanted).
+- Server restarted with a wiped .next (stale-chunk rule from Task 36 note); / returns 200.
+- VERIFY (agent-browser): landing + admin sign-in flow; desktop 1600x900 screenshots: command-center, recruitment, settings, review-queue; all render the Bevel system with real data, zero console/page errors.
+- BUG FOUND + FIXED (R-03 horizontal scroll leak): at 390px the staff tables made the ROOT scroller pannable (documentElement.scrollWidth 1029 vs 390) while every flow box measured <=390. Recursive hide-bisect pinned the culprit: absolutely-positioned sr-only labels inside right-aligned THs (recruitment/candidates/settings/review-queue). Their containing block was the ICB, so the table-card's overflow-hidden clip never applied to them and they landed at x~1029. Fix: `.table-card { position: relative; }` in globals.css (one line + comment) so the card anchors and clips its own absolute descendants. Root cause fix covers all four views; no component edits.
+- RE-VERIFY after fix: scrollWidth==innerWidth AND window unpannable (scrollTo(600)->scrollX 0) on recruitment, settings, candidates, review-queue, analytics, public jobs, landing at 390x844; desktop re-checked review-queue. bun run lint clean.
+
+Stage Summary:
+- Current tree = Task 37 state (V9 Bevel + antislop) + the table-card containing-block fix. Head: 180691c. Executive Ink remains abandoned per user rollback.
+- Screenshots: tool-results/t38-{landing,command-center,recruitment,settings,desktop-review,mobile-final}.png
