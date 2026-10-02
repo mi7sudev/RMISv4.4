@@ -312,3 +312,25 @@ Stage Summary:
 - Head: 08bd550 on top of the Task 38 recovery line. Current design = Bevel + antislop + inspo composition pass (hero split, stat strips). All numbers/links/data identical; only arrangement changed.
 - The stat-strip anatomy is now the shared workspace KPI pattern (command-center + review-queue twins); future views should reuse these cell markups instead of boxed cards.
 - Production deploy unchanged: copy sources, npm run build, cp .env .next/standalone/, pm2 restart rmis.
+
+---
+Task ID: 39
+Agent: Z.ai Code (main)
+Task: Improve current UI/UX/layout/architecture using inspo-mcp design inspiration; no new features, modify existing system only.
+
+Work Log:
+- Ran `npx -y inspo-mcp install` (v0.1.16): hosted MCP endpoint at https://inspomcp.dev/api/mcp, no local MCP client; spoke MCP JSON-RPC over HTTP directly (initialize → tools/list → tools/call).
+- Ran the recommended inspo study budget: one `recommend` (enterprise government recruitment workspace brief, light mode), one `search_screens` (SaaS/light/admin dashboard), one `find_components` (stat, saas, light), `get_screen` on watershed-com; downloaded and visually studied Watershed/Statsig/Calendly/Alloy/Forest Admin captures.
+- Study distillation: both Watershed and Statsig converge on the "institutional ledger" stat band — ONE hairline-bordered container, cells separated by vertical 1px rules (no floating cards), oversized tabular numerals, quiet sentence-case captions, mono/uppercase eyebrow micro-labels; light paper 79% consensus, grotesk sans 63% (Inter leads), warm/cool accent split.
+- Architecture: extracted the previously duplicated stat strips (command-center.tsx StatTile + review-queue.tsx StatCard twins) into shared `StatLedger` / `StatCell` / `StatLedgerSkeleton` primitives in src/components/ui/shell.tsx; both views now consume one implementation. Cell anatomy upgraded per study: 44px numerals (was 40px), .eyebrow labels, same hairline gap-px geometry.
+- New `.eyebrow` utility in globals.css (11px/500/0.08em/caps/stone) and swept 20+ drifting inline micro-label call sites (footer, contact, candidates, applicant-home incl. its local Eyebrow component, settings x6, candidate-detail, analytics x3, recruitment tr, profile-view, review-queue th x5, public-landing QuickFact) onto it. Micro-label ramp formalized: page tier (PageHeader, 0.14em pebble) and 10px kickers (0.14em) intentionally kept.
+- CSS guarantee: `.table-card thead th` now enforces the eyebrow anatomy so table headers can never drift.
+- Analytics layout balance: funnel card previously left ~300px dead space below "Rejected" (left column shorter than right). Panel now stretches (h-full + flex body) and funnel rows became a hairline divide-y ledger with lg:flex-1 equal-height cells — echoes the stat band language.
+- Command Center aside: unanchored `bg-white/70` alert box → `bg-fog` rounded-[16px] tile (material consistency under the cloud Overview card).
+- Verification: lint clean; browser-verified desktop 1600x900 (command center, analytics, review-queue, recruitment, candidates incl. #/candidates?status=incomplete deep link) and mobile 390x844 (operations/analytics/review-queue all documentElement.scrollWidth=390, R-03 zero horizontal scroll holds); stat-cell click-through navigates correctly; public landing intact with sticky footer. Committed as 5d6b9d2.
+
+Stage Summary:
+- Design language now carries the Watershed/Statsig institutional-ledger DNA inside the existing V9 Bevel system; zero features added, zero business logic touched (pure presentation + dedupe).
+- StatLedger is the single source of truth for stat bands app-wide; .eyebrow is the single source of truth for micro-labels.
+- inspo-mcp usage note for future agents: it is a hosted MCP endpoint (https://inspomcp.dev/api/mcp); call it with JSON-RPC via curl (tools: recommend, search_screens, get_screen, find_components, get_design_system). Budget: 1 recommend + 1-2 search_screens + get_screen on 3-5 keepers.
+- Pending from earlier: production deployment to rmis-mirdc@10.10.120.102:~/Desktop/RMISv4 (pm2 restart rmis) — remember to restore INTRANET_ENFORCEMENT=on in the production .env (sandbox .env is intentionally off per user request).
