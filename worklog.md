@@ -334,3 +334,21 @@ Stage Summary:
 - StatLedger is the single source of truth for stat bands app-wide; .eyebrow is the single source of truth for micro-labels.
 - inspo-mcp usage note for future agents: it is a hosted MCP endpoint (https://inspomcp.dev/api/mcp); call it with JSON-RPC via curl (tools: recommend, search_screens, get_screen, find_components, get_design_system). Budget: 1 recommend + 1-2 search_screens + get_screen on 3-5 keepers.
 - Pending from earlier: production deployment to rmis-mirdc@10.10.120.102:~/Desktop/RMISv4 (pm2 restart rmis) — remember to restore INTRANET_ENFORCEMENT=on in the production .env (sandbox .env is intentionally off per user request).
+
+---
+Task ID: 39
+Agent: Z.ai Code (main)
+Task: Document the system's fonts/typography in a .md file so it can be cloned exactly.
+
+Work Log:
+- Extracted font loading config from src/app/layout.tsx (Inter via next/font with --font-inter; DM_Sans loaded as --font-radio legacy variable, not referenced in CSS)
+- Extracted font stack, body rules (letter-spacing -0.01em, font-feature-settings "blwf","cv03","cv04","cv09") from src/app/globals.css
+- Captured all custom typography classes: .font-display, .text-display-hero, .text-heading-lg/md (fluid clamp), .eyebrow, .monogram, .num, .status-pill, .table-card thead th, .dlg-cta/.dlg-ghost, .rich-text, Sonner toast restyle
+- Cross-referenced design spec type scale from upload/PROPOSED-RMIS-DESIGN.md (caption→hero-display roles, weights 400/500/600)
+- Measured actual Tailwind usage across components: text-sm(335)/text-xs(217) dominant rhythm, font-medium(176)/font-semibold(106)
+- Wrote /home/z/my-project/TYPOGRAPHY.md with 7 sections: families, body settings, spec scale, exact CSS classes, usage stats, ink colors, clone checklist
+
+Stage Summary:
+- TYPOGRAPHY.md created at project root — complete clone-ready typography reference
+- Key facts: single rendered web font (Inter); platform renders SF Pro (macOS) / Segoe UI (Windows) / Inter (elsewhere); weight ceiling 600; 14px+12px working rhythm; global -0.01em tracking
+- Documentation-only change; no code modified
