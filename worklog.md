@@ -411,3 +411,34 @@ Work Log:
 Stage Summary:
 - The Bevel spec is now applied precisely system-wide: exact tokens in @theme, exact component anatomy on public surfaces (capsule nav, hero sky, charcoal pills, cloud cards borderless), unified micro-label and dialog-title anatomy, WCAG AA preserved under the spec Body Gray.
 - Interpretations documented: spec components without RMIS counterparts (QR card, stars, carousel, partner row, footer link groups) were NOT invented (no new features); staff 14px functional rhythm retained (spec governs public/marketing roles); spec's -0.24px@24px tracking = -0.01em used consistently.
+
+---
+Task ID: 42
+Agent: Z.ai Code (main agent, no subagents)
+Task: Full-system clean refactor to upload/PROPOSED-RMIS-DESIGN.md (Bevel) — every component, table, modal, button across all sections.
+
+Work Log:
+- Read the full design spec; enumerated all 60+ source files; planned bottom-up refactor.
+- PASS 1 (commit e54d0b7) — foundation primitives restyled to Bevel:
+  * button.tsx: capsule 128px radius all variants; Charcoal primary pill with float-shadow hover lift; outline/ghost/secondary/link/destructive.
+  * input/textarea/label/select/checkbox/radio/switch: dlg-input anatomy (white, #d7dfec hairline, 12px radius, Metric Blue focus ring), Charcoal checked states, capsule selects.
+  * dialog/alert-dialog/sheet: 24px radius, borderless, float shadow (spec --shadow-md-2), soft charcoal wash overlay, display-font titles, capsule close buttons.
+  * popover/tooltip/dropdown-menu/command: 16px radius, hairline #e6ebf3, float shadow, 8px items, eyebrow group labels, capsule tooltips.
+  * tabs: capsule segmented control (cloud track, white active pill). badge: capsule with functional tints. table: 11px caps eyebrow headers, hairline rows, fog hover.
+  * card: borderless/shadowless 24px; skeleton: .skel shimmer; avatar: cloud fallback.
+  * kanban.tsx: cloud columns (16px), white floating cards, capsule count chips/tags/match badges, dashed white/45 empty insets.
+  * shell.tsx: PageHeader .eyebrow + display title, KpiCard cloud surface (no border/shadow/gradient), circular empty-state chips, cloud skeletons.
+  * Chrome: nav-rail + mobile-nav rounded-full items (spec 32px nav radii), cloud active pills; footer chip circular; command-menu dropped rounded-none; notifications panel rounded (bell capsule, capsule badge, rounded rows).
+- PASS 2 (commit 135c035) — surfaces made Bevel-visible:
+  * StatLedger inverted: cloud band + white 1px hairline gaps + transparent cells (white/70 hover) — reads as the pale institutional band.
+  * Converted white-on-white invisible surfaces to Cloud Card per spec: command-center list registers, recruitment/candidates/review-queue table cards + filter bars, analytics/candidate-detail/job-workspace Panel wrappers, review-workspace dossier, contact-view cards.
+  * Nested interior tiles inside cloud panels converted to white: review-workspace snapshot cards, analytics metric tiles, candidate-detail entity/document tiles.
+- Verified per-route in agent-browser at 1600x900: command center, recruitment, candidates (list+toggle), review queue (kanban), review workspace (dossier + MQR rail), analytics, settings (users tab), job workspace, public landing, sign-in (hero-sky split), applicant home (tour modal), profile builder. Mobile 390x844: zero horizontal overflow (scrollWidth=390) on home/vacant-positions/profile/review-queue/operations/recruitment; mobile recruitment layout verified visually.
+- Debugged: stale Turbopack bundle after shell.tsx fix (browser kept broken # comment chunk) — resolved by reload; agent-browser synthetic click does not trigger React form submit — verified real flow via requestSubmit (login 200 → navigate to role home).
+- bun run lint clean at both passes; two incremental commits.
+
+Stage Summary:
+- The entire system now renders the Bevel spec: white editorial canvas, cloud feature surfaces, capsule controls, hairline data tables, capsule segmented tabs, borderless 24px dialogs, Charcoal conversion pills, Metric Blue focus/selection accents, monogram identity, 11px eyebrow micro-labels, tabular numerals.
+- Key artifacts: src/components/ui/{button,input,textarea,label,select,checkbox,radio-group,switch,dialog,alert-dialog,sheet,popover,tooltip,dropdown-menu,command,tabs,badge,table,card,skeleton,separator,avatar,kanban,shell}.tsx, src/components/shell/* (chrome), src/components/views/* (surfaces).
+- Commits: e54d0b7 (foundation), 135c035 (surfaces). Verification screenshots in tool-results/bv-*.png, ev-*.png, m-*.png.
+- Note: production deploy must restore INTRANET_ENFORCEMENT=on in .env (still off per user request).
