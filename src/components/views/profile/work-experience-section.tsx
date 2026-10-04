@@ -160,9 +160,9 @@ export default function WorkExperienceSection({
                 <div className="min-w-0">
                   <p className="font-medium text-ink">
                     {row.positionTitle ?? "-"}
-                    {row.employerName ? <span className="text-body-gray"> · {row.employerName}</span> : null}
+                    {row.employerName ? <span className="text-stone"> · {row.employerName}</span> : null}
                   </p>
-                  <p className="num mt-1 text-sm text-body-gray">
+                  <p className="num mt-1 text-sm text-stone">
                     {row.statusOfEmployment ? `${humanize(row.statusOfEmployment)} · ` : ""}
                     {row.dateFrom ? new Date(row.dateFrom).toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "?"}
                     {" – "}
@@ -237,7 +237,7 @@ export default function WorkExperienceSection({
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-ink">Remove this work experience?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Remove this work experience?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This permanently removes the entry from your profile and may change your experience-years total.
             </AlertDialogDescription>

@@ -124,13 +124,13 @@ function RichOrPlain({ html, text }: { html?: string | null; text?: string | nul
   if (html && html.trim()) {
     return (
       <div
-        className="rich-text text-sm leading-relaxed text-body-gray"
+        className="rich-text text-sm leading-relaxed text-stone"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
   }
   if (text && text.trim()) {
-    return <p className="whitespace-pre-line text-sm leading-relaxed text-body-gray">{text}</p>;
+    return <p className="whitespace-pre-line text-sm leading-relaxed text-stone">{text}</p>;
   }
   return <p className="text-sm text-stone">Not provided.</p>;
 }
@@ -142,7 +142,7 @@ function Skeleton({ className }: { className?: string }) {
 function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="dlg-card p-8 text-center">
-      <p className="font-display text-xl text-ink">Something went wrong</p>
+      <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">Something went wrong</p>
       <p className="mt-2 text-sm text-stone">{message}</p>
       <button onClick={onRetry} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
         Try again
@@ -180,7 +180,7 @@ function QuickView({
   return (
     <div className="mt-4 space-y-4 border-t border-divider pt-4">
       {brief ? (
-        <p className="line-clamp-4 text-sm leading-relaxed text-body-gray">{brief}</p>
+        <p className="line-clamp-4 text-sm leading-relaxed text-stone">{brief}</p>
       ) : (
         <p className="text-sm text-stone">No brief description provided.</p>
       )}
@@ -240,8 +240,8 @@ function JobCard({
             <DeadlinePill job={job} />
             {applied && <span className="status-pill status-ok">Applied</span>}
           </div>
-          <h3 className="mt-2 font-display text-xl text-ink">{humanize(job.title)}</h3>
-          <p className="mt-1 text-sm text-body-gray">
+          <h3 className="mt-2 text-lg font-semibold text-ink">{humanize(job.title)}</h3>
+          <p className="mt-1 text-sm text-stone">
             {pos?.placeOfAssignment || "-"} ·{" "}
             {job.positionType ? humanize(job.positionType) : "-"}
             {pos?.salaryGrade ? <span className="num"> · SG {pos.salaryGrade}</span> : null}
@@ -253,7 +253,7 @@ function JobCard({
           </p>
           <p className="num mt-1.5 text-[15px] font-medium text-ink">
             {salary != null ? formatCurrency(salary) : "Competitive"}
-            {salary != null && <span className="font-normal text-body-gray">/mo</span>}
+            {salary != null && <span className="font-normal text-stone">/mo</span>}
           </p>
         </div>
         <button
@@ -305,7 +305,7 @@ function SummaryCard({
       <dl className="mt-4 space-y-3 text-sm">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-start justify-between gap-3">
-            <dt className="shrink-0 text-body-gray">{label}</dt>
+            <dt className="shrink-0 text-stone">{label}</dt>
             <dd
               className={`text-right text-ink ${
                 label === "Deadline" && dl.overdue ? "text-[var(--bad)]" : ""
@@ -321,10 +321,10 @@ function SummaryCard({
       {job.deadlineDate && (
         <div className="mt-4 border-t border-border pt-4">
           <div className="flex items-center justify-between gap-3 text-xs">
-            <span className="text-body-gray">
+            <span className="text-stone">
               Posted <span className="num">{formatDate(job.publishDate ?? job.publishedAt)}</span>
             </span>
-            <span className={dl.overdue ? "text-[var(--bad)]" : "text-body-gray"}>
+            <span className={dl.overdue ? "text-[var(--bad)]" : "text-stone"}>
               Closes <span className="num">{formatDate(job.deadlineDate)}</span>
             </span>
           </div>
@@ -434,8 +434,8 @@ function DetailBody({ job }: { job: JobWire }) {
           <DeadlinePill job={job} />
           {(job.applications?.length ?? 0) > 0 && <span className="status-pill status-ok">Applied</span>}
         </div>
-        <h1 className="text-heading-md mt-3">{humanize(job.title)}</h1>
-        <p className="mt-2 text-sm text-body-gray">
+        <h1 className="mt-3 text-2xl font-semibold tracking-[-0.01em] text-ink sm:text-[40px] sm:leading-none sm:tracking-[-1.2px]">{humanize(job.title)}</h1>
+        <p className="mt-2 text-sm text-stone">
           {pos?.placeOfAssignment || "-"} · {divisionName(pos?.division)} ·{" "}
           {job.positionType ? humanize(job.positionType) : "-"}
         </p>
@@ -730,8 +730,8 @@ export default function JobsView() {
           <ErrorCard message={error} onRetry={() => void load(false)} />
         ) : detail === null ? (
           <div className="dlg-card p-10 text-center">
-            <p className="font-display text-xl text-ink">Position not found</p>
-            <p className="mt-2 text-sm text-body-gray">
+            <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">Position not found</p>
+            <p className="mt-2 text-sm text-stone">
               This position may have closed or is no longer published.
             </p>
             <button onClick={() => navigate("vacant-positions")} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
@@ -860,8 +860,8 @@ export default function JobsView() {
   } else if ((jobs ?? []).length === 0) {
     content = (
       <div className="dlg-card p-10 text-center">
-        <p className="font-display text-xl text-ink">No vacant positions</p>
-        <p className="mt-2 text-sm text-body-gray">
+        <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">No vacant positions</p>
+        <p className="mt-2 text-sm text-stone">
           There are no published postings at the moment. Check back soon.
         </p>
       </div>
@@ -869,8 +869,8 @@ export default function JobsView() {
   } else if (filtered.length === 0) {
     content = (
       <div className="dlg-card p-10 text-center">
-        <p className="font-display text-xl text-ink">No positions match your filters</p>
-        <p className="mt-2 text-sm text-body-gray">Try a different search term or clear the filters.</p>
+        <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">No positions match your filters</p>
+        <p className="mt-2 text-sm text-stone">Try a different search term or clear the filters.</p>
         <button onClick={clearFilters} className="dlg-ghost mt-5 min-h-[44px] px-6 text-sm">
           Clear filters
         </button>

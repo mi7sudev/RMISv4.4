@@ -271,7 +271,7 @@ export default function EligibilitySection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-ink">{row.title}</p>
-                  <p className="num mt-1 text-sm text-body-gray">
+                  <p className="num mt-1 text-sm text-stone">
                     {row.rating ? `Rating ${row.rating} · ` : ""}
                     {row.examDate ? `Exam ${formatDate(row.examDate)}` : ""}
                     {row.examPlace ? ` · ${row.examPlace}` : ""}
@@ -325,7 +325,7 @@ export default function EligibilitySection({
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-ink">Remove this eligibility?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Remove this eligibility?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This permanently removes the entry. Jobs requiring this eligibility may no longer match your profile.
             </AlertDialogDescription>

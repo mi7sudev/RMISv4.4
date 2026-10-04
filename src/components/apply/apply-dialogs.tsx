@@ -180,7 +180,7 @@ export function ApplyDialogs({
           <div className="p-6">
             <DialogHeader className="text-left space-y-2">
               <div className="dlg-pill inline-flex w-fit items-center rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">Application</div>
-              <DialogTitle className="font-display text-2xl tracking-[-0.02em] text-ink">{jobTitle}</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">{jobTitle}</DialogTitle>
               <DialogDescription className="text-sm text-body-gray">
                 {place} · {job.positionType ? humanize(job.positionType) : "-"}{job.numberOfVacancy != null ? ` · ${job.numberOfVacancy} vacanc${job.numberOfVacancy === 1 ? "y" : "ies"}` : ""}
               </DialogDescription>
@@ -211,7 +211,7 @@ export function ApplyDialogs({
         {step === "mqr-fail" && mqr && (
           <div className="p-6">
             <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="font-display text-2xl tracking-[-0.02em] text-ink">Minimum Qualifications</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Minimum Qualifications</DialogTitle>
               <DialogDescription className="text-sm text-body-gray">Automated evaluation for {jobTitle}</DialogDescription>
             </DialogHeader>
             <div className="mt-4">
@@ -224,7 +224,7 @@ export function ApplyDialogs({
         {step === "done" && (
           <div className="p-6 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-charcoal text-xl text-[#ebf0f8]">✓</div>
-            <h3 className="mt-4 font-display text-2xl tracking-[-0.02em] text-ink">Application submitted</h3>
+            <h3 className="mt-4 text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Application submitted</h3>
             <p className="mt-2 text-sm text-body-gray">
               We received your application for {jobTitle}. You will receive an SMS confirmation shortly.
             </p>

@@ -205,7 +205,7 @@ export default function PdsUploadCard({
             <span className="flex flex-wrap items-center gap-x-1.5">
               <span className="text-base font-semibold tracking-[-0.01em] text-ink">PDS Upload</span>
             </span>
-            <span className="mt-0.5 block truncate text-xs text-body-gray">
+            <span className="mt-0.5 block truncate text-xs text-stone">
               Drop PDS, resume, or certificates · XLSX / XLS (Excel 2019 and older), PDF, DOCX, images · 10MB max
             </span>
           </span>
@@ -227,7 +227,7 @@ export default function PdsUploadCard({
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-2 flex items-center gap-2 text-xs text-body-gray">
+              <p className="mt-2 flex items-center gap-2 text-xs text-stone">
                 <Loader2 className="h-3 w-3 animate-spin" /> {PHASE_LABEL[phase]}
               </p>
             </div>
@@ -236,7 +236,7 @@ export default function PdsUploadCard({
           {error && (
             <div className="mb-4 rounded-xl bg-[var(--bad-bg)] p-4">
               <p className="text-sm text-ink">{error.message}</p>
-              <p className="mt-0.5 text-xs text-body-gray">{error.fileName}</p>
+              <p className="mt-0.5 text-xs text-stone">{error.fileName}</p>
               <button
                 type="button"
                 onClick={pickFile}
@@ -254,7 +254,7 @@ export default function PdsUploadCard({
               <dl className="mt-2 divide-y divide-divider">
                 {applyRows.map(([label, count]) => (
                   <div key={label} className="flex items-baseline justify-between gap-4 py-1.5 first:pt-0 last:pb-0">
-                    <dt className="text-xs text-body-gray">{label}</dt>
+                    <dt className="text-xs text-stone">{label}</dt>
                     <dd className="num text-xs font-medium text-ink">{count}</dd>
                   </div>
                 ))}
@@ -269,7 +269,7 @@ export default function PdsUploadCard({
                 <IconChip icon={Lock} tone="ink" size={36} iconSize={16} className="mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-ink">Profile auto-filled from your PDS</p>
-                  <p className="mt-0.5 text-xs text-body-gray">
+                  <p className="mt-0.5 text-xs text-stone">
                     Extraction already ran on your documents. Clear your forms to start over.
                   </p>
                 </div>
@@ -308,7 +308,7 @@ export default function PdsUploadCard({
               >
                 <IconChip icon={CloudUpload} tone="plum" size={44} />
                 <span className="text-sm font-medium text-ink">Upload PDS (CS Form 212)</span>
-                <span className="text-xs text-body-gray">XLSX, PDF, DOCX or image · up to 10 MB</span>
+                <span className="text-xs text-stone">XLSX, PDF, DOCX or image · up to 10 MB</span>
               </button>
               <input
                 ref={inputRef}
@@ -329,7 +329,7 @@ export default function PdsUploadCard({
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-ink">Clear all forms and re-upload?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Clear all forms and re-upload?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This erases ALL of your profile information — personal details, education, work experience, training,
               eligibility, and awards — and marks your profile incomplete again. Your uploaded files stay for HR review.

@@ -277,7 +277,7 @@ export default function ProfileView() {
       <div className="space-y-6">
         <div className="dlg-card flex flex-col items-center gap-3 p-6 text-center sm:p-10">
           <AlertCircle className="h-6 w-6 text-[var(--bad)]" />
-          <p className="text-sm text-body-gray">{error}</p>
+          <p className="text-sm text-stone">{error}</p>
           <button type="button" onClick={() => void loadAll(false)} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
             <RefreshCw className="mr-2 inline h-3.5 w-3.5" /> Retry
           </button>
@@ -369,7 +369,7 @@ export default function ProfileView() {
         {!isComplete && (
           <div className="mt-5 flex items-start gap-3 rounded-lg bg-cloud/60 px-4 py-3">
             <Info className="h-4 w-4 shrink-0 text-stone" aria-hidden="true" />
-            <p className="min-w-0 flex-1 text-sm leading-relaxed text-body-gray">
+            <p className="min-w-0 flex-1 text-sm leading-relaxed text-stone">
               Profile completion requires your Personal Information (first name, last name, and email) and at least one
               entry each in Education and Work Experiences.
             </p>
@@ -627,7 +627,7 @@ export default function ProfileView() {
       <AlertDialog open={markOpen} onOpenChange={setMarkOpen}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-ink">Mark your profile as complete?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Mark your profile as complete?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-stone">
               Your profile will be ready for application and subject to verification by HR. All statements become part
               of your civil-service application record.

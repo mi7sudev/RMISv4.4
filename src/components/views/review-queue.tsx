@@ -228,7 +228,7 @@ export default function ReviewQueue() {
       />
       {/* QA 2026-02: scope of administrator access to Review */}
       {isAdmin && (
-        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
+        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-stone" role="note">
           <span className="font-semibold text-ink">Administrator access:</span>{" "}
           you can view and assist with every evaluation in this queue. Scoring decisions and
           recommendations remain the responsibility of the assigned evaluators.

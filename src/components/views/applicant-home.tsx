@@ -224,11 +224,11 @@ function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; 
       </div>
       <h3 className="mt-3 text-base font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-lg">{app.job?.title ?? "Position"}</h3>
       {place && (
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-body-gray">
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-stone">
           <MapPin className="h-4 w-4" aria-hidden="true" /> {place}
         </p>
       )}
-      <p className="mt-1 flex items-center gap-1.5 text-xs text-body-gray">
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
         <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Applied{" "}
         <span className="num">{formatDate(app.dateApplied)}</span>
       </p>
@@ -238,8 +238,8 @@ function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; 
       {/* Next hint — the card's closing block (the full posting lives one
           click away, in the application detail modal). */}
       <div className="mt-3 border-t border-divider pt-2.5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">Next Step</p>
-        <p className="mt-1 text-xs leading-relaxed text-body-gray">{nextStepHint(stage)}</p>
+        <p className="eyebrow text-stone">Next Step</p>
+        <p className="mt-1 text-xs leading-relaxed text-stone">{nextStepHint(stage)}</p>
       </div>
     </button>
   );
@@ -285,7 +285,7 @@ function MqrLedger({ position }: { position: PositionWire | null }) {
         {visible.map((r) => (
           <div key={r.label} className="rounded-lg bg-cloud/60 p-3">
             <p className="text-xs font-medium text-stone">{r.label}</p>
-            <p className="mt-0.5 whitespace-pre-line text-sm text-body-gray">{r.value}</p>
+            <p className="mt-0.5 whitespace-pre-line text-sm text-stone">{r.value}</p>
           </div>
         ))}
       </div>
@@ -359,7 +359,7 @@ function ApplicationDetailModal({
             <IconChip icon={BadgeCheck} tone="emerald" size={36} iconSize={17} />
             <div>
               <p className="text-sm font-medium text-ink">Successfully Applied</p>
-              <p className="text-xs text-body-gray">
+              <p className="text-xs text-stone">
                 Applied <span className="num">{formatDate(application.dateApplied)}</span>
               </p>
             </div>
@@ -406,7 +406,7 @@ function ApplicationDetailModal({
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent className="dlg-card-plain">
             <AlertDialogHeader>
-              <AlertDialogTitle className="font-display text-xl text-ink">Cancel this application?</AlertDialogTitle>
+              <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Cancel this application?</AlertDialogTitle>
               <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
                 Your application for {job?.title ?? "this position"} will be withdrawn. You may apply again while the
                 position is still open. Once review has started, applications can no longer be cancelled.
@@ -504,10 +504,10 @@ function JobListCard({
           className="focus-ring min-w-0 flex-1 px-5 py-6 text-left sm:px-8 sm:py-7"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <h3 className="min-w-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-ink sm:text-2xl">{humanize(title)}</h3>
+            <h3 className="min-w-0 text-lg font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-2xl">{humanize(title)}</h3>
             {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-body-gray">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-stone">
             {meta.map((m, idx) => (
               <Fragment key={idx}>
                 {idx > 0 && (
@@ -551,7 +551,7 @@ function JobListCard({
               {job.briefDescription && (
                 <div>
                   <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Job description</h4>
-                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-body-gray">{job.briefDescription}</p>
+                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
                 </div>
               )}
               {/* 3-up everywhere: a 6-up row inside the 7/12 pane leaves
@@ -752,7 +752,7 @@ export default function ApplicantHome() {
             <IconChip icon={AlertCircle} tone="gold" size={36} iconSize={17} className="mt-0.5" />
             <div>
               <p className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Complete Your Profile</p>
-              <p className="mt-0.5 text-sm text-body-gray">
+              <p className="mt-0.5 text-sm text-stone">
                 Finish your applicant profile to apply for positions and speed up processing.
               </p>
             </div>

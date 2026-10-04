@@ -50,7 +50,7 @@ const TRUST_POINTS: ReadonlyArray<{ icon: LucideIcon; tone: ChipTone; text: stri
  *  the watermark is decorative and pointer-events-none. */
 function AuthBrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] lg:flex lg:w-[42%] xl:w-[46%]">
+    <aside className="relative hidden overflow-hidden hero-sky lg:flex lg:w-[42%] xl:w-[46%]">
       {/* Ink watermark (decorative) */}
       <span
         aria-hidden="true"
@@ -64,19 +64,18 @@ function AuthBrandPanel() {
           {/* Official two-logo lockup — the emblems' art carries transparent
               backgrounds, so it floats directly on the white capsule. */}
           <BrandLogo logoSize={22} />
-          <span className="text-sm font-semibold text-ink">RMIS</span>
+          <span className="text-brand-nav font-medium text-ink">RMIS</span>
         </div>
 
         {/* QA 2026-02: spell out the acronym in full — the system name is
             "Recruitment Management Information System", not "Recruitment portal". */}
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-body-gray">
-          Recruitment Management Information System
-        </p>
+        <p className="eyebrow mt-5 text-stone">Recruitment Management Information System</p>
 
-        <h1 className="mt-10 font-display text-[clamp(30px,2.6vw,38px)] leading-[1.18] text-ink">
+        {/* Spec card-heading role: Ink 40px/40px, weight 600, -1.2px tracking */}
+        <h1 className="font-display mt-10 text-[40px] leading-none tracking-[-1.2px] text-ink">
           Build a career that moves the nation forward.
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-body-gray">
+        <p className="mt-4 text-sm leading-relaxed text-stone">
           The official hiring portal of the Metals Industry Research and Development Center.
         </p>
 
@@ -87,7 +86,7 @@ function AuthBrandPanel() {
               className="flex items-center gap-3.5 rounded-xl bg-white p-3.5 shadow-e1"
             >
               <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} />
-              <span className="text-[13px] font-medium text-ink">{point.text}</span>
+              <span className="text-xs font-medium text-ink">{point.text}</span>
             </li>
           ))}
         </ul>
@@ -190,7 +189,7 @@ export default function SignInView() {
           <div>
             {/* Card header — mobile/tablet only; the lg+ brand panel carries brand + heading */}
             <div className="lg:hidden">
-              <h2 className="text-center font-display text-3xl text-ink">Welcome back</h2>
+              <h2 className="text-center text-2xl font-semibold leading-none tracking-[-0.01em] text-ink">Welcome back</h2>
             </div>
             <p className="mt-2 text-center text-sm text-body-gray lg:mt-0 lg:text-left">
               Sign in with your email or username to continue.
@@ -253,7 +252,7 @@ export default function SignInView() {
               <button
                 type="submit"
                 disabled={busy}
-                className="dlg-cta min-h-[44px] w-full text-sm font-medium disabled:opacity-50"
+                className="dlg-cta text-nav min-h-[44px] w-full font-medium disabled:opacity-50"
               >
                 {busy ? "Signing in…" : "Sign in"}
               </button>
@@ -314,7 +313,7 @@ export default function SignInView() {
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="dlg-card-plain sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl tracking-[-0.02em] text-ink">Reset your password</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Reset your password</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-body-gray">
               Enter the email address on your account (applicants, evaluators, and administrators
               alike) and we'll send you a reset link. The link expires in 30 minutes.

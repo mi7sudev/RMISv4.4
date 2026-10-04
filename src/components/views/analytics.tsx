@@ -268,7 +268,7 @@ export default function Analytics() {
         />
         <div className="dlg-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-body-gray">{error}</p>
+          <p className="text-sm text-stone">{error}</p>
           <button type="button" className={ghostBtn} onClick={() => void load()}>
             Retry
           </button>

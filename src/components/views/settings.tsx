@@ -263,7 +263,7 @@ function UsersPanel() {
       <AlertDialog open={!!disableTarget} onOpenChange={(o) => !o && setDisableTarget(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl">Disable {disableTarget?.username}?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Disable {disableTarget?.username}?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-stone">
               The account will be signed out and cannot sign in until re-enabled. Nothing is permanently deleted.
             </AlertDialogDescription>
@@ -278,7 +278,7 @@ function UsersPanel() {
       <AlertDialog open={!!hardTarget} onOpenChange={(o) => !o && setHardTarget(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl">Permanently delete {hardTarget?.username}?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Permanently delete {hardTarget?.username}?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-stone">
               This removes the account and its applicant profile. Administrators and your own account are protected.
             </AlertDialogDescription>
@@ -661,7 +661,7 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
       </div>
 
       {readOnly ? (
-        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-body-gray" role="note">
+        <p className="rounded-xl bg-cloud/70 px-4 py-2.5 text-xs leading-relaxed text-stone" role="note">
           <span className="font-semibold text-ink">Read-only view:</span> notification sending and
           gateway configuration are managed by system administrators.
         </p>

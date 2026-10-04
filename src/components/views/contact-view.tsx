@@ -70,7 +70,7 @@ export default function ContactView() {
               <span className="grid h-12 w-12 place-items-center rounded-full bg-cloud text-metric-blue">
                 <LifeBuoy className="h-6 w-6" aria-hidden="true" />
               </span>
-              <h2 className="font-display text-xl text-ink">Inquiry received</h2>
+              <h2 className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Inquiry received</h2>
               <p className="max-w-sm text-sm leading-relaxed text-body-gray">
                 Thank you, your request is now in the HR queue. Keep an eye on your inbox for the
                 response.
@@ -167,7 +167,7 @@ export default function ContactView() {
               </span>
               <div className="min-w-0">
                 <p className="eyebrow">{c.label}</p>
-                <p className="mt-1 text-sm leading-relaxed text-body-gray">{c.value}</p>
+                <p className="mt-1 text-sm leading-relaxed text-stone">{c.value}</p>
               </div>
             </div>
           ))}

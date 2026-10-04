@@ -66,7 +66,7 @@ export default function ResetPasswordView() {
                 <KeyRound className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <h1 className="font-display text-2xl tracking-[-0.02em] text-ink">Choose a new password</h1>
+                <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Choose a new password</h1>
                 <p className="mt-1.5 text-sm leading-relaxed text-body-gray">
                   Pick a strong password of at least 6 characters for your Recruitment Management
                   Information System account.
@@ -86,7 +86,7 @@ export default function ResetPasswordView() {
                 </button>
               </div>
             ) : done ? (
-              <div className="mt-6 rounded-xl bg-cloud/70 p-4 text-sm text-body-gray">
+              <div className="mt-6 rounded-xl bg-cloud/70 p-4 text-sm text-stone">
                 <p className="flex items-center gap-2 font-medium text-ink">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Password updated
                 </p>
@@ -125,7 +125,7 @@ export default function ResetPasswordView() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="dlg-cta min-h-[44px] w-full text-sm font-medium disabled:opacity-50"
+                  className="dlg-cta text-nav min-h-[44px] w-full font-medium disabled:opacity-50"
                 >
                   {busy ? "Updating…" : "Update password"}
                 </button>

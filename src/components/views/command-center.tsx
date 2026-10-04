@@ -192,7 +192,7 @@ export default function CommandCenter() {
         {header}
         <div className="dlg-card p-8 text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-body-gray">{error}</p>
+          <p className="text-sm text-stone">{error}</p>
           <button type="button" className={ghostBtn} onClick={() => void load()}>
             Retry
           </button>
@@ -232,7 +232,7 @@ export default function CommandCenter() {
           <section className="space-y-3">
             <div className="flex flex-wrap items-baseline gap-3">
               <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Needs attention</h2>
-              <span className="text-xs text-body-gray">
+              <span className="text-xs text-stone">
                 <span className="num">{attentionTotal}</span> item{attentionTotal === 1 ? "" : "s"} across the board
               </span>
             </div>
@@ -389,7 +389,7 @@ export default function CommandCenter() {
                   key={label}
                   className="flex items-center justify-between gap-3 border-b border-[var(--border)] py-2.5 last:border-0"
                 >
-                  <dt className="text-xs text-body-gray">{label}</dt>
+                  <dt className="text-xs text-stone">{label}</dt>
                   <dd className="num text-sm font-medium text-ink">{value}</dd>
                 </div>
               ))}
@@ -413,7 +413,7 @@ export default function CommandCenter() {
                 [AlertTriangle, stats.needsAttention.failedLogins24h, "failed login(s) in the last 24 h", "bad"],
               ] as [typeof CalendarClock, number, string, "warn" | "bad"][]
             ).map(([Icon, count, label, alertTone]) => (
-              <p key={label} className="flex items-center gap-2 text-xs text-body-gray">
+              <p key={label} className="flex items-center gap-2 text-xs text-stone">
                 <Icon
                   className={`h-3.5 w-3.5 shrink-0 ${SUMMARY_TONE_TEXT[summaryTone(count, alertTone)]}`}
                   aria-hidden

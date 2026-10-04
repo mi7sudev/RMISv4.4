@@ -207,7 +207,7 @@ export function NavRail({ view }: { view: string }) {
             )}
             {expanded && (
               <span className="min-w-0 text-left">
-                <span className="block truncate text-sm font-semibold text-ink">RMIS</span>
+                <span className="text-brand-nav block truncate font-medium text-ink">RMIS</span>
               </span>
             )}
           </button>
@@ -230,9 +230,7 @@ export function NavRail({ view }: { view: string }) {
           {groups.map((g) => (
             <div key={g.group}>
               {expanded ? (
-                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--rail-text-dim)]">
-                  {g.group}
-                </p>
+                <p className="eyebrow mb-2 px-3 text-[var(--rail-text-dim)]">{g.group}</p>
               ) : (
                 <div className="mx-auto mb-2 h-px w-6 bg-[var(--rail-border)]" aria-hidden="true" />
               )}

@@ -49,10 +49,12 @@ import { cn } from "@/lib/utils";
 // ── Bevel accents ───────────────────────────────────────────────────────────
 
 const TITLE_SELECTED = "text-metric-blue";
+// Charcoal Download Pill (spec): Charcoal fill, Cloud text, 128px radius,
+// 16px/22.4 weight-500 text, 8px vertical / 16px horizontal padding.
 const QUICK_APPLY_BTN =
-  "dlg-cta inline-flex min-h-[44px] items-center justify-center gap-2 px-6 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50";
+  "dlg-cta text-nav inline-flex min-h-[44px] items-center justify-center gap-2 px-4 font-medium disabled:cursor-not-allowed disabled:opacity-50";
 const SAVE_BTN =
-  "dlg-ghost inline-flex min-h-[44px] items-center justify-center gap-2 px-7 text-sm font-medium";
+  "dlg-ghost text-nav inline-flex min-h-[44px] items-center justify-center gap-2 px-5 font-medium";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -157,17 +159,17 @@ function JobListCard({
       >
         <h3
           className={cn(
-            "text-[17px] font-semibold leading-snug",
+            "text-lg font-semibold leading-snug",
             selected ? TITLE_SELECTED : "text-ink"
           )}
         >
           {humanize(title)}
         </h3>
-        <p className="mt-1 text-[15px] text-ink">{company}</p>
-        <p className="mt-2.5 text-sm text-body-gray">{jobPlace(job)}</p>
-        {salary != null && <p className="num mt-0.5 text-sm text-body-gray">{formatCurrency(salary)} per month</p>}
+        <p className="text-lg mt-1 text-ink">{company}</p>
+        <p className="mt-2.5 text-sm text-stone">{jobPlace(job)}</p>
+        {salary != null && <p className="num mt-0.5 text-sm text-stone">{formatCurrency(salary)} per month</p>}
         {job.briefDescription && (
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-body-gray">{job.briefDescription}</p>
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
         )}
       </button>
 
@@ -176,7 +178,7 @@ function JobListCard({
         <button
           type="button"
           onClick={onSelect}
-          className="focus-ring num rounded-full px-2 py-1.5 text-xs text-body-gray transition-colors hover:text-ink"
+          className="focus-ring num rounded-full px-2 py-1.5 text-xs text-stone transition-colors hover:text-ink"
           aria-label={`Open ${humanize(title)}`}
         >
           {timeAgo(postedAt(job))}
@@ -187,7 +189,7 @@ function JobListCard({
             onClick={onToggle}
             aria-expanded={expanded}
             aria-label={expanded ? `Collapse: ${humanize(title)}` : `Quick view: ${humanize(title)}`}
-            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-body-gray transition-colors hover:bg-white/70 hover:text-ink"
+            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
           >
             <ChevronDown
               className={cn("h-[18px] w-[18px] transition-transform duration-200", expanded && "rotate-180")}
@@ -198,7 +200,7 @@ function JobListCard({
             onClick={onSave}
             aria-pressed={saved}
             aria-label={saved ? `Remove ${humanize(title)} from saved` : `Save ${humanize(title)}`}
-            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-body-gray transition-colors hover:bg-white/70 hover:text-ink"
+            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
           >
             <Bookmark className={cn("h-[18px] w-[18px]", saved && "fill-current text-metric-blue")} />
           </button>
@@ -225,7 +227,7 @@ function JobListCard({
               {job.briefDescription && (
                 <div>
                   <h4 className="font-display text-lg text-ink">Job description</h4>
-                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-body-gray">
+                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-stone">
                     {job.briefDescription}
                   </p>
                 </div>
@@ -285,7 +287,7 @@ function TextBullets({ text }: { text: string }) {
     .filter(Boolean);
   if (items.length === 0) return null;
   return (
-    <ul className="list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-body-gray">
+    <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed text-stone">
       {items.map((item, i) => (
         <li key={i}>{item}</li>
       ))}
@@ -299,7 +301,7 @@ function PostingSection({ title, html, text }: { title: string; html: string | n
     return (
       <section className="space-y-3">
         <h3 className="text-lg font-semibold tracking-[-0.01em] text-ink">{title}</h3>
-        <div className="rich-text text-[15px] leading-relaxed text-body-gray" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="rich-text text-base leading-relaxed text-stone" dangerouslySetInnerHTML={{ __html: html }} />
       </section>
     );
   }
@@ -362,11 +364,11 @@ function JobDetail({
         <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Back to job list
       </button>
 
-      <h2 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-3xl">
+      <h2 className="text-2xl font-semibold leading-tight tracking-[-0.01em] text-ink sm:text-3xl">
         {humanize(title)}
       </h2>
       <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-        <span className="text-[15px] font-medium text-ink">DOST-MIRDC</span>
+        <span className="text-base font-medium text-ink">DOST-MIRDC</span>
         <BadgeCheck className="h-[18px] w-[18px] shrink-0 text-stone" aria-label="Verified agency" />
         <button
           type="button"
@@ -378,7 +380,7 @@ function JobDetail({
       </div>
 
       <ul className="mt-4 space-y-2.5">
-        <li className="flex items-start gap-2.5 text-[15px] text-body-gray">
+        <li className="flex items-start gap-2.5 text-base text-stone">
           <MapPin className="mt-0.5 h-[18px] w-[18px] shrink-0 text-stone" aria-hidden="true" />
           {jobPlace(job)}
         </li>
@@ -386,8 +388,8 @@ function JobDetail({
           <li
             key={i}
             className={cn(
-              "flex items-start gap-2.5 text-[15px]",
-              m.danger ? "font-semibold text-[var(--bad)]" : "text-body-gray"
+              "flex items-start gap-2.5 text-base",
+              m.danger ? "font-semibold text-[var(--bad)]" : "text-stone"
             )}
           >
             <m.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-stone" aria-hidden="true" />
@@ -396,7 +398,7 @@ function JobDetail({
         ))}
       </ul>
 
-      <p className="num mt-4 text-sm text-body-gray">Posted {timeAgo(postedAt(job))}</p>
+      <p className="num mt-4 text-sm text-stone">Posted {timeAgo(postedAt(job))}</p>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button type="button" onClick={onApply} disabled={overdue} className={QUICK_APPLY_BTN}>
@@ -425,7 +427,7 @@ function JobDetail({
             .split(/\n{2,}/)
             .filter((p) => p.trim())
             .map((p, i) => (
-              <p key={i} className="text-[15px] leading-relaxed text-body-gray">
+              <p key={i} className="text-base leading-relaxed text-stone">
                 {p}
               </p>
             ))}
@@ -559,22 +561,20 @@ export default function PublicLanding() {
             arranged as a split: display headline + copy + single charcoal
             capsule CTA left; official seal lockup + authority line right as
             the quiet institutional proof strip (real marks only). */}
-        <section className="rounded-[32px] bg-[linear-gradient(180deg,#d2e5ff,#fff9ee)] p-6 sm:p-8 lg:px-10 lg:py-10">
+        <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10">
           <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
             {/* QA 2026-02: header renamed to "Job Opportunities" to match the
                 Positions tab; the live "N open" pill was removed — it read as
                 an unclickable button. */}
             <div className="min-w-0">
-              <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.03em] text-ink sm:text-6xl">
-                Job Opportunities
-              </h1>
-              <p className="mt-3 max-w-xl text-base leading-relaxed text-body-gray">
+              <h1 className="text-display-hero">Job Opportunities</h1>
+              <p className="text-body mt-3 max-w-xl text-body-gray">
                 Current vacancies at DOST-MIRDC. Pick a role to read the full posting.
               </p>
               <div className="mt-6">
                 <button
                   onClick={() => navigate("vacant-positions")}
-                  className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 text-sm font-medium"
+                  className="dlg-cta text-nav inline-flex min-h-[44px] items-center gap-2 px-4 font-medium"
                 >
                   Browse the full board
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -589,7 +589,7 @@ export default function PublicLanding() {
                 <p className="text-sm font-semibold leading-snug text-ink">
                   Metals Industry Research and Development Center
                 </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-body-gray">
+                <p className="mt-0.5 text-xs leading-relaxed text-stone">
                   An agency of the Department of Science and Technology, Republic of the Philippines
                 </p>
               </div>

@@ -162,7 +162,7 @@ export default function EducationSection({
                     {row.educationLevel ? humanize(row.educationLevel) : "Education entry"}
                     {row.course ? `, ${row.course}` : ""}
                   </p>
-                  <p className="num mt-1 text-sm text-body-gray">
+                  <p className="num mt-1 text-sm text-stone">
                     {row.schoolName ?? "-"}
                     {row.yearFrom || row.yearTo ? ` · ${row.yearFrom ?? "?"}–${row.yearTo ?? "Ongoing"}` : ""}
                     {row.yearGraduated ? ` · Graduated ${row.yearGraduated}` : ""}
@@ -240,7 +240,7 @@ export default function EducationSection({
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-ink">Remove this education entry?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Remove this education entry?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This permanently removes the entry from your profile.
             </AlertDialogDescription>

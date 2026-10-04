@@ -211,7 +211,7 @@ export default function OnboardingTour({
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-cloud text-metric-blue">
                 <Compass className="h-5 w-5" aria-hidden="true" />
               </span>
-              <DialogTitle className="font-display text-xl tracking-[-0.02em] text-ink">{title}</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">{title}</DialogTitle>
             </div>
             <DialogDescription className="text-sm leading-relaxed text-body-gray">
               {description}

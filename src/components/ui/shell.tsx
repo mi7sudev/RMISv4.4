@@ -75,9 +75,9 @@ export function PageHeader({
             </div>
             {description ? (
               typeof description === "string" ? (
-                <p className="mt-1 text-sm text-body-gray">{description}</p>
+                <p className="mt-1 text-sm text-stone">{description}</p>
               ) : (
-                <div className="mt-1 text-sm text-body-gray">{description}</div>
+                <div className="mt-1 text-sm text-stone">{description}</div>
               )
             ) : null}
             {meta ? (

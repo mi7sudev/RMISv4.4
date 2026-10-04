@@ -283,7 +283,7 @@ function EducationCards({ rows }: { rows: SnapRow[] }) {
             <p className="text-sm text-ink">{str(r.degree) || str(r.course) || str(r.specifyOthers) || "-"}</p>
             {r.ongoing === true && <span className="status-pill status-neutral shrink-0">Ongoing</span>}
           </div>
-          <p className="mt-1 text-xs text-body-gray">
+          <p className="mt-1 text-xs text-stone">
             {[str(r.educationLevel), str(r.schoolName)].filter(Boolean).join(" · ") || "-"}
           </p>
           <p className="num mt-0.5 text-xs text-stone">
@@ -291,7 +291,7 @@ function EducationCards({ rows }: { rows: SnapRow[] }) {
               .filter(Boolean)
               .join(" · ") || "-"}
           </p>
-          {str(r.awards) && <p className="mt-1 text-xs text-body-gray">Honors: {str(r.awards)}</p>}
+          {str(r.awards) && <p className="mt-1 text-xs text-stone">Honors: {str(r.awards)}</p>}
         </div>
       ))}
     </div>
@@ -310,7 +310,7 @@ function ExperienceCards({ rows }: { rows: SnapRow[] }) {
               <span className="dlg-pill shrink-0 rounded-full bg-charcoal px-2 py-0.5 text-xs font-medium text-[#ebf0f8]">Present</span>
             )}
           </div>
-          <p className="mt-1 text-xs text-body-gray">{str(r.employerName) || "-"}</p>
+          <p className="mt-1 text-xs text-stone">{str(r.employerName) || "-"}</p>
           <p className="num mt-0.5 text-xs text-stone">
             {[
               (str(r.dateFrom) || str(r.dateTo)) &&
@@ -333,7 +333,7 @@ function TrainingCards({ rows }: { rows: SnapRow[] }) {
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <p className="text-sm text-ink">{str(r.title) || "-"}</p>
-          <p className="num mt-1 text-xs text-body-gray">
+          <p className="num mt-1 text-xs text-stone">
             {[str(r.typeOfTraining), str(r.numberHours) && `${str(r.numberHours)} hrs`, str(r.hourDecimal) && `${str(r.hourDecimal)} hrs`]
               .filter(Boolean)
               .join(" · ") || "-"}
@@ -356,7 +356,7 @@ function EligibilityCards({ rows }: { rows: SnapRow[] }) {
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <p className="text-sm text-ink">{str(r.title) || str(r.eligibilityTitle) || "-"}</p>
-          <p className="num mt-1 text-xs text-body-gray">
+          <p className="num mt-1 text-xs text-stone">
             {[str(r.rating) && `Rating: ${str(r.rating)}`, snapshotDisplayDate(r.examDate), str(r.examPlace), str(r.licenseNumber) && `License ${str(r.licenseNumber)}`]
               .filter(Boolean)
               .join(" · ") || "-"}
@@ -374,7 +374,7 @@ function AwardCards({ rows }: { rows: SnapRow[] }) {
       {rows.map((r, i) => (
         <div key={i} className="rounded-lg bg-cloud/60 p-4">
           <p className="text-sm text-ink">{str(r.details) || "-"}</p>
-          <p className="num mt-1 text-xs text-body-gray">
+          <p className="num mt-1 text-xs text-stone">
             {[str(r.recognitionType), str(r.scope), str(r.provider), snapshotDisplayDate(r.dateGranted)]
               .filter(Boolean)
               .join(" · ") || "-"}
@@ -412,7 +412,7 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
           <IconChip icon={ListChecks} tone="gold" size={36} iconSize={16} />
           <div className="min-w-0">
             <h3 className="text-[15px] font-semibold leading-6 text-ink">Requirements match</h3>
-            <p className="mt-0.5 text-xs text-body-gray">{vm.meaning}</p>
+            <p className="mt-0.5 text-xs text-stone">{vm.meaning}</p>
           </div>
         </div>
         <StatusPill status={vm.chip} variant={vm.variant} className="shrink-0" />
@@ -432,7 +432,7 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
                   <p className="min-w-0 flex-1 text-[13px] leading-5 text-ink line-clamp-2">{c.standard || "-"}</p>
                   <StatusPill status={cp.label} variant={cp.variant} className="shrink-0" />
                 </div>
-                <p className="num mt-1.5 text-xs leading-5 text-body-gray line-clamp-2">
+                <p className="num mt-1.5 text-xs leading-5 text-stone line-clamp-2">
                   {c.applicantSummary || "No applicant data on file."}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -544,7 +544,7 @@ function NoticeFormDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">
+          <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">
             {kind === "interview" ? "Send interview invitation" : "Send skills-exam notice"}
           </DialogTitle>
           <DialogDescription>
@@ -683,7 +683,7 @@ function DecisionDialog({
               ) : (
                 <XCircle className="h-5 w-5 shrink-0 text-[var(--bad)]" aria-hidden />
               )}
-              <DialogTitle className="font-display text-xl">
+              <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">
                 {shortlist ? "Shortlist this applicant" : "Mark as Not Qualified"}
               </DialogTitle>
             </div>
@@ -839,7 +839,7 @@ function DirectEmailDialog({
       <Dialog open onOpenChange={(v) => !v && onClose()}>
         <DialogContent className="max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Send a direct email</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Send a direct email</DialogTitle>
             <DialogDescription>
               The recipient is retrieved automatically from the email on the applicant's profile.
             </DialogDescription>
@@ -971,7 +971,7 @@ function DirectEmailCard({
         <IconChip icon={Mail} tone="slate" size={28} iconSize={13} />
         <h3 className="text-[15px] font-semibold leading-6 text-ink">Direct email</h3>
       </div>
-      <p className="mt-1 text-xs text-body-gray">
+      <p className="mt-1 text-xs text-stone">
         {recipient
           ? "Recipient is pulled from the applicant's profile email; attachments ≤ 3 files × 5 MB."
           : "No email on record; the applicant left the profile email blank."}
@@ -989,9 +989,9 @@ function DirectEmailCard({
         <p className="text-xs font-medium text-stone">History</p>
         <div className="mt-2 max-h-48 space-y-1.5 overflow-y-auto scroll-thin">
           {emails === null ? (
-            <p className="text-xs text-body-gray">Loading…</p>
+            <p className="text-xs text-stone">Loading…</p>
           ) : emails.length === 0 ? (
-            <p className="text-xs text-body-gray">No direct emails sent yet.</p>
+            <p className="text-xs text-stone">No direct emails sent yet.</p>
           ) : (
             emails.map((m) => {
               const atts = parseAttachments(m.attachments);
@@ -1284,7 +1284,7 @@ export function ReviewWorkspace({
           <TabsContent value="documents" className="pt-4">
             <div className="rounded-lg bg-cloud/60 p-6 text-center">
               <IconChip icon={FileText} tone="slate" size={40} className="mx-auto" />
-              <p className="mt-2 text-sm text-body-gray">Supporting documents are verified in person at the next stage.</p>
+              <p className="mt-2 text-sm text-stone">Supporting documents are verified in person at the next stage.</p>
             </div>
           </TabsContent>
         </Tabs>
@@ -1332,7 +1332,7 @@ export function ReviewWorkspace({
                 Not Qualified
               </button>
             </div>
-            <p className="text-xs text-body-gray">
+            <p className="text-xs text-stone">
               {email ? `Decisions email ${email}.` : "No email on record for this applicant."}
             </p>
           </div>
@@ -1344,7 +1344,7 @@ export function ReviewWorkspace({
               <IconChip icon={History} tone="slate" size={28} iconSize={13} />
               <h3 className="text-[15px] font-semibold leading-6 text-ink">Revise decision</h3>
             </div>
-            <p className="text-xs text-body-gray">Changing the decision notifies the applicant.</p>
+            <p className="text-xs text-stone">Changing the decision notifies the applicant.</p>
             <button
               type="button"
               className={
@@ -1406,9 +1406,9 @@ export function ReviewWorkspace({
           </div>
           <div className="max-h-48 space-y-1.5 overflow-y-auto scroll-thin">
             {notices === null ? (
-              <p className="text-xs text-body-gray">Loading…</p>
+              <p className="text-xs text-stone">Loading…</p>
             ) : notices.length === 0 ? (
-              <p className="text-xs text-body-gray">No notices sent yet.</p>
+              <p className="text-xs text-stone">No notices sent yet.</p>
             ) : (
               notices.map((n) => (
                 <div key={n.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">

@@ -92,7 +92,7 @@ function d(v: unknown): string {
 function LedgerRow({ label, value, num = false }: { label: string; value: string; num?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] py-2.5 last:border-0">
-      <span className="shrink-0 pt-0.5 text-xs text-body-gray">{label}</span>
+      <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
       <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "-"}</span>
     </div>
   );
@@ -102,7 +102,7 @@ function EntityCard({ title, lines }: { title: string; lines: string[] }) {
   return (
     <div className="rounded-lg bg-cloud/60 p-4">
       <p className="text-sm text-ink">{title}</p>
-      {lines.filter(Boolean).length > 0 && <p className="num mt-1 text-xs text-body-gray">{lines.filter(Boolean).join(" · ")}</p>}
+      {lines.filter(Boolean).length > 0 && <p className="num mt-1 text-xs text-stone">{lines.filter(Boolean).join(" · ")}</p>}
     </div>
   );
 }
@@ -110,7 +110,7 @@ function EntityCard({ title, lines }: { title: string; lines: string[] }) {
 function EntityGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-[var(--border)] pt-4 first:border-0 first:pt-0">
-      <h3 className="text-[13px] font-medium uppercase tracking-[0.06em] text-body-gray">{label}</h3>
+      <h3 className="eyebrow">{label}</h3>
       <div className="mt-2.5 space-y-3">{children}</div>
     </div>
   );
@@ -506,7 +506,7 @@ export default function CandidateDetail() {
                     {doc.originalName}
                     <ExternalLink className="inline h-3 w-3" aria-hidden />
                   </a>
-                  <p className="num mt-0.5 text-xs text-body-gray">
+                  <p className="num mt-0.5 text-xs text-stone">
                     {doc.category} · {(doc.size / 1024).toFixed(0)} KB · {formatDateTime(doc.createdAt)}
                   </p>
                 </div>
@@ -534,7 +534,7 @@ export default function CandidateDetail() {
                 <span className={cn("stage-dot relative shrink-0", dotClass(variantForStatus(app.status)))} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">{app.positionTitle || app.jobTitle}</p>
-                  <p className="num mt-0.5 text-xs text-body-gray">Applied {formatDate(app.dateApplied)}</p>
+                  <p className="num mt-0.5 text-xs text-stone">Applied {formatDate(app.dateApplied)}</p>
                 </div>
                 <StatusPill status={app.status} />
                 <ArrowUpRight

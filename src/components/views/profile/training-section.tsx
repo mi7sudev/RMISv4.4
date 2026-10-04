@@ -151,7 +151,7 @@ export default function TrainingSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-ink">{row.title ?? "-"}</p>
-                  <p className="num mt-1 text-sm text-body-gray">
+                  <p className="num mt-1 text-sm text-stone">
                     {row.typeOfTraining ?? "-"}
                     {row.specifyTraining ? ` (${row.specifyTraining})` : ""}
                     {row.numberHours != null ? ` · ${row.numberHours} hrs` : ""}
@@ -221,7 +221,7 @@ export default function TrainingSection({
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-ink">Remove this training entry?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Remove this training entry?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This permanently removes the entry from your profile and may change your training-hours total.
             </AlertDialogDescription>

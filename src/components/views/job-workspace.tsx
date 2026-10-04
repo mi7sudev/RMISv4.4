@@ -218,7 +218,7 @@ export default function JobWorkspace() {
   if (!valid) {
     return (
       <div className="dlg-card p-8 text-center space-y-3">
-        <p className="text-sm text-body-gray">No job selected.</p>
+        <p className="text-sm text-stone">No job selected.</p>
         <button type="button" className={ctaBtn} onClick={() => navigate("recruitment")}>
           Go to recruitment
         </button>
@@ -230,7 +230,7 @@ export default function JobWorkspace() {
     return (
       <div className="dlg-card p-8 text-center space-y-4">
         <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-        <p className="text-sm text-body-gray">{error}</p>
+        <p className="text-sm text-stone">{error}</p>
         <button type="button" className={ghostBtn} onClick={() => void load()}>
           Retry
         </button>
@@ -411,7 +411,7 @@ export default function JobWorkspace() {
         <TabsContent value="candidates" className="mt-4">
           {apps.length === 0 ? (
             <div className="dlg-card p-6 sm:p-10">
-              <p className="py-6 text-center text-sm text-body-gray">No applications for this posting yet.</p>
+              <p className="py-6 text-center text-sm text-stone">No applications for this posting yet.</p>
             </div>
           ) : (
             <div className="dlg-card-plain overflow-hidden">

@@ -268,7 +268,7 @@ export function JobFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[92dvh] overflow-y-auto scroll-thin">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">{editing ? "Edit job posting" : "Create job posting"}</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">{editing ? "Edit job posting" : "Create job posting"}</DialogTitle>
           <DialogDescription>
             {editing
               ? "Updates are saved to the posting; qualification vitals write through to the position master."

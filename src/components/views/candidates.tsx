@@ -117,7 +117,7 @@ function StatCard({
         <IconChip icon={icon} tone={chipTone} size={40} />
       </div>
       <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
-      <p className="mt-2 text-xs text-body-gray">{hint}</p>
+      <p className="mt-2 text-xs text-stone">{hint}</p>
     </div>
   );
 }
@@ -155,7 +155,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
     <Dialog open={id !== null} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[92dvh] overflow-y-auto scroll-thin">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Candidate</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Candidate</DialogTitle>
           <DialogDescription>Quick identity and pipeline snapshot.</DialogDescription>
         </DialogHeader>
 

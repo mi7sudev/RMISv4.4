@@ -51,7 +51,7 @@ export function MobileNav({ view }: { view: string }) {
               className="flex min-h-[44px] items-center gap-3"
             >
               <BrandLogo logoSize={26} />
-              <span className="text-sm font-medium text-ink">RMIS</span>
+              <span className="text-brand-nav font-medium text-ink">RMIS</span>
             </button>
           </div>
 
@@ -59,9 +59,7 @@ export function MobileNav({ view }: { view: string }) {
           <nav className="flex-1 space-y-5 overflow-y-auto scroll-thin px-3 py-4" aria-label="Workspace">
             {groups.map((g) => (
               <div key={g.group}>
-                <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-wider text-pebble">
-                  {g.group}
-                </p>
+                <p className="eyebrow mb-1.5 px-3 text-pebble">{g.group}</p>
                 <ul className="space-y-1">
                   {g.items.map((item) => {
                     const active = item.view === view;
