@@ -1,7 +1,11 @@
 "use client";
 
 // ============================================================================
-// RMIS — shared presentation primitives for the premium enterprise pass.
+// RMIS — shared presentation primitives (Bevel edition).
+// upload/PROPOSED-RMIS-DESIGN.md: white editorial canvas, pale Cloud Card
+// geometry (24px radius, no borders, no shadows — the surface IS the
+// elevation), Ink 600 display headings with tight tracking, stone eyebrows,
+// monochrome chrome with metric accents rationed to data visuals.
 // PageHeader, StatusPill, KpiCard, EmptyState, SectionCard, Monogram,
 // SkeletonBlocks. Pure presentation: no fetching, no business logic.
 // ============================================================================
@@ -13,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { pillClass, type StatusVariant } from "@/lib/status-ui";
 
 // ── PageHeader ──────────────────────────────────────────────────────────────
-// The single enterprise page-header anatomy used by EVERY view (Task 35):
+// The single enterprise page-header anatomy used by EVERY view:
 // optional labelled back link (detail views) → eyebrow → title row
 // (title + titleAside badge) → description → meta row, with the action
 // cluster right-aligned and stacked below the title below xl.
@@ -63,25 +67,23 @@ export function PageHeader({
           {leading ? <div className="shrink-0">{leading}</div> : null}
           <div className="min-w-0">
             {eyebrow ? (
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-pebble">
-                {eyebrow}
-              </p>
+              <p className="eyebrow mb-1.5">{eyebrow}</p>
             ) : null}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
+              <h1 className="font-display truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
                 {title}
               </h1>
               {titleAside}
             </div>
             {description ? (
               typeof description === "string" ? (
-                <p className="mt-1 text-sm text-stone">{description}</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-stone">{description}</p>
               ) : (
-                <div className="mt-1 text-sm text-stone">{description}</div>
+                <div className="mt-1.5 text-sm leading-relaxed text-stone">{description}</div>
               )
             ) : null}
             {meta ? (
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">{meta}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">{meta}</div>
             ) : null}
           </div>
         </div>
@@ -112,7 +114,7 @@ export function StatusPill({
   );
 }
 
-// ── Monogram (gradient avatar tile) ─────────────────────────────────────────
+// ── Monogram (Charcoal identity avatar) ─────────────────────────────────────
 
 export function Monogram({
   children,
@@ -164,6 +166,9 @@ export function IconChip({
 }
 
 // ── KpiCard ─────────────────────────────────────────────────────────────────
+// Bevel Cloud Feature Card anatomy: #ebf0f8 surface, 24px radius, NO border,
+// NO shadow, 32px padding (p-8). The eyebrow labels the metric; the oversized
+// tabular numeral is the hero.
 
 const TONE_CHIP: Record<NonNullable<KpiCardProps["tone"]>, ChipTone> = {
   ok: "emerald",
@@ -200,7 +205,7 @@ export function KpiCard({
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <p className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone">{label}</p>
+        <p className="eyebrow pt-0.5">{label}</p>
         {Icon ? <IconChip icon={Icon} tone={TONE_CHIP[tone]} size={40} /> : null}
       </div>
       <div className="mt-4 flex items-end justify-between gap-3">
@@ -214,9 +219,8 @@ export function KpiCard({
   );
 
   const base = cn(
-    "dlg-card-plain border border-black/[0.07] bg-gradient-to-b from-white to-[#fdfdfc] p-6 shadow-e2",
-    onClick &&
-      "group focus-ring cursor-pointer lift hover:border-ink/15",
+    "dlg-card p-6",
+    onClick && "group focus-ring cursor-pointer lift",
     className
   );
 
@@ -231,13 +235,10 @@ export function KpiCard({
 }
 
 // ── StatLedger ──────────────────────────────────────────────────────────────
-// The institutional stat band (Watershed / Statsig school, absorbed from the
-// inspo study): ONE white ledger whose cells are separated by hairline 1px
-// gaps painted with the divider color — no floating cards, no icon chips.
-// The oversized tabular numeral is the hero; a stone eyebrow labels it and a
-// body-gray caption quietly qualifies it. Shared by every workspace view so
-// the anatomy can never drift (previously hand-rolled twice).
-// ────────────────────────────────────────────────────────────────────────────
+// The institutional stat band: ONE white ledger with 24px radius whose cells
+// are separated by hairline 1px gaps painted with the divider color — no
+// floating cards, no icon chips. The oversized tabular numeral is the hero; a
+// stone eyebrow labels it and a body-gray caption quietly qualifies it.
 
 export function StatLedger({
   children,
@@ -253,7 +254,7 @@ export function StatLedger({
     <div
       aria-label={ariaLabel}
       className={cn(
-        "dlg-card-plain grid grid-cols-2 gap-px overflow-hidden bg-[var(--divider)] xl:grid-cols-4",
+        "dlg-card-plain grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-[var(--divider)] xl:grid-cols-4",
         className
       )}
     >
@@ -294,7 +295,7 @@ export function StatCell({
         type="button"
         onClick={onClick}
         aria-label={ariaLabel ?? label}
-        className="focus-ring block w-full bg-white p-5 text-left transition-colors hover:bg-fog sm:p-6"
+        className="focus-ring block w-full rounded-none bg-white p-5 text-left transition-colors first:rounded-tl-2xl first:rounded-bl-2xl hover:bg-fog sm:p-6"
       >
         {body}
       </button>
@@ -347,7 +348,7 @@ export function EmptyState({
     >
       <span
         className={cn(
-          "chip mb-4",
+          "chip mb-4 rounded-full",
           `chip-${tone}`,
           compact ? "h-10 w-10" : "h-14 w-14"
         )}
@@ -364,8 +365,8 @@ export function EmptyState({
 }
 
 // ── SectionCard ─────────────────────────────────────────────────────────────
-
-const SECTION_CHIP_TONE: Record<string, ChipTone> = {};
+// Bevel Cloud Feature Card: #ebf0f8 surface, 24px radius, no border, no
+// shadow, 32px padding (p-6 keeps in-app density; p-8 on wide screens).
 
 export function SectionCard({
   title,
@@ -397,13 +398,13 @@ export function SectionCard({
             {Icon ? (
               <IconChip
                 icon={Icon}
-                tone={chipTone ?? SECTION_CHIP_TONE[title ?? ""] ?? "slate"}
+                tone={chipTone ?? "slate"}
                 size={36}
                 iconSize={16}
               />
             ) : null}
             <div className="min-w-0">
-              <h2 className="truncate font-display text-lg leading-7 text-ink">{title}</h2>
+              <h2 className="font-display truncate text-lg leading-7 text-ink">{title}</h2>
               {/* Wraps below sm, truncates from sm up. Full-width nowrap (truncate
                   everywhere) gave the card a huge min-content floor that blew out
                   auto grid tracks on phones; wrapping text has none. */}
@@ -424,10 +425,10 @@ export function SkeletonKpis({ count = 4, className }: { count?: number; classNa
   return (
     <div className={cn("grid grid-cols-2 gap-4 lg:grid-cols-4", className)} aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="dlg-card-plain border border-black/[0.07] p-6 shadow-e1">
+        <div key={i} className="dlg-card p-6">
           <div className="flex items-start justify-between">
             <div className="skel h-3 w-20" />
-            <div className="skel h-10 w-10 rounded-xl" />
+            <div className="skel h-10 w-10 rounded-full" />
           </div>
           <div className="skel mt-4 h-8 w-16" />
         </div>
@@ -458,15 +459,15 @@ export function SkeletonKanban({ columns = 4, className }: { columns?: number; c
   return (
     <div className={cn("grid grid-cols-2 gap-4 xl:grid-cols-4", className)} aria-hidden="true">
       {Array.from({ length: columns }).map((_, i) => (
-        /* Tinted column panel + floating card blocks (mirrors KanbanColumn) */
-        <div key={i} className="flex flex-col gap-2 border border-black/[0.06] bg-fog p-2.5">
+        /* Pale cloud column panel + floating card blocks (mirrors KanbanColumn) */
+        <div key={i} className="flex flex-col gap-2 rounded-2xl bg-cloud p-2.5">
           <div className="flex items-center gap-2 px-1 pb-0.5 pt-0.5">
             <div className="skel h-2 w-2 rounded-full" />
             <div className="skel h-3.5 w-20" />
-            <div className="ml-auto skel h-5 w-6" />
+            <div className="ml-auto skel h-5 w-6 rounded-full" />
           </div>
-          <div className="skel h-24 w-full" />
-          <div className="skel h-24 w-full" />
+          <div className="skel h-24 w-full rounded-2xl" />
+          <div className="skel h-24 w-full rounded-2xl" />
         </div>
       ))}
     </div>

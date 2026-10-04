@@ -35,7 +35,7 @@ export function Footer() {
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div className="flex max-w-2xl items-start gap-3 text-xs leading-relaxed text-body-gray">
             {/* Icon chip — sharp square block */}
-            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border border-divider bg-cloud text-[#415eee]">
+            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-cloud text-[#415eee]">
               <ShieldCheck className="size-4" />
             </span>
             <p>

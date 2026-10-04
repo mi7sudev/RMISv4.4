@@ -68,8 +68,8 @@ export function MobileNav({ view }: { view: string }) {
                         <button
                           onClick={() => go(item.view)}
                           aria-current={active ? "page" : undefined}
-                          className={`flex min-h-[44px] w-full items-center gap-3 px-3.5 text-sm ${
-                            active ? "bg-ink text-white" : "text-stone hover:bg-fog hover:text-ink"
+                          className={`flex min-h-[44px] w-full items-center gap-3 rounded-full px-3.5 text-sm transition-colors ${
+                            active ? "bg-cloud font-medium text-ink" : "text-stone hover:bg-fog hover:text-ink"
                           }`}
                         >
                           <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
@@ -86,7 +86,7 @@ export function MobileNav({ view }: { view: string }) {
           {/* Account block */}
           <div className="shrink-0 space-y-3 border-t border-border p-4">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-[#ebf0f8]">
                 {initialsOf(user)}
               </span>
               <div className="min-w-0">

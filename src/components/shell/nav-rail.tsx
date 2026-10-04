@@ -216,7 +216,7 @@ export function NavRail({ view }: { view: string }) {
           {expanded && (
             <button
               onClick={toggleExpanded}
-              className="grid h-9 w-9 shrink-0 place-items-center text-[var(--rail-text-dim)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[var(--rail-text-dim)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink"
               aria-label="Collapse navigation"
               title="Collapse navigation"
             >
@@ -241,7 +241,7 @@ export function NavRail({ view }: { view: string }) {
                     <button
                       onClick={() => navigate(item.view)}
                       aria-current={active ? "page" : undefined}
-                      className={`group relative flex min-h-[44px] w-full items-center gap-3 text-sm transition-all duration-150 ${
+                      className={`group relative flex min-h-[44px] w-full items-center gap-3 rounded-full text-sm transition-all duration-150 ${
                         expanded ? "px-3.5" : "justify-center px-0"
                       } ${
                         active
@@ -293,7 +293,7 @@ export function NavRail({ view }: { view: string }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`flex min-h-[44px] w-full items-center gap-3 text-left hover:bg-[var(--rail-hover-bg)] ${
+                className={`flex min-h-[44px] w-full items-center gap-3 rounded-full text-left transition-colors hover:bg-[var(--rail-hover-bg)] ${
                   expanded ? "px-2" : "justify-center px-0"
                 }`}
                 aria-label="Account menu"

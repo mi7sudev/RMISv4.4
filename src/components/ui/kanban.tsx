@@ -2,14 +2,11 @@
 
 // ============================================================================
 // RMIS — shared kanban primitives (presentation only, no business logic).
-// Reference design (rmis-main-ui PipelineBoard): TINTED stage columns with
-// floating white cards — soft panel + inline header (stage dot + label +
-// count chip), preview cards then a dashed "+ N more" expander ("Show less"
-// to collapse), dashed empty column with inbox glyph. Cards carry the pastel
-// initial avatar, name, match-percentage badge, position / place / relative
-// applied meta rows, hairline divider and credential tag chips. Applicant
-// cards are softly rounded (12px, arbitrary value) so they read as floating
-// on the sharp tinted columns; columns, expanders and empty states stay square.
+// Bevel edition (upload/PROPOSED-RMIS-DESIGN.md): pale Cloud Card columns
+// (16px radius, no border), floating white applicant cards (16px radius,
+// image-lift shadow on hover), capsule count chips and tag chips. Stage dots
+// and pastel avatars stay as the only color moments — data-category accents
+// per the spec. Business logic untouched.
 // ============================================================================
 
 import * as React from "react";
@@ -21,11 +18,11 @@ import type { StageKey } from "@/lib/status";
 
 /** Tiny colored dot class per pipeline stage — also reused by stage filter tabs. */
 export const STAGE_DOT_CLASS: Record<StageKey | "Neutral", string> = {
-  "Applied": "bg-[#3d7ef0]",
+  "Applied": "bg-viz-1",
   "Under Review": "bg-[#c47f17]",
-  "Shortlisted": "bg-[#2e9e5b]",
+  "Shortlisted": "bg-viz-2",
   "Rejected": "bg-[#d0454f]",
-  "Neutral": "bg-[#b9b9c0]",
+  "Neutral": "bg-[#b9bfc9]",
 };
 
 export function StageDot({ stage, className }: { stage: StageKey | "Neutral"; className?: string }) {
@@ -97,14 +94,14 @@ export function MatchBadge({
   const pct = Math.round((metCount / requiredCount) * 100);
   const tone =
     pct >= 100
-      ? "bg-[#e5f3ea] text-[#2e7d4f]"
+      ? "bg-ok-bg text-ok"
       : pct > 0
-        ? "bg-[#faf0da] text-[#a16207]"
-        : "bg-[#f9e7ec] text-[#b3556a]";
+        ? "bg-warn-bg text-warn"
+        : "bg-bad-bg text-bad";
   return (
     <span
       className={cn(
-        "num inline-flex shrink-0 items-center rounded-none px-2 py-[3px] text-[11px] font-semibold leading-none",
+        "num inline-flex shrink-0 items-center rounded-full px-2 py-[3px] text-[11px] font-semibold leading-none",
         tone,
         className
       )}
@@ -128,13 +125,13 @@ export function KanbanTags({ tags, className }: { tags: string[]; className?: st
       {visible.map((t, i) => (
         <span
           key={`${i}-${t}`}
-          className="inline-flex max-w-full items-center rounded-md bg-[#f1f1f3] px-2 py-1 text-[11px] font-medium leading-none text-[#5c5c66]"
+          className="inline-flex max-w-full items-center rounded-full bg-[#f1f3f7] px-2 py-1 text-[11px] font-medium leading-none text-stone"
         >
           <span className="truncate">{t}</span>
         </span>
       ))}
       {extra > 0 && (
-        <span className="num inline-flex items-center rounded-md bg-[#f1f1f3] px-2 py-1 text-[11px] font-medium leading-none text-pebble">
+        <span className="num inline-flex items-center rounded-full bg-[#f1f3f7] px-2 py-1 text-[11px] font-medium leading-none text-stone">
           +{extra}
         </span>
       )}
@@ -144,12 +141,10 @@ export function KanbanTags({ tags, className }: { tags: string[]; className?: st
 
 // ── Card shell ──────────────────────────────────────────────────────────────
 
-/** White applicant card: soft rounded corners + hairline elevation + hover
-    lift (clickable surfaces). Only kanban applicant cards use this — columns
-    and other panels stay sharp. Arbitrary radius because the global theme
-    collapses the rounded-* scale to 0px (sharp-enterprise system). */
+/** White applicant card: 16px radius (spec imagery radii), hairline elevation,
+    hover lift with the spec image-lift shadow. */
 export const KANBAN_CARD =
-  "rounded-[12px] border border-black/[0.07] bg-white shadow-e1 lift duration-200 hover:border-ink/15";
+  "rounded-2xl bg-white shadow-e1 lift duration-200";
 
 /** Hairline divider above the credential tags. */
 export const KANBAN_DIVIDER = "mt-3 border-t border-black/[0.06] pt-2.5";
@@ -160,13 +155,14 @@ export const KANBAN_DIVIDER = "mt-3 border-t border-black/[0.06] pt-2.5";
 const CARDS_PREVIEW = 4;
 
 /**
- * Board column — reference PipelineBoard layout: TINTED panel (fog) with the
- * header INSIDE (stage dot + label + white count chip) and floating white
- * cards stacked below. The body never scrolls: the first CARDS_PREVIEW cards
- * render, then a dashed "+ N more" expander reveals the rest ("Show less"
- * collapses again). Empty columns show a quiet dashed box. On phones the
- * column is a snap-scroll lane card (min(320px, 85vw)); from md up the
- * grid stretches all columns to equal height.
+ * Board column — Bevel pipeline column: pale Cloud Card panel (16px radius,
+ * no border, no shadow — the surface is the elevation) with the header INSIDE
+ * (stage dot + label + white capsule count chip) and floating white cards
+ * stacked below. The body never scrolls: the first CARDS_PREVIEW cards render,
+ * then a "+ N more" expander reveals the rest ("Show less" collapses again).
+ * Empty columns show a quiet dashed inset. On phones the column is a
+ * snap-scroll lane card (min(320px, 85vw)); from md up the grid stretches all
+ * columns to equal height.
  */
 export function KanbanColumn({
   label,
@@ -187,7 +183,7 @@ export function KanbanColumn({
 
   return (
     <div className="flex w-[min(320px,85vw)] shrink-0 snap-start flex-col md:w-auto md:shrink">
-      <div className="flex min-h-[280px] flex-1 flex-col border border-black/[0.06] bg-fog p-2.5 md:min-h-0">
+      <div className="flex min-h-[280px] flex-1 flex-col bg-cloud p-2.5 md:min-h-0">
         {/* Header — stage dot + label + count chip */}
         <div className="flex items-center gap-2 px-1 pb-2.5 pt-0.5">
           <StageDot stage={stage} />
@@ -195,17 +191,17 @@ export function KanbanColumn({
             {label}
           </h2>
           <span
-            className="num ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center bg-white px-1.5 text-[11px] font-semibold tabular-nums text-stone"
+            className="num ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-semibold tabular-nums text-stone shadow-e1"
             aria-label={`${count} in ${label}`}
           >
             {count}
           </span>
         </div>
-        {/* Body — floating white cards on the tinted panel */}
+        {/* Body — floating white cards on the pale panel */}
         <div className="flex flex-1 flex-col gap-2">
           {cards.length === 0 ? (
-            <div className="flex min-h-28 flex-1 flex-col items-center justify-center gap-1.5 border border-dashed border-black/[0.12]">
-              <Inbox className="h-5 w-5 text-pebble/70" aria-hidden="true" />
+            <div className="flex min-h-28 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d5dce8] bg-white/45">
+              <Inbox className="h-5 w-5 text-ash" aria-hidden="true" />
               <span className="text-xs text-pebble">No applications</span>
             </div>
           ) : (
@@ -217,7 +213,7 @@ export function KanbanColumn({
                   onClick={() => setExpanded(true)}
                   aria-expanded={false}
                   aria-label={`Show ${hidden} more cards in ${label}`}
-                  className="focus-ring flex w-full items-center justify-center border border-dashed border-black/[0.15] py-2 text-xs font-medium text-stone transition-colors hover:border-ink/30 hover:text-ink"
+                  className="focus-ring flex w-full items-center justify-center rounded-xl border border-dashed border-[#c9d3e2] bg-white/45 py-2 text-xs font-medium text-stone transition-colors hover:border-ink/25 hover:bg-white hover:text-ink"
                 >
                   + {hidden} more
                 </button>
@@ -227,7 +223,7 @@ export function KanbanColumn({
                   type="button"
                   onClick={() => setExpanded(false)}
                   aria-expanded={true}
-                  className="focus-ring flex w-full items-center justify-center py-1.5 text-xs font-medium text-stone transition-colors hover:text-ink"
+                  className="focus-ring flex w-full items-center justify-center rounded-xl py-1.5 text-xs font-medium text-stone transition-colors hover:text-ink"
                 >
                   Show less
                 </button>

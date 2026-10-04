@@ -2,12 +2,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Bevel card (upload/PROPOSED-RMIS-DESIGN.md): white surface, 24px radius, no
+ * shadow, hairline-free by default — the surface itself is the elevation. For
+ * pale feature surfaces use the `.dlg-card` utility (Cloud Card #ebf0f8)
+ * alongside this component; both share the same 32px padding rhythm via
+ * CardHeader/CardContent.
+ */
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-2xl py-6",
         className
       )}
       {...props}
@@ -32,7 +39,10 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn(
+        "font-display text-lg leading-snug tracking-[-0.02em] text-ink font-semibold",
+        className
+      )}
       {...props}
     />
   )
@@ -42,7 +52,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-stone text-sm leading-relaxed", className)}
       {...props}
     />
   )
