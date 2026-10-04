@@ -391,3 +391,23 @@ Stage Summary:
 - Only casualty of server reset = .env (gitignored); already restored; no user-visible impact at any point thanks to the code default
 - All code implementations from the whole conversation verified present in HEAD
 - Reminder: set INTRANET_ENFORCEMENT=on before production deploy
+
+---
+Task ID: 42
+Agent: Z.ai Code (main) — solo per user instruction (no subagents)
+Task: Implement upload/PROPOSED-RMIS-DESIGN.md (Bevel style reference) precisely across the entire system, page by page / component by component.
+
+Work Log:
+- Foundation (globals.css): added the spec's full type-scale token set (caption 12 / nav 16 / brand-nav 18 / body 24 / section-label 24 / card-heading 40 / display 64 / hero-display 80 with integrated line-height + letter-spacing via Tailwind v4 companion tokens); --color-body-gray -> spec #747679; Hero Sky tokens + .hero-sky composer class (replaced 3 inline gradients); spec white inset glows (--inset-shadow-subtle/subtle-2/lg); .text-display-hero max -> 80px. Deliberately did NOT override Tailwind default --shadow-md/--shadow-lg or numeric --spacing-* (would break 300+ call sites and the v4 spacing scale); spec shadow VALUES already live as --shadow-image-lift (=spec md) and --shadow-float (=spec md-2), byte-identical.
+- WCAG sweep forced by the #747679 token: all small body-gray text on Cloud surfaces (#ebf0f8, 3.98:1 FAIL) switched to stone #5d6067 (5.5:1 PASS) across public-landing, jobs-view, review-workspace, review-queue, settings, applicant-home, job-workspace, analytics, candidate-detail, command-center, profile-view, 5 profile sections, pds-upload-card, contact-view, candidates, shell EmptyState. White-surface body-gray retained (4.56:1 PASS) per the spec's Body Gray role.
+- SiteHeader -> spec "Floating Capsule Navigation": rounded-32 glass capsule, pointer-events-none wrapper + pointer-events-auto capsule (kills dead zones; fixes the old full-bar takeover reason), 16px internal spacing, brand = text-brand-nav (18/500/+0.162px), links = text-nav Body Gray, CTA = Charcoal pill.
+- Public landing: hero h1 -> text-display-hero (spec 80px step), hero copy -> text-body (24px/1.3 Body Gray), CTAs -> Charcoal Download Pill anatomy (16px/22.4 500, px-4), register/detail text snapped to the closed set (17->18, 15->16), cloud meta -> stone.
+- Auth (signin/signup/reset): brand panel h1 -> card-heading role (40px/1/-1.2px), eyebrow kicker, brand-nav lockup, stone on Hero Sky, pill submits, dialog titles standardized.
+- Staff shell: eyebrow group labels (rail + mobile nav), brand-nav lockups; all Dialog/AlertDialog titles across 16 files unified to 24px/600/-0.24px; off-set heading sizes snapped (20->18/24, 17->18, 15->16, 13->12).
+- Job detail hero title -> spec card-heading at sm+ (40px/1/-1.2px), section-label 24px mobile.
+- Verification: lint clean; agent-browser dual-viewport pass — landing, signin, command center, review queue, recruitment, analytics, users, settings, profile, applicant home; zero horizontal scroll at 390px on all 8 staff routes + landing + vacant positions; screenshots t42-*.png.
+- Committed 7c4369a (32 files, +220/-185).
+
+Stage Summary:
+- The Bevel spec is now applied precisely system-wide: exact tokens in @theme, exact component anatomy on public surfaces (capsule nav, hero sky, charcoal pills, cloud cards borderless), unified micro-label and dialog-title anatomy, WCAG AA preserved under the spec Body Gray.
+- Interpretations documented: spec components without RMIS counterparts (QR card, stars, carousel, partner row, footer link groups) were NOT invented (no new features); staff 14px functional rhythm retained (spec governs public/marketing roles); spec's -0.24px@24px tracking = -0.01em used consistently.
