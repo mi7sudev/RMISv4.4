@@ -372,3 +372,22 @@ Stage Summary:
 - Review Queue stat band removed for both admin and evaluator (shared view component)
 - Kanban/List modes, Qualified-only toggle, refresh all intact and rendering
 - Screenshots: tool-results/t39-review-queue-final.png
+
+---
+Task ID: 41
+Agent: Z.ai Code (main)
+Task: Backread audit — verify all conversation implementations survived server resets; restore anything wiped.
+
+Work Log:
+- Git history intact: ebde630 (Task 37 V9 Bevel + antislop restore), 180691c (Task 38 mobile overflow fix), 08bd550 + 5d6b9d2 + 7bc2104 (inspo composition/ledger passes), 7e8a851 (stat band removal + TYPOGRAPHY.md) — nothing lost
+- Working tree clean; zero conflict markers in src/
+- Verified present: .table-card position:relative (globals.css:660), V9 light theme (--background #ffffff), Inter+DM_Sans fonts in layout.tsx, StatLedger removed from review-queue (0 matches), shared StatLedger primitive in ui/shell.tsx, .eyebrow micro-typography, TYPOGRAPHY.md, DESIGN.md, AGENTS.md, antislop.md, upload/PROPOSED-RMIS-DESIGN.md, prisma schema
+- FOUND WIPED: .env lost INTRANET_ENFORCEMENT=off (server reset regenerated .env with only DATABASE_URL; .env* is gitignored so git could not protect it)
+- Mitigation found: auth.ts line 56 defaults to "off" when unset — live-tested admin + evaluator login from external IP (XFF 21.0.0.1) both returned 200 during the gap; user login was never broken
+- Restored .env explicitly: DATABASE_URL + INTRANET_ENFORCEMENT=off with TEMPORARY/restore-before-deploy comment; Next.js hot-reloaded env
+- Post-restore login re-test: 200
+
+Stage Summary:
+- Only casualty of server reset = .env (gitignored); already restored; no user-visible impact at any point thanks to the code default
+- All code implementations from the whole conversation verified present in HEAD
+- Reminder: set INTRANET_ENFORCEMENT=on before production deploy
