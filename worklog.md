@@ -461,3 +461,20 @@ Stage Summary:
 - Brand is now the single unified DOST-MIRDC mark everywhere the BrandLogo component renders (public header, hero, auth cards, job cards, nav rail, mobile top bar, favicon)
 - No call-site size changes needed — mark reads crisply at 16–36px
 - Old assets logo-dost.png / logo-mirdc.png remain in /public (unused by UI; favicon no longer points at logo-mirdc.png)
+
+---
+Task ID: 43
+Agent: main (Z.ai Code)
+Task: Audit user's desktop frontpage screenshot against upload/PROPOSED-RMIS-DESIGN.md; fix found deviation
+
+Work Log:
+- Read PROPOSED-RMIS-DESIGN.md in full (390 lines): tokens, type scale, components, do's/don'ts
+- Section-by-section audit of the screenshot vs spec: capsule nav, charcoal pill, Hero Sky field, display headline, Body Gray copy, Cloud Card pane, Metric Blue selection ring — all conform
+- Found one spec-explicit deviation: header secondary links ("Vacant Positions", "Contact") rendered as bordered dlg-ghost pills; spec defines them as quiet Body Gray 16px/500 text links
+- Fixed site-header.tsx only (dlg-ghost untouched for its 45+ secondary-button usages): text-body-gray, hover:text-ink, whitespace-nowrap, min-h-44 touch targets
+- Verified desktop 1600×900 + mobile 390×844: quiet links, single charcoal control, no wrap, zero page errors; lint clean
+- Committed as the public-header quiet links commit
+
+Stage Summary:
+- Frontpage is otherwise conformant to the Bevel spec; the bordered-pill drift is corrected
+- Intentional non-changes (documented): hero→board gap stays 32px (pinned full-height explorer, not editorial 80px sections); Metric Blue kept for selection ring/links as system-wide interactive accent
