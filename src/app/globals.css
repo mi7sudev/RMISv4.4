@@ -3,6 +3,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Frontpage explorer layout modes (public-landing):
+   - pinned — desktop width AND a viewport tall enough to fit the whole
+     minimum layout (header + hero + 400px board floor + footer ≈ 1040px):
+     the root is h-dvh, the page never scrolls, and the panes scroll
+     internally (the reference board's sticky-description behavior).
+   - flow — desktop width but a shorter viewport: the page scrolls
+     naturally, the footer appears only at the real bottom, and the
+     posting pane becomes position:sticky so it stays in view while the
+     job list scrolls with the page. */
+@custom-variant pinned (@media (min-width: 1024px) and (min-height: 1040px));
+@custom-variant flow (@media (min-width: 1024px) and (max-height: 1039.98px));
+
 /* ============================================================================
    RMIS × "BEVEL" — Bright cloudlight edition (PROPOSED-RMIS-DESIGN.md).
    A white editorial canvas: Paper White page, Cloud Card pale-blue surfaces,

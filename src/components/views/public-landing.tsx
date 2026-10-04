@@ -553,14 +553,13 @@ export default function PublicLanding() {
   const showDetail = isDesktop || selectedId !== null;
 
   return (
-    // Root height is conditionally capped: only when the viewport is tall
-    // enough to fit the whole minimum layout (header + hero + 400px board
-    // floor + footer ≈ 1040px) does lg pin it app-style (h-dvh) so the page
-    // never scrolls and the posting stays in view. On shorter laptops the
-    // column flows naturally — the page scrolls, the footer appears only at
-    // the real bottom, and the job board is never crowded out (it keeps a
-    // 400px floor and the panes scroll internally either way).
-    <div className="flex min-h-screen flex-col lg:[@media(min-height:1040px)]:h-dvh">
+    // Root height is conditionally capped via the `pinned` custom variant
+    // (lg width AND ≥1040px tall — see globals.css): only then is the page
+    // app-pinned at h-dvh with internally-scrolling panes. Below that the
+    // `flow` mode applies: the page scrolls naturally, the footer appears
+    // only at the real bottom, the job list scrolls with the page, and the
+    // posting pane sticks to the top (see the pane below).
+    <div className="flex min-h-screen flex-col pinned:h-dvh">
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
@@ -646,15 +645,16 @@ export default function PublicLanding() {
           // safety net: on short laptops the root flows naturally instead of
           // pinning, and flex may never shrink the board below a usable pane.
           <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:flex-1 lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
-            {/* Left · the register — 8px of ring room on every side (pl/py)
-                with matching negative margins so the cards, the column
-                alignment, and the scrollbar stay exactly where they were;
-                without it the overflow-y padding box clips the selected
-                card's outside ring on the left/top/bottom. */}
+            {/* Left · the register — scrolls internally ONLY in pinned mode;
+                in flow mode it is a plain block so the wheel over the cards
+                scrolls the page (an overflow container here would swallow
+                it). 8px of ring room on every side (pl/py) with matching
+                negative margins keeps the cards, the column alignment, and
+                the pinned-mode scrollbar exactly where they were. */}
             {showList && (
               <div
                 aria-label="Job opportunities list"
-                className="scroll-thin min-h-0 space-y-3.5 lg:-ml-2 lg:-my-2 lg:overflow-y-auto lg:overscroll-contain lg:py-2 lg:pl-2 lg:pr-1.5"
+                className="scroll-thin min-h-0 space-y-3.5 lg:-ml-2 lg:-my-2 lg:py-2 lg:pl-2 lg:pr-1.5 pinned:overflow-y-auto"
               >
                 {openJobs.map((job) => (
                   <JobListCard
@@ -671,28 +671,39 @@ export default function PublicLanding() {
               </div>
             )}
 
-            {/* Right · the posting */}
+            {/* Right · the posting — sticky-column pattern. The outer grid
+                item is the ref anchor; in flow mode it contributes ZERO to
+                the row size (h-0 + min-h-full) so the LIST sizes the row,
+                and the inner wrapper is position:sticky, capped to the
+                viewport under the sticky header, and scrolls internally —
+                it stays in view while the list scrolls with the page. In
+                pinned mode the root never scrolls: the outer item stretches
+                to the flexed row, the inner fills it (h-full) and scrolls
+                internally exactly as before. On mobile both are plain
+                blocks (single-pane swap, page scroll). */}
             {showDetail && (
-              <div ref={paneRef} className="scroll-thin min-h-0 lg:overscroll-contain lg:overflow-y-auto lg:pr-2">
-                {selectedJob ? (
-                  <div className="dlg-card p-6 sm:p-8">
-                    <JobDetail
-                      job={selectedJob}
-                      saved={saved.includes(selectedJob.id)}
-                      onApply={() => requestApply(selectedJob)}
-                      onSave={() => saveAndToast(selectedJob)}
-                      onBack={() => setSelectedId(null)}
-                    />
-                  </div>
-                ) : (
-                  <div className="dlg-card">
-                    <EmptyState
-                      icon={Briefcase}
-                      title="Select a position"
-                      description="Choose a role from the list to read the full posting."
-                    />
-                  </div>
-                )}
+              <div ref={paneRef} className="min-h-0 flow:h-0 flow:min-h-full">
+                <div className="scroll-thin flow:sticky flow:top-[88px] flow:max-h-[calc(100dvh-112px)] flow:overflow-y-auto flow:pr-2 pinned:h-full pinned:overflow-y-auto pinned:pr-2">
+                  {selectedJob ? (
+                    <div className="dlg-card p-6 sm:p-8">
+                      <JobDetail
+                        job={selectedJob}
+                        saved={saved.includes(selectedJob.id)}
+                        onApply={() => requestApply(selectedJob)}
+                        onSave={() => saveAndToast(selectedJob)}
+                        onBack={() => setSelectedId(null)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="dlg-card">
+                      <EmptyState
+                        icon={Briefcase}
+                        title="Select a position"
+                        description="Choose a role from the list to read the full posting."
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
