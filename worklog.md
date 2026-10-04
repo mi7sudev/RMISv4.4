@@ -512,3 +512,21 @@ Stage Summary:
 - Footer now behaves per user expectation on every viewport: visible only at the real bottom on short screens, flush-bottom app pin only on tall (≥1040px) screens
 - Posting pane guaranteed ≥400px and visible on first screen at common laptop sizes
 - Arbitrary-variant stacking (lg:[@media(...)]) confirmed compiling in Tailwind v4
+
+---
+Task ID: 46
+Agent: main (Z.ai Code)
+Task: User feedback — cannot scroll with cursor over job list / description; description must be sticky while the list scrolls
+
+Work Log:
+- Root-caused the scroll trap: flow-mode panes were lg overflow-y-auto + overscroll-contain containers with no internal overflow; overscroll-behavior:contain on a non-scrollable scroll container blocks wheel chaining — wheel over the list/description died
+- Added @custom-variant pinned (lg + min-height:1040px) and flow (lg + max-height:1039.98px) to globals.css, matching the root pin condition
+- Left list: overflow moved to pinned:overflow-y-auto (plain block in flow mode so wheel scrolls the page); overscroll-contain dropped everywhere
+- Right pane: sticky-column pattern — outer grid item min-h-0 flow:h-0 flow:min-h-full (zero row contribution so the LIST sizes the row; first attempt with flow:self-start failed because the pane's own 908px content inflated the row and erased sticky travel — caught via paneTop measurements), inner wrapper flow:sticky flow:top-[88px] flow:max-h-[calc(100dvh-112px)] flow:overflow-y-auto; pinned mode keeps h-full + overflow-y-auto
+- Verification: flow 1280×720 — wheel over list scrolls page (scrollY 350), pane stuck at exactly top 88px, row 707px (list-driven); pinned 1600×1100 — scrollH==viewH, inner fills 502px, overflow auto; mobile single-pane swap intact; zero errors; lint clean
+- Diagnosed an agent-browser engine quirk en route: its synthetic wheel skips nested scroll containers entirely (confirmed via minimal standalone HTML repro — even a plain static overflow div is skipped); nested-pane wheel validated programmatically instead; real browsers scroll nested containers natively
+
+Stage Summary:
+- Flow mode: page always scrolls from anywhere (list included); posting pane sticks under the header and scrolls internally — the requested LinkedIn-style behavior
+- Pinned mode: unchanged app-pinned board
+- Custom variants pinned/flow now the single source of truth for the two explorer layout modes
