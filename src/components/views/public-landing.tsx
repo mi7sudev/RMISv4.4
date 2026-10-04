@@ -553,7 +553,14 @@ export default function PublicLanding() {
   const showDetail = isDesktop || selectedId !== null;
 
   return (
-    <div className="flex min-h-screen flex-col lg:h-dvh">
+    // Root height is conditionally capped: only when the viewport is tall
+    // enough to fit the whole minimum layout (header + hero + 400px board
+    // floor + footer ≈ 1040px) does lg pin it app-style (h-dvh) so the page
+    // never scrolls and the posting stays in view. On shorter laptops the
+    // column flows naturally — the page scrolls, the footer appears only at
+    // the real bottom, and the job board is never crowded out (it keeps a
+    // 400px floor and the panes scroll internally either way).
+    <div className="flex min-h-screen flex-col lg:[@media(min-height:1040px)]:h-dvh">
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
@@ -561,7 +568,7 @@ export default function PublicLanding() {
             arranged as a split: display headline + copy + single charcoal
             capsule CTA left; official brand mark + authority line right as
             the quiet institutional proof strip (real marks only). */}
-        <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10">
+        <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10 lg:[@media(max-height:860px)]:py-8">
           <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
             {/* QA 2026-02: header renamed to "Job Opportunities" to match the
                 Positions tab; the live "N open" pill was removed — it read as
@@ -631,12 +638,14 @@ export default function PublicLanding() {
             </div>
           </div>
         ) : (
-          // Board height is derived, not a magic viewport constant: on lg the
-          // grid flex-fills whatever is left between the real header and
-          // footer (main is a min-h-0 flex column on lg), so the page itself
-          // never scrolls and the open posting stays pinned in view — the
-          // reference board's "sticky description" behavior.
-          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
+          // Board height is derived, not a magic viewport constant: on tall
+          // viewports (root pinned at h-dvh) the grid flex-fills whatever is
+          // left between the real header and footer, so the page itself never
+          // scrolls and the open posting stays pinned in view — the reference
+          // board's "sticky description" behavior. The 400px floor is the
+          // safety net: on short laptops the root flows naturally instead of
+          // pinning, and flex may never shrink the board below a usable pane.
+          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:flex-1 lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
             {/* Left · the register — 8px of ring room on every side (pl/py)
                 with matching negative margins so the cards, the column
                 alignment, and the scrollbar stay exactly where they were;

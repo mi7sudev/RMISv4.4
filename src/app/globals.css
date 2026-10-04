@@ -285,6 +285,14 @@
   letter-spacing: -0.03em;
   color: #222326;
 }
+/* Short-viewport laptops (incl. browser zoom): step the hero headline down
+   to the spec's 64px display step so the frontpage explorer keeps room for
+   the job board without the footer crowding the first screen. */
+@media (max-height: 860px) {
+  .text-display-hero {
+    font-size: clamp(42px, 5vw, 64px); /* spec display step: 64px */
+  }
+}
 .text-heading-lg {
   font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
