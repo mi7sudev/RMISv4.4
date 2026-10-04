@@ -6,7 +6,9 @@
 // floating over the page and remaining available as content moves beneath.
 // The sticky wrapper is pointer-events-none so the capsule's side gaps never
 // create dead zones (the old full-bar takeover is gone); the capsule itself
-// is pointer-events-auto. 16px internal control spacing. Brand text =
+// is pointer-events-auto. 24px edge insets (16px on mobile) keep the brand
+// mark and conversion control clear of the rounded ends; 16px internal
+// control spacing. Brand text =
 // Ink 18px/25.2 weight 500 +0.16px tracking (text-brand-nav); secondary
 // links = Body Gray 16px/22.4 weight 500 (text-nav); the sign-in/dashboard
 // conversion control is the Charcoal Download Pill (dlg-cta, 128px radius).
@@ -25,7 +27,7 @@ export function SiteHeader() {
   return (
     <header className="pointer-events-none sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4">
       <nav
-        className="glass pointer-events-auto mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between gap-4 rounded-[32px] border border-divider/70 shadow-e1"
+        className="glass pointer-events-auto mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between gap-4 rounded-[32px] border border-divider/70 px-4 shadow-e1 sm:px-6"
         aria-label="Primary"
       >
         {/* Brand — Ink 18px/25.2 weight 500 +0.162px tracking (brand-nav) */}
@@ -36,7 +38,7 @@ export function SiteHeader() {
         >
           {/* Official unified brand mark — DOST pinwheel + MIRDC gear crest
               in a single emblem (see brand-logo). Floats on the capsule. */}
-          <BrandLogo logoSize={26} />
+          <BrandLogo logoSize={32} />
           <span className="text-brand-nav hidden font-medium text-ink sm:inline">RMIS</span>
         </button>
 
