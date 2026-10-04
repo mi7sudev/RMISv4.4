@@ -44,10 +44,13 @@ export function SiteHeader() {
         <div className="flex items-center gap-4">
           {/* QA 2026-02: the page/tab label must match the website slug —
               the board lives at #/vacant-positions as "Vacant Positions". */}
+          {/* Secondary links — spec §Floating Capsule Navigation: quiet
+              Body Gray 16px/500 text links, not bordered pills. The Sign in
+              capsule stays the cluster's single strong control. */}
           {view !== "vacant-positions" && (
             <button
               onClick={() => navigate("vacant-positions")}
-              className="dlg-ghost text-nav inline-flex min-h-[44px] items-center px-3 font-medium sm:px-4"
+              className="text-nav inline-flex min-h-[44px] items-center whitespace-nowrap px-3 font-medium text-body-gray transition-colors hover:text-ink sm:px-4"
             >
               Vacant Positions
             </button>
@@ -55,7 +58,7 @@ export function SiteHeader() {
           {view !== "contact" && (
             <button
               onClick={() => navigate("contact")}
-              className="dlg-ghost text-nav hidden inline-flex min-h-[44px] items-center px-3 font-medium sm:inline-flex sm:px-4"
+              className="text-nav hidden min-h-[44px] items-center whitespace-nowrap px-3 font-medium text-body-gray transition-colors hover:text-ink sm:inline-flex sm:px-4"
             >
               Contact
             </button>
