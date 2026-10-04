@@ -442,3 +442,22 @@ Stage Summary:
 - Key artifacts: src/components/ui/{button,input,textarea,label,select,checkbox,radio-group,switch,dialog,alert-dialog,sheet,popover,tooltip,dropdown-menu,command,tabs,badge,table,card,skeleton,separator,avatar,kanban,shell}.tsx, src/components/shell/* (chrome), src/components/views/* (surfaces).
 - Commits: e54d0b7 (foundation), 135c035 (surfaces). Verification screenshots in tool-results/bv-*.png, ev-*.png, m-*.png.
 - Note: production deploy must restore INTRANET_ENFORCEMENT=on in .env (still off per user request).
+
+---
+Task ID: 42
+Agent: main (Z.ai Code)
+Task: Update the header logo with the new unified MIRDC mark (upload/MIRDC-mark.png)
+
+Work Log:
+- Verified uploaded asset (383×383 RGBA PNG) and confirmed /public/MIRDC-mark.png already identical (md5 d9f0adcf9b3037c2a2427510d26c578b)
+- Rewrote src/components/brand-logo.tsx: replaced the two-emblem lockup (DOST seal + hairline divider + MIRDC emblem) with the single unified mark; kept the logoSize/tone/className props API so all 12 call sites work unchanged (tone is now a documented no-op)
+- Updated favicon in src/app/layout.tsx to /MIRDC-mark.png
+- Corrected stale "two-logo lockup" comments at 7 call sites: site-header, app-shell, nav-rail, signin-view, signup-view, jobs-view, public-landing (×2)
+- bun run lint: clean
+- Browser verification (agent-browser): desktop 1600×900 public header + hero proof block; mobile 390×844 public header + workspace top bar; signed-in desktop nav rail (expanded). Verified both img instances load (naturalWidth 383, complete) and zero page errors/console errors
+- Committed as b4dacbf
+
+Stage Summary:
+- Brand is now the single unified DOST-MIRDC mark everywhere the BrandLogo component renders (public header, hero, auth cards, job cards, nav rail, mobile top bar, favicon)
+- No call-site size changes needed — mark reads crisply at 16–36px
+- Old assets logo-dost.png / logo-mirdc.png remain in /public (unused by UI; favicon no longer points at logo-mirdc.png)
