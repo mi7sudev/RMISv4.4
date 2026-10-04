@@ -494,3 +494,21 @@ Work Log:
 
 Stage Summary:
 - Public capsule header now has proper internal breathing room and a 32px mark; no behavior changes
+
+---
+Task ID: 45
+Agent: main (Z.ai Code)
+Task: User feedback — job posting not visible on frontpage; footer visible while not at page bottom
+
+Work Log:
+- Diagnosed: root lg:h-dvh hard-pinned the footer at the viewport edge on ALL desktop heights while the board (lg:min-h-0 lg:flex-1) flex-collapsed to near-zero on short viewports/zoom — posting invisible, footer floating
+- First attempt (remove h-dvh entirely) broke pinned mode: root grew to content (scrollH 1481 at 900px viewport); caught via metrics and revised
+- Final: conditional pin — root gets lg:[@media(min-height:1040px)]:h-dvh (1040 = header+hero+400px board floor+footer); below threshold natural flow; board lg:min-h-0 → lg:min-h-[400px] floor
+- globals.css: max-height:860px media query steps .text-display-hero to the spec 64px display step; hero section gains lg:[@media(max-height:860px)]:py-8
+- Verified via agent-browser metrics: 1280×720 (natural flow, h1 64px, hero py 32px, footerTop 1355 below fold, posting pane fully visible on first screen); 1600×1100 (pinned: scrollH==viewH==1100, footerTop 980 flush, board 502px); 1600×900 (natural, footer 1361 below fold); 390×844 mobile (natural, footer 1658). Zero page errors; lint clean
+- Committed as the frontpage board/footer fix commit
+
+Stage Summary:
+- Footer now behaves per user expectation on every viewport: visible only at the real bottom on short screens, flush-bottom app pin only on tall (≥1040px) screens
+- Posting pane guaranteed ≥400px and visible on first screen at common laptop sizes
+- Arbitrary-variant stacking (lg:[@media(...)]) confirmed compiling in Tailwind v4
