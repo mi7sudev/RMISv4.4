@@ -478,3 +478,19 @@ Work Log:
 Stage Summary:
 - Frontpage is otherwise conformant to the Bevel spec; the bordered-pill drift is corrected
 - Intentional non-changes (documented): hero→board gap stays 32px (pinned full-height explorer, not editorial 80px sections); Metric Blue kept for selection ring/links as system-wide interactive accent
+
+---
+Task ID: 44
+Agent: main (Z.ai Code)
+Task: User feedback — header logo and buttons too close to capsule edges; RMIS mark too small
+
+Work Log:
+- Confirmed site-header nav had no horizontal padding (brand chip and Sign in pill flush with the rounded-32 ends)
+- Added px-4 (mobile) / sm:px-6 (24px desktop) edge insets to the capsule nav
+- Raised the unified brand mark in the header from logoSize 26 to 32
+- Updated the file's spec doc comment to record the inset values
+- Verified desktop 1600×900 and mobile 390×844 via agent-browser: clear insets both ends, mark reads prominently, no errors; lint clean
+- Committed as the capsule edge insets commit
+
+Stage Summary:
+- Public capsule header now has proper internal breathing room and a 32px mark; no behavior changes
