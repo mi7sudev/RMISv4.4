@@ -530,3 +530,25 @@ Stage Summary:
 - Flow mode: page always scrolls from anywhere (list included); posting pane sticks under the header and scrolls internally — the requested LinkedIn-style behavior
 - Pinned mode: unchanged app-pinned board
 - Custom variants pinned/flow now the single source of truth for the two explorer layout modes
+
+---
+Task ID: 47
+Agent: main (Z.ai Code)
+Task: Read upload/RMIS QA Review.docx and verify every QA suggestion is implemented
+
+Work Log:
+- Extracted the full QA review via pandoc (10 findings: 3 landing/sign-in, 4 applicant, admin module, evaluator module)
+- Audited each finding against the codebase; every item carries "QA 2026-02" implementation markers:
+  L1 home header "Job Opportunities" + "N open" pill removed (public-landing.tsx) ✓
+  L2 "Vacant Positions" title matching slug #/vacant-positions, marketing subheader replaced by live result count, Position Category facet (Plantilla / COS checkboxes), Open Positions → Job Openings naming (jobs-view.tsx, applicant-home.tsx) ✓
+  L3 forgot-password option near password box + "Recruitment Management Information System" eyebrow (signin-view.tsx + /api/auth/forgot-password + reset-password-view) ✓
+  A1 onboarding tour with "Start the guided tour" / "Skip" choice + localStorage dismissal (onboarding-tour.tsx) ✓
+  A2 PDS pipeline: streaming extract route with per-doc status, blank-CS-Form-212 guidance mentioning "Excel 2019 and older" + legacy .xls support via SheetJS, auto-apply to profile with per-section replacement counts (/api/applicant/documents/extract, pds-extract.ts, pds-upload-card.tsx) ✓
+  A3 PDS section progression footer with explicit Back / "Continue to {next section}" (profile-view.tsx) ✓
+  A4 vacancy count required for COS postings only, optional for Plantilla (recruitment.tsx) ✓
+  Ad1 admin nav "Users" rename, Review administrator-scope note, settings tabs Users & Security / Audit Log / SMS Gateway / Email Notices / Contact Requests (nav-rail.tsx, review-queue.tsx, settings.tsx) ✓
+  E1 evaluator settings scoped to Email Notices (read-only) + Contact Requests; analytics shows recruitment-only (system usage + audit feed are admin-only) (settings.tsx, analytics.tsx) ✓
+- Runtime confirmation: #/vacant-positions renders "Vacant Positions" + live result count + Plantilla/COS facet; zero console errors; lint clean
+
+Stage Summary:
+- ALL 10 QA review findings are implemented and verified — no gaps found; no code changes required this task
