@@ -294,7 +294,7 @@ export default function CommandCenter() {
                 />
               </div>
             ) : (
-              <div className="dlg-card-plain overflow-hidden">
+              <div className="dlg-card overflow-hidden">
                 {activeJobs.map((j) => {
                   const dl = deadlineState(j.deadlineDate);
                   const urgent = !dl.overdue && dl.closingSoon;
@@ -344,7 +344,7 @@ export default function CommandCenter() {
                 />
               </div>
             ) : (
-              <div className="dlg-card-plain overflow-hidden">
+              <div className="dlg-card overflow-hidden">
                 {stats.recent.map((r) => (
                   <button
                     key={r.id}

@@ -597,7 +597,7 @@ export default function Recruitment() {
       />
 
       {/* Filter toolbar — white card row: search grows, capsule selects fixed */}
-      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
+      <div className="dlg-card flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <IconChip icon={Search} tone="slate" size={40} className="shrink-0 max-sm:hidden" />
           <Input
@@ -670,7 +670,7 @@ export default function Recruitment() {
           />
         </div>
       ) : (
-        <div className="dlg-card-plain table-card overflow-hidden">
+        <div className="dlg-card table-card overflow-hidden">
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-5 py-4">
             <IconChip icon={Briefcase} tone="amber" size={36} iconSize={16} />
             <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Job postings</h2>

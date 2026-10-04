@@ -91,7 +91,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("dlg-card min-w-0 p-5 sm:p-6", className)}>
       {title || actions ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -414,7 +414,7 @@ export default function JobWorkspace() {
               <p className="py-6 text-center text-sm text-stone">No applications for this posting yet.</p>
             </div>
           ) : (
-            <div className="dlg-card-plain overflow-hidden">
+            <div className="dlg-card overflow-hidden">
               {apps.map((app) => (
                 <button
                   key={app.id}

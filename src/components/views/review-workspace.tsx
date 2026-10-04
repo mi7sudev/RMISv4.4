@@ -278,7 +278,7 @@ function EducationCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-lg bg-cloud/60 p-4">
+        <div key={i} className="rounded-lg bg-white p-4">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-ink">{str(r.degree) || str(r.course) || str(r.specifyOthers) || "-"}</p>
             {r.ongoing === true && <span className="status-pill status-neutral shrink-0">Ongoing</span>}
@@ -303,7 +303,7 @@ function ExperienceCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-lg bg-cloud/60 p-4">
+        <div key={i} className="rounded-lg bg-white p-4">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-ink">{str(r.positionTitle) || "-"}</p>
             {r.isPresentWork === true && (
@@ -331,7 +331,7 @@ function TrainingCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-lg bg-cloud/60 p-4">
+        <div key={i} className="rounded-lg bg-white p-4">
           <p className="text-sm text-ink">{str(r.title) || "-"}</p>
           <p className="num mt-1 text-xs text-stone">
             {[str(r.typeOfTraining), str(r.numberHours) && `${str(r.numberHours)} hrs`, str(r.hourDecimal) && `${str(r.hourDecimal)} hrs`]
@@ -354,7 +354,7 @@ function EligibilityCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-lg bg-cloud/60 p-4">
+        <div key={i} className="rounded-lg bg-white p-4">
           <p className="text-sm text-ink">{str(r.title) || str(r.eligibilityTitle) || "-"}</p>
           <p className="num mt-1 text-xs text-stone">
             {[str(r.rating) && `Rating: ${str(r.rating)}`, snapshotDisplayDate(r.examDate), str(r.examPlace), str(r.licenseNumber) && `License ${str(r.licenseNumber)}`]
@@ -372,7 +372,7 @@ function AwardCards({ rows }: { rows: SnapRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="rounded-lg bg-cloud/60 p-4">
+        <div key={i} className="rounded-lg bg-white p-4">
           <p className="text-sm text-ink">{str(r.details) || "-"}</p>
           <p className="num mt-1 text-xs text-stone">
             {[str(r.recognitionType), str(r.scope), str(r.provider), snapshotDisplayDate(r.dateGranted)]
@@ -1171,7 +1171,7 @@ export function ReviewWorkspace({
   if (!payload) {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
-        <div className="dlg-card-plain space-y-5 p-5 sm:p-6">
+        <div className="dlg-card space-y-5 p-5 sm:p-6">
           <div className="space-y-2.5">
             <Skeleton className="h-7 w-1/2" />
             <Skeleton className="h-4 w-1/3" />
@@ -1207,7 +1207,7 @@ export function ReviewWorkspace({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_380px]">
       {/* ── LEFT: frozen dossier ── */}
-      <div className="dlg-card-plain space-y-4 p-5 sm:p-6">
+      <div className="dlg-card space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <MonogramAvatar name={applicantName} size={48} warm />
@@ -1241,7 +1241,7 @@ export function ReviewWorkspace({
           </TabsList>
 
           <TabsContent value="profile" className={sectionCls("pt-4")}>
-            <div className="rounded-lg bg-cloud/60 p-4">
+            <div className="rounded-lg bg-white p-4">
               <LedgerRow label="Email" value={str(p.emailAddress) || str(payload.applicant.emailAddress)} />
               <LedgerRow label="Mobile" value={str(p.mobileNumber) || str(p.contactNumber)} num />
               <LedgerRow label="Other phone" value={[str(p.contactNumberSec), str(p.telephoneNumber)].filter(Boolean).join(" · ")} num />
@@ -1282,7 +1282,7 @@ export function ReviewWorkspace({
             <AwardCards rows={payload.snapshots.awards} />
           </TabsContent>
           <TabsContent value="documents" className="pt-4">
-            <div className="rounded-lg bg-cloud/60 p-6 text-center">
+            <div className="rounded-lg bg-white p-6 text-center">
               <IconChip icon={FileText} tone="slate" size={40} className="mx-auto" />
               <p className="mt-2 text-sm text-stone">Supporting documents are verified in person at the next stage.</p>
             </div>
@@ -1301,7 +1301,7 @@ export function ReviewWorkspace({
         <RequirementsMatchPanel report={payload.requirements} />
         <CredentialsRow payload={payload} />
 
-        <div className={`rounded-lg bg-cloud/70 p-4 text-sm ${banner.cls}`}>
+        <div className={`rounded-lg bg-white p-4 text-sm ${banner.cls}`}>
           <StatusPill status={payload.status} className="mr-2" />
           {banner.text}
         </div>

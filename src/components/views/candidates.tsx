@@ -433,7 +433,7 @@ export default function Candidates() {
       ))}
 
       {/* Filter toolbar — white card row */}
-      <div className="dlg-card-plain flex flex-wrap items-center gap-3 p-3 sm:p-4">
+      <div className="dlg-card flex flex-wrap items-center gap-3 p-3 sm:p-4">
         <div className="relative min-w-0 flex-1 basis-56">
           <IconChip
             icon={Search}
@@ -511,7 +511,7 @@ export default function Candidates() {
               />
             </div>
           ) : (
-            <div className="dlg-card-plain table-card overflow-hidden">
+            <div className="dlg-card table-card overflow-hidden">
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>

@@ -100,7 +100,7 @@ function LedgerRow({ label, value, num = false }: { label: string; value: string
 
 function EntityCard({ title, lines }: { title: string; lines: string[] }) {
   return (
-    <div className="rounded-lg bg-cloud/60 p-4">
+    <div className="rounded-lg bg-white p-4">
       <p className="text-sm text-ink">{title}</p>
       {lines.filter(Boolean).length > 0 && <p className="num mt-1 text-xs text-stone">{lines.filter(Boolean).join(" · ")}</p>}
     </div>
@@ -192,7 +192,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("dlg-card min-w-0 p-5 sm:p-6", className)}>
       {title ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -360,7 +360,7 @@ export default function CandidateDetail() {
 
       {/* Contact */}
       <Panel title="Contact" icon={Mail} chipTone="slate" description="Personal details on record.">
-        <div className="rounded-lg bg-cloud/60 p-4">
+        <div className="rounded-lg bg-white p-4">
           <LedgerRow label="Email" value={detail.emailAddress ?? ""} />
           <LedgerRow label="Mobile" value={detail.mobileNumber ?? ""} num />
           <LedgerRow label="Contact number" value={detail.contactNumber ?? ""} num />
@@ -494,7 +494,7 @@ export default function CandidateDetail() {
         ) : (
           <div className="space-y-3">
             {detail.documents.map((doc) => (
-              <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-cloud/60 p-4">
+              <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4">
                 <IconChip icon={FileText} tone="slate" size={32} iconSize={14} />
                 <div className="min-w-0 flex-1">
                   <a

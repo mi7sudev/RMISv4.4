@@ -126,7 +126,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("dlg-card-plain min-w-0 p-5 sm:p-6", className)}>
+    <section className={cn("dlg-card min-w-0 p-5 sm:p-6", className)}>
       {title || actions ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -542,7 +542,7 @@ export default function Analytics() {
                   ["Incomplete profiles", stats?.needsAttention?.incompleteProfiles],
                 ] as [string, number | undefined][]
               ).map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-cloud p-4">
+                <div key={label} className="rounded-lg bg-white p-4">
                   <p className="eyebrow">{label}</p>
                   <p className="num mt-2 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
                 </div>
@@ -556,7 +556,7 @@ export default function Analytics() {
                   ["Administrators", stats?.admins],
                 ] as [string, number | undefined][]
               ).map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-cloud/60 p-4">
+                <div key={label} className="rounded-lg bg-white p-4">
                   <p className="eyebrow">{label}</p>
                   <p className="num mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
                 </div>

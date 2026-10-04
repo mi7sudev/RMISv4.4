@@ -64,7 +64,7 @@ export default function ContactView() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Form */}
-        <div className="dlg-card-plain p-5 sm:p-6">
+        <div className="dlg-card p-5 sm:p-6">
           {status === "sent" ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <span className="grid h-12 w-12 place-items-center rounded-full bg-cloud text-metric-blue">

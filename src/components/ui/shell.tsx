@@ -235,10 +235,11 @@ export function KpiCard({
 }
 
 // ── StatLedger ──────────────────────────────────────────────────────────────
-// The institutional stat band: ONE white ledger with 24px radius whose cells
-// are separated by hairline 1px gaps painted with the divider color — no
-// floating cards, no icon chips. The oversized tabular numeral is the hero; a
-// stone eyebrow labels it and a body-gray caption quietly qualifies it.
+// The institutional stat band: a Cloud Card band (24px radius) whose white
+// cells are separated by hairline 1px gaps that let the pale surface show
+// through — no floating cards, no icon chips. The oversized tabular numeral
+// is the hero; a stone eyebrow labels it and a body-gray caption quietly
+// qualifies it.
 
 export function StatLedger({
   children,
@@ -254,7 +255,7 @@ export function StatLedger({
     <div
       aria-label={ariaLabel}
       className={cn(
-        "dlg-card-plain grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-[var(--divider)] xl:grid-cols-4",
+        "dlg-card grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white xl:grid-cols-4",
         className
       )}
     >
@@ -295,13 +296,13 @@ export function StatCell({
         type="button"
         onClick={onClick}
         aria-label={ariaLabel ?? label}
-        className="focus-ring block w-full rounded-none bg-white p-5 text-left transition-colors first:rounded-tl-2xl first:rounded-bl-2xl hover:bg-fog sm:p-6"
+        className="focus-ring block w-full rounded-none bg-transparent p-5 text-left transition-colors hover:bg-white/70 sm:p-6"
       >
         {body}
       </button>
     );
   }
-  return <div className="bg-white p-5 sm:p-6">{body}</div>;
+  return <div className="p-5 sm:p-6">{body}</div>;
 }
 
 /** Skeleton twin of StatLedger — identical geometry, shimmer cells. */
@@ -309,7 +310,7 @@ export function StatLedgerSkeleton({ count = 4 }: { count?: number }) {
   return (
     <StatLedger aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white p-5 sm:p-6">
+        <div key={i} className="p-5 sm:p-6">
           <div className="skel h-3 w-20" />
           <div className="skel mt-4 h-10 w-16" />
           <div className="skel mt-3 h-3 w-24" />

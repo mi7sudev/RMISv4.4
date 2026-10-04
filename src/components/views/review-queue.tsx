@@ -370,7 +370,7 @@ export default function ReviewQueue() {
               />
             </div>
           ) : (
-            <div className="dlg-card-plain table-card overflow-hidden">
+            <div className="dlg-card table-card overflow-hidden">
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[760px] border-collapse text-sm">
                   <thead>
