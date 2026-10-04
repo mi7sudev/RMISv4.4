@@ -4,7 +4,7 @@
 // RMIS — Public landing (spec §7.1): a two-pane job explorer in the
 // reference-board style — TOP: a Bevel "Hero Sky" rounded-32 gradient field
 // in a split composition (Google-Workspace rhythm): display headline + copy
-// + charcoal capsule CTA on the left, the official DOST/MIRDC seal lockup
+// + charcoal capsule CTA on the left, the official DOST-MIRDC brand mark
 // with the agency authority line as the institutional proof block on the
 // right; LEFT: a scrollable register of Cloud Card
 // job cards (title · company · place · salary · clamped snippet · posted
@@ -559,7 +559,7 @@ export default function PublicLanding() {
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
         {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer,
             arranged as a split: display headline + copy + single charcoal
-            capsule CTA left; official seal lockup + authority line right as
+            capsule CTA left; official brand mark + authority line right as
             the quiet institutional proof strip (real marks only). */}
         <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10">
           <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">

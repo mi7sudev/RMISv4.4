@@ -49,8 +49,8 @@ export function AppShell({
               className="flex min-h-[44px] items-center gap-2.5"
               aria-label="Go to my workspace"
             >
-              {/* Official two-logo lockup — the emblems' art carries transparent
-                  backgrounds, so it floats directly on the light rail strip. */}
+              {/* Official unified brand mark — transparent art, so it floats
+                  directly on the light rail strip. */}
               <BrandLogo logoSize={22} tone="light" />
               <span className="text-sm font-semibold text-ink">RMIS</span>
             </button>

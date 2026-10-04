@@ -199,7 +199,7 @@ export function NavRail({ view }: { view: string }) {
             className={`flex min-h-[44px] items-center gap-3 ${expanded ? "min-w-0 flex-1" : ""}`}
             aria-label={expanded ? "Go to my workspace" : "Expand navigation"}
           >
-            {/* Official two-logo lockup — see brand-logo (tone adapts the divider). */}
+            {/* Official unified brand mark — see brand-logo. */}
             {expanded ? (
               <BrandLogo logoSize={22} tone="light" />
             ) : (

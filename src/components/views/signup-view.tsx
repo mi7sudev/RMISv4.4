@@ -54,8 +54,7 @@ function AuthBrandPanel() {
 
       <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
         <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white py-2 pl-2 pr-4 shadow-e1">
-          {/* Official two-logo lockup — the emblems' art carries transparent
-              backgrounds, so it floats directly on the white capsule. */}
+          {/* Official unified brand mark — floats on the white capsule. */}
           <BrandLogo logoSize={22} />
           <span className="text-brand-nav font-medium text-ink">RMIS</span>
         </div>

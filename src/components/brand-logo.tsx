@@ -1,13 +1,13 @@
 import { cn } from "@/lib/utils";
 
 // ============================================================================
-// RMIS — Official brand lockup. The agency mark is composed of TWO emblems:
-// the DOST pinwheel seal (logo-dost.png) and the MIRDC gear emblem
-// (logo-mirdc.png), shown side by side. Both source PNGs carry TRANSPARENT
-// backgrounds, so no plate is drawn — the lockup floats directly on the
-// surface behind it (white on the public header, ink on the dark rail).
-// tone adapts the divider hairline to the surface: "light" (default) draws a
-// dark hairline for light backgrounds, "dark" a light one for dark rails.
+// RMIS — Official brand mark. A single unified emblem (MIRDC-mark.png): the
+// DOST pinwheel (ink + azure quadrants) carrying the MIRDC gear crest in its
+// white heart. The source PNG is square 383×383 with a TRANSPARENT background,
+// so the mark floats directly on the surface behind it (white on the public
+// header, ink strip on mobile, light auth cards). `tone` is retained for API
+// compatibility with existing call sites but is now a no-op — the unified mark
+// carries no divider hairline.
 // ============================================================================
 
 export function BrandLogo({
@@ -15,33 +15,23 @@ export function BrandLogo({
   tone = "light",
   className,
 }: {
-  /** Height of each emblem in px (the chip adds 4px padding around). */
+  /** Height/width of the mark in px. */
   logoSize?: number;
-  /** Surface tone behind the lockup — picks the divider hairline color. */
+  /** Retained for call-site compatibility; no visual effect (see above). */
   tone?: "light" | "dark";
   className?: string;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-1.5 p-1",
+        "inline-flex shrink-0 items-center justify-center p-1",
         className
       )}
-      style={{ height: logoSize + 8 }}
+      style={{ height: logoSize + 8, width: logoSize + 8 }}
     >
       <img
-        src="/logo-dost.png"
-        alt="DOST seal"
-        style={{ height: logoSize, width: logoSize }}
-        className="object-contain"
-      />
-      <span
-        aria-hidden="true"
-        className={cn("h-2/3 w-px", tone === "dark" ? "bg-white/25" : "bg-black/15")}
-      />
-      <img
-        src="/logo-mirdc.png"
-        alt="MIRDC emblem"
+        src="/MIRDC-mark.png"
+        alt="DOST-MIRDC seal"
         style={{ height: logoSize, width: logoSize }}
         className="object-contain"
       />

@@ -34,8 +34,8 @@ export function SiteHeader() {
           className="flex min-h-[44px] items-center gap-3"
           aria-label="RMIS home"
         >
-          {/* Official two-logo lockup — DOST seal + MIRDC emblem. The emblems'
-              art carries transparent backgrounds and floats on the capsule. */}
+          {/* Official unified brand mark — DOST pinwheel + MIRDC gear crest
+              in a single emblem (see brand-logo). Floats on the capsule. */}
           <BrandLogo logoSize={26} />
           <span className="text-brand-nav hidden font-medium text-ink sm:inline">RMIS</span>
         </button>

@@ -232,7 +232,7 @@ function JobCard({
   return (
     <article className="dlg-card lift p-4 sm:p-6">
       <div className="flex items-start gap-4">
-        {/* Official two-logo lockup — anchors the card the way a company
+        {/* Official unified brand mark — anchors the card the way a company
             logo does on every top-ranked job-board design */}
         <BrandLogo logoSize={36} className="hidden sm:inline-flex" />
         <div className="min-w-0 flex-1">
