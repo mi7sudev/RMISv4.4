@@ -26,7 +26,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  EmptyState, PageHeader, SkeletonKanban, SkeletonRows, StatCell, StatLedger, StatLedgerSkeleton,
+  EmptyState, PageHeader, SkeletonKanban, SkeletonRows,
 } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge, StageDot,
@@ -155,19 +155,6 @@ export default function ReviewQueue() {
     return map;
   }, [filtered]);
 
-  // Header stat tiles — purely derived counts over the loaded queue.
-  const stat = useMemo(() => {
-    const qualified = applications.filter((r) => r.match?.verdict === "ALL_MET").length;
-    let underReview = 0;
-    let shortlisted = 0;
-    for (const r of applications) {
-      const s = stageForStatus(r.status);
-      if (s === "Under Review") underReview += 1;
-      else if (s === "Shortlisted") shortlisted += 1;
-    }
-    return { qualified, underReview, shortlisted };
-  }, [applications]);
-
   const sendRegrets = async () => {
     setRegretBusy(true);
     try {
@@ -247,20 +234,6 @@ export default function ReviewQueue() {
           recommendations remain the responsibility of the assigned evaluators.
         </p>
       )}
-
-      {/* Queue stat band — the shared institutional StatLedger (one white
-          surface, hairline gaps, editorial numbers; same primitive as the
-          Command Center so the anatomy can never drift). */}
-      {!error && (queue === null ? (
-        <StatLedgerSkeleton />
-      ) : (
-        <StatLedger>
-          <StatCell label="In queue" value={applications.length} hint="applications on file" />
-          <StatCell label="Qualified" value={stat.qualified} hint="meet all minimum requirements" />
-          <StatCell label="Under review" value={stat.underReview} hint="being screened" />
-          <StatCell label="Shortlisted" value={stat.shortlisted} hint="advanced by evaluators" />
-        </StatLedger>
-      ))}
 
       {/* Stage tabs (list mode only) */}
       {mode === "list" && (
