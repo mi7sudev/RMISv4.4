@@ -352,3 +352,23 @@ Stage Summary:
 - TYPOGRAPHY.md created at project root — complete clone-ready typography reference
 - Key facts: single rendered web font (Inter); platform renders SF Pro (macOS) / Segoe UI (Windows) / Inter (elsewhere); weight ceiling 600; 14px+12px working rhythm; global -0.01em tracking
 - Documentation-only change; no code modified
+
+---
+Task ID: 40
+Agent: Z.ai Code (main)
+Task: Remove the stat band (In queue / Qualified / Under review / Shortlisted) from the Review Queue view (evaluator + admin).
+
+Work Log:
+- Located the band: StatLedger block in src/components/views/review-queue.tsx (lines 251-263), fed by a derived `stat` useMemo (lines 158-169)
+- Confirmed Command Center also uses the shared StatLedger primitive and left it untouched (user only asked for Review Queue)
+- Removed: the StatLedger JSX block, the now-unused `stat` useMemo, and the StatCell/StatLedger/StatLedgerSkeleton imports
+- bun run lint: clean
+- Browser-verified as testadmin at 1600x900: #/review-queue shows NO trace of "In queue", "applications on file", "meet all minimum requirements", "being screened", "advanced by evaluators"; page flows header -> admin note -> kanban directly
+- Mobile check at 390x844: scrollWidth 390 == clientWidth 390 (R-03 zero horizontal scroll holds)
+- Console: no errors (only pre-existing unrelated LCP image warning)
+- Committed as 7e8a851 (review-queue.tsx; TYPOGRAPHY.md from Task 39 also tracked in repo)
+
+Stage Summary:
+- Review Queue stat band removed for both admin and evaluator (shared view component)
+- Kanban/List modes, Qualified-only toggle, refresh all intact and rendering
+- Screenshots: tool-results/t39-review-queue-final.png
