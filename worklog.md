@@ -763,3 +763,17 @@ Stage Summary:
 - Root cause: a sticky element only pins while its containing row is TALLER than itself; with few vacancies the row equaled the pane height → zero travel → never pinned.
 - New rule: board row min-height 100dvh+128px guarantees a ~240px pin phase at any register length; the description pins under the header while the page scrolls, yields only when the footer arrives, and never covers the footer.
 - Register remains a plain non-sticky block (user clarification respected). Committed as the 52-fix change on public-landing.tsx.
+
+---
+Task ID: 53
+Agent: Z.ai Code (main)
+Task: User report — vacant-positions card logo "not center aligned"; asked whether the logo is necessary and what enhancement could make it look better
+
+Work Log:
+- Measured in-browser at 1280×800: the row used items-start, so the 44px seal box and the + button both sat 34.3px ABOVE the card's vertical center (text block is 113px tall) — the seal read as belonging to the deadline pill instead of anchoring the card. Seal PNG itself is a perfectly square/centered 383×383 alpha canvas (PIL bbox check — no optical nudge needed).
+- Design decision: KEEP the mark (institutional anchor — gov job boards repeat the agency seal per posting; matches the design's "institutional proof" motif) and enhance it: (1) row items-start → items-center so the seal chip AND the expand button center against the content block (LinkedIn-style card anchor); (2) seal upgraded from floating 36px directly on the tinted card to a 48×48 white cloud-plain chip (rounded-xl bg-white, NO border/shadow per the Bevel "surface is the elevation" rule, same layering pattern as Task 50's white blocks on cloud) with a 40px seal inside; (3) chip still hidden below sm (mobile cards stay compact, unchanged).
+- Implemented in JobCard (src/components/views/jobs-view.tsx); BrandLogo component untouched (single source of truth preserved for header/hero/auth call sites).
+- Verified: tile center = card center (offset 0.0), seal centered in chip (dx 0, dy 0, 40px), + button offset 0; expanded QuickView renders below with the row intact; mobile 390×844 chip display:none; console clean; lint clean. Evidence: upload/task53-before.png, task53-after.png, task53-expanded.png.
+
+Stage Summary:
+- Vacant-positions card anchor fixed: vertically centered white 48px chip carrying a 40px DOST-MIRDC seal, expand button centered too; logo kept as the institutional anchor with a cleaner, deliberate surface treatment.

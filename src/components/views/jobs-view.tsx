@@ -231,10 +231,16 @@ function JobCard({
   const dl = deadlineState(job.deadlineDate);
   return (
     <article className="dlg-card lift p-4 sm:p-6">
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-4">
         {/* Official unified brand mark — anchors the card the way a company
-            logo does on every top-ranked job-board design */}
-        <BrandLogo logoSize={36} className="hidden sm:inline-flex" />
+            logo does on every top-ranked job-board design. The seal sits on
+            a white cloud-plain chip (surface = elevation, Bevel rule — no
+            border, no shadow) and is vertically centered on the row so it
+            reads as the anchor of the WHOLE card instead of drifting up
+            beside the deadline pill. */}
+        <span className="hidden h-12 w-12 shrink-0 place-items-center rounded-xl bg-white sm:grid">
+          <BrandLogo logoSize={40} />
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <DeadlinePill job={job} />
