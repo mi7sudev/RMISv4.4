@@ -613,3 +613,17 @@ Work Log:
 
 Stage Summary:
 - Applicants now have a discoverable "How hiring works" affordance in the rail: minimal circular (!) above Profile, infographic in a modal — no rail clutter, zero impact on admin/evaluator rails and mobile.
+
+---
+Task ID: 49 (re-verify)
+Agent: Z.ai Code (main)
+Task: Re-verify the applicant sidebar infographic after session context cut — user re-sent the bottom-of-sidebar screenshot clarification.
+
+Work Log:
+- Confirmed on disk/git: rail-journey-info.tsx present, wired in nav-rail.tsx (Account group, APPLICANT only, above Profile); commits f702ae7 + c37e0c5 intact; lint clean; dev server healthy (200).
+- agent-browser E2E re-run: login testapplicant → rail shows Home → "How hiring works" circle → Profile in the ACCOUNT block (exactly the area from the user's screenshot); modal opens with full 4-step timeline + DOST-MIRDC email footnote (innerText verified).
+- Collapsed rail: circle recentered (button & disc center x=32), still opens modal; Escape closes. Evaluator rail: no button (role gate). Mobile 390x844: rail hidden, info button not visible. Console: no errors (only pre-existing LCP seal-image warning).
+- Evidence: upload/task49-verify-rail.png, -modal.png, -collapsed-modal.png.
+
+Stage Summary:
+- Task 49 stands complete and re-verified end-to-end; no code changes needed. Awaiting user direction on Task 47 (primary color) vs Task 46 (frontpage scroll bug).
