@@ -597,3 +597,19 @@ Stage Summary:
 - The production email sender is now live in our system: EMAIL_PROVIDER=middleware drives every notice (shortlist, under review, status change, regret, interview, skills exam, direct HR email with real attachments, forgot-password, admin test send) through the office mirdc_middleware VM (systems@mirdc.dost.gov.ph From header).
 - Sandbox cannot reach 10.10.120.43 — sends there log "failed" (expected, honest). On the intranet server it delivers, byte-for-byte per the verified contract.
 - For production deploy: .env needs only the RMISv4.1 values the user provided (already documented in .env comments); INTRANET_ENFORCEMENT must be on; UPLOAD_DIR/DATABASE_URL per server paths.
+
+---
+Task ID: 49
+Agent: Z.ai Code (main)
+Task: Add an infographic to the APPLICANT sidebar — refined per user clarification to a small circular (!) button above the Profile button that opens the infographic in a modal.
+
+Work Log:
+- First pass rendered a full "Your journey" card pinned in the rail; user clarified: "just a circle with (!) that can be clicked and the modal will appear, position the button above the profile button".
+- Rebuilt as src/components/shell/rail-journey-info.tsx: circular CircleAlert button (h-8 disc inside a 44px row) + shadcn Dialog (dlg-card-plain sm:max-w-md) carrying the infographic — 4-step vertical timeline (Apply → Under review → Shortlisted → Face-to-face) mirroring the real pipeline in src/lib/status.ts + the MOM offline steps, with blue-tinted icon nodes, connector rails, sr-only step numbers, and an email-notice footnote (DOST-MIRDC Recruitment sender).
+- nav-rail.tsx: injected <RailJourneyInfo/> as an <li> inside the Account group's <ul> for APPLICANT only — renders directly above the Profile button; collapsed=!expanded prop recenters the circle (justify-center) when the rail is icon-only; reverted the earlier card-injection experiment (nav back to original structure).
+- Fixed a wiring bug found in browser testing: the click originally only had a TooltipTrigger — nested DialogTrigger inside TooltipTrigger so one click opens the modal while hover shows the tooltip.
+- Verification (agent-browser): rail order Home → "How hiring works" → Profile; modal opens/closes with full content; collapsed rail — all icons centered at x=32 and the circle still opens the modal; evaluator rail has NO button (role gate); mobile 390×844 rail hidden; console clean after reload (stale HMR rename errors cleared); lint clean. Screenshots: upload/journey-modal.png, upload/journey-rail-button.png.
+- Committed f702ae7.
+
+Stage Summary:
+- Applicants now have a discoverable "How hiring works" affordance in the rail: minimal circular (!) above Profile, infographic in a modal — no rail clutter, zero impact on admin/evaluator rails and mobile.
