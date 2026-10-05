@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
-import { RailJourneyCard } from "@/components/shell/rail-journey-card";
+import { RailJourneyInfo } from "@/components/shell/rail-journey-info";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -226,15 +226,9 @@ export function NavRail({ view }: { view: string }) {
           )}
         </div>
 
-        {/* Sections — groups first, then the applicant journey infographic
-            pinned to the foot of the scroll area (mt-auto; it scrolls away
-            gracefully on short viewports and hides when the rail collapses). */}
-        <nav
-          className="flex flex-1 flex-col overflow-y-auto scroll-thin px-2.5 py-4"
-          aria-label="Workspace"
-        >
-          <div className="space-y-6">
-            {groups.map((g) => (
+        {/* Sections */}
+        <nav className="flex-1 space-y-6 overflow-y-auto scroll-thin px-2.5 py-4" aria-label="Workspace">
+          {groups.map((g) => (
             <div key={g.group}>
               {expanded ? (
                 <p className="eyebrow mb-2 px-3 text-[var(--rail-text-dim)]">{g.group}</p>
@@ -242,6 +236,13 @@ export function NavRail({ view }: { view: string }) {
                 <div className="mx-auto mb-2 h-px w-6 bg-[var(--rail-border)]" aria-hidden="true" />
               )}
               <ul className="space-y-1">
+                {/* Applicant info affordance — circular (!) directly above the
+                    Profile button; opens the hiring-journey infographic. */}
+                {g.group === "Account" && user.role === "APPLICANT" && (
+                  <li>
+                    <RailJourneyInfo collapsed={!expanded} />
+                  </li>
+                )}
                 {g.items.map((item) => {
                   const active = item.view === activeKey;
                   const button = (
@@ -292,10 +293,7 @@ export function NavRail({ view }: { view: string }) {
                 })}
               </ul>
             </div>
-            ))}
-          </div>
-
-          {user.role === "APPLICANT" && expanded && <RailJourneyCard />}
+          ))}
         </nav>
 
         {/* Bottom: user dropdown (the collapse toggle lives in the brand row) */}
