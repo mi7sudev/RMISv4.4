@@ -675,15 +675,18 @@ export default function PublicLanding() {
                 item is the ref anchor; in flow mode it contributes ZERO to
                 the row size (h-0 + min-h-full) so the LIST sizes the row,
                 and the inner wrapper is position:sticky, capped to the
-                viewport under the sticky header, and scrolls internally —
-                it stays in view while the list scrolls with the page. In
+                viewport under the sticky header AND to its own container
+                (min() with 100%) — a sticky pane taller than its container
+                would overflow past the row bottom and paint over the footer
+                (short lists: 3 cards ≈ 470px row vs a 688px viewport cap).
+                It stays in view while the list scrolls with the page. In
                 pinned mode the root never scrolls: the outer item stretches
                 to the flexed row, the inner fills it (h-full) and scrolls
                 internally exactly as before. On mobile both are plain
                 blocks (single-pane swap, page scroll). */}
             {showDetail && (
               <div ref={paneRef} className="min-h-0 flow:h-0 flow:min-h-full">
-                <div className="scroll-thin flow:sticky flow:top-[88px] flow:max-h-[calc(100dvh-112px)] flow:overflow-y-auto flow:pr-2 pinned:h-full pinned:overflow-y-auto pinned:pr-2">
+                <div className="scroll-thin flow:sticky flow:top-[88px] flow:max-h-[min(calc(100dvh_-_112px),100%)] flow:overflow-y-auto flow:pr-2 pinned:h-full pinned:overflow-y-auto pinned:pr-2">
                   {selectedJob ? (
                     <div className="dlg-card p-6 sm:p-8">
                       <JobDetail

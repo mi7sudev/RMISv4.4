@@ -1,18 +1,21 @@
 "use client";
 
 // ============================================================================
-// RMIS — Applicant rail info button + modal (spec §13 sidebar): a small
-// circular (!) affordance PINNED TO THE BOTTOM of the nav rail, directly
+// RMIS — Applicant journey info button + modal (spec §13 sidebar): a small
+// circular (!) affordance PINNED TO THE BOTTOM of the navigation, directly
 // ABOVE the active-user profile card (avatar + name + role — APPLICANT role
-// only). Clicking it opens the "How hiring works" infographic as a modal
-// dialog. The steps mirror the REAL recruitment pipeline (src/lib/status.ts):
-// Applied → Under Review → Shortlisted, after which the process continues
-// offline — HR emails schedule the interview, skills exam and appointment
-// face-to-face (MOM 2026-09-03 flow). The disc is SOLID BRAND BLUE with a
-// white (!) — a deliberate visual twin of the profile avatar beneath it, so
-// the affordance reads instantly on the dark rail. Collapsed rail: the
-// circle recenters, tooltip flips to the right — same affordance, icon-only
-// (consistent with the other rail items).
+// only). It renders in the dark desktop rail (variant "rail", default) and
+// in the white mobile drawer (variant "drawer") — both surfaces carry the
+// same circle → divider → profile-card bottom stack. Clicking it opens the
+// "How hiring works" infographic as a modal dialog. The steps mirror the
+// REAL recruitment pipeline (src/lib/status.ts): Applied → Under Review →
+// Shortlisted, after which the process continues offline — HR emails
+// schedule the interview, skills exam and appointment face-to-face
+// (MOM 2026-09-03 flow). The disc is SOLID BRAND BLUE with a white (!) — a
+// deliberate visual twin of the profile avatar beneath it, so the
+// affordance reads instantly. Collapsed rail: the circle recenters,
+// tooltip flips to the right — same affordance, icon-only (consistent with
+// the other rail items).
 // ============================================================================
 
 import {
@@ -68,14 +71,22 @@ const STEPS: JourneyStep[] = [
   },
 ];
 
-export function RailJourneyInfo({ collapsed = false }: { collapsed?: boolean }) {
+export function RailJourneyInfo({
+  collapsed = false,
+  variant = "rail",
+}: {
+  collapsed?: boolean;
+  /** "rail" = dark desktop rail (disc inset 8px to twin the avatar);
+   *  "drawer" = white mobile drawer (disc flush with the account avatar). */
+  variant?: "rail" | "drawer";
+}) {
   const trigger = (
     <button
       type="button"
       aria-label="How hiring works"
       title="How hiring works"
       className={`group flex min-h-[44px] w-full items-center rounded-full text-[var(--rail-text)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink ${
-        collapsed ? "justify-center px-0" : "px-2"
+        collapsed ? "justify-center px-0" : variant === "drawer" ? "px-0" : "px-2"
       }`}
     >
       {/* Solid brand-blue disc + white (!) — matches the profile avatar's

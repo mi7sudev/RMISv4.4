@@ -1,8 +1,10 @@
 "use client";
 
 // ============================================================================
-// RMIS — Mobile navigation sheet (left drawer): all rail sections, account
-// block, sign out. Triggered from the mobile top bar in AppShell.
+// RMIS — Mobile navigation sheet (left drawer): all rail sections, the
+// applicant "How hiring works" info circle, account block, sign out.
+// Triggered from the mobile top bar in AppShell. The bottom stack mirrors
+// the desktop rail: journey circle → divider line → user profile card.
 // ============================================================================
 
 import { useState } from "react";
@@ -15,6 +17,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { NAV_CONFIG, displayNameOf, initialsOf, performSignOut } from "@/components/shell/nav-rail";
+import { RailJourneyInfo } from "@/components/shell/rail-journey-info";
 import { BrandLogo } from "@/components/brand-logo";
 import { useSession } from "@/components/session-provider";
 import { navigate, ROLE_HOME } from "@/lib/router";
@@ -82,6 +85,15 @@ export function MobileNav({ view }: { view: string }) {
               </div>
             ))}
           </nav>
+
+          {/* APPLICANT drawer: the "How hiring works" circle sits above the
+              bottom divider — same circle → line → profile-card stack as the
+              desktop rail. Disc flush with the account avatar below it. */}
+          {user.role === "APPLICANT" && (
+            <div className="shrink-0 px-4 pb-1.5">
+              <RailJourneyInfo variant="drawer" />
+            </div>
+          )}
 
           {/* Account block */}
           <div className="shrink-0 space-y-3 border-t border-border p-4">
