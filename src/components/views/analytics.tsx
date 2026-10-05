@@ -219,10 +219,16 @@ export default function Analytics() {
   const rows = useMemo(() => queue ?? [], [queue]);
 
   const funnel = useMemo(() => {
-    const applied = rows.filter((r) => stageForStatus(r.status) === "Applied").length;
+    // QA 2026-02 bugfix (user report: "progress bars not working"): the old
+    // denominator was the count CURRENTLY sitting in the Applied stage — once
+    // every applicant advances (Applied = 0), every percentage collapsed to
+    // 0% and all bars went empty. A conversion funnel's denominator is the
+    // size of the whole intake pool: rows.length (everyone who applied).
+    // Stage shares now always render and sum to ~100%.
+    const total = rows.length;
     return PIPELINE_STAGES.map((stage) => {
       const count = rows.filter((r) => stageForStatus(r.status) === stage).length;
-      const pct = applied > 0 ? Math.round((count / applied) * 100) : 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
       return { stage, count, pct };
     });
   }, [rows]);
@@ -323,7 +329,7 @@ export default function Analytics() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Panel
             title="Pipeline conversion"
-            description="Click a stage to drill into its applicants. Percentages are of Applied."
+            description="Click a stage to drill into its applicants. Percentages are of all applications."
             icon={Filter}
             chipTone="plum"
             className="h-full lg:flex lg:flex-col"

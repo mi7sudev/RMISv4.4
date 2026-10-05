@@ -1,14 +1,16 @@
 "use client";
 
 // ============================================================================
-// RMIS — Evaluator review queue (spec §7.8). Kanban (default) and List modes
+// RMIS — Evaluator review queue (spec §7.8). List (default) and Kanban modes
 // over /api/evaluator/queue. 15 s silent poll + focus refresh + manual refresh.
 // "Qualified only" lens, stage tabs (list), bulk regret letters with confirm.
-// Card / row review actions open the ReviewWorkspace in a Dialog.
-// Bevel pass: shared page-header anatomy + cloud stat cards, capsule segmented
-// toggles, white hairline table-card, quiet round row actions. 4-column kanban
-// keeps the shared reference-board primitives (dot+label+count columns, pastel
-// avatars, match badge, credential tags). Handlers byte-identical.
+// Card / row review actions open the ReviewWorkspace in a Dialog. List rows
+// carry an always-visible labeled Review button (user direction — no
+// hover-reveal arrow). Bevel pass: shared page-header anatomy + cloud stat
+// cards, capsule segmented toggles, white hairline table-card, quiet round row
+// actions. 4-column kanban keeps the shared reference-board primitives (dot+
+// label+count columns, pastel avatars, match badge, credential tags).
+// Handlers byte-identical.
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -99,7 +101,9 @@ export default function ReviewQueue() {
   const [queue, setQueue] = useState<QueueRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [qualifiedOnly, setQualifiedOnly] = useState(false);
-  const [mode, setMode] = useState<"kanban" | "list">("kanban");
+  // QA 2026-02 (user direction): List is the default working surface — the
+  // kanban board stays available as the secondary spatial overview.
+  const [mode, setMode] = useState<"kanban" | "list">("list");
   const [listStage, setListStage] = useState<"All" | StageKey>("All");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [regretOpen, setRegretOpen] = useState(false);
@@ -380,7 +384,7 @@ export default function ReviewQueue() {
                       <th scope="col" className="eyebrow px-4 py-3">Applied</th>
                       <th scope="col" className="eyebrow px-4 py-3">Status</th>
                       <th scope="col" className="eyebrow px-4 py-3">Verdict</th>
-                      <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
+                      <th scope="col" className="px-3 py-3"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -400,23 +404,27 @@ export default function ReviewQueue() {
                               </div>
                             </div>
                           </td>
-                          <td className="max-w-[220px] px-4 py-3">
+                          <td className="max-w-[190px] px-4 py-3">
                             <p className="truncate text-[13px] text-ink">{humanize(position)}</p>
                             <p className="truncate text-xs text-stone">{place || "-"}</p>
                           </td>
                           <td className="num whitespace-nowrap px-4 py-3 text-[13px] text-stone">{formatDate(row.dateApplied)}</td>
                           <td className="px-4 py-3"><StatusPill status={row.status} /></td>
                           <td className="px-4 py-3"><VerdictPill verdict={row.match?.verdict} /></td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
+                          <td className="px-3 py-3 text-right">
+                            {/* QA 2026-02 (user direction): the review action is
+                                a labeled, always-visible button — no hover-reveal
+                                arrow. "View" marks already-decided rows. */}
+                            <div className="flex items-center justify-end gap-1">
                               <button
                                 type="button"
-                                className={iconBtn}
+                                className="dlg-ghost inline-flex min-h-[36px] items-center gap-1 px-3 text-xs font-medium"
                                 aria-label={decided ? `View decision for ${name}` : `Review application from ${name}`}
                                 title={decided ? "View decision" : "Review"}
                                 onClick={() => setSelectedId(row.id)}
                               >
-                                <ArrowUpRight className="h-4 w-4" aria-hidden />
+                                {decided ? "View" : "Review"}
+                                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                               </button>
                               <button
                                 type="button"
