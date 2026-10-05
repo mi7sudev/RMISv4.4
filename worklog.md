@@ -791,3 +791,19 @@ Work Log:
 
 Stage Summary:
 - PDS extraction now accepts every layout family found in the wild: official Revised 2017 multi-sheet (any agency re-revision incl. 2026-era), 2026-style flat-table continuation sheets, and lower-version single-sheet/legacy exports — with header-resolved columns instead of one template's hardcoded geometry, junk-proofed (skills≠awards, captions≠eligibility, banners/notes≠data). Commit: pds-extract.ts rewrite.
+
+---
+Task ID: 55
+Agent: Z.ai Code (main)
+Task: "update this login page left side contents and ui 'MOLDING THE FUTURE OF METAL INDUSTRIES' make it look not AI Generated or AI slop" — redesign the auth brand panel
+
+Work Log:
+- Diagnosed the slop signals in the old AuthBrandPanel (duplicated in signin-view + signup-view): generic slogan "Build a career that moves the nation forward.", three pastel IconChip pills (amber/emerald/plum), giant faded "M" letterform, capsule logo chip — the default AI-landing-page vocabulary.
+- Rebuilt as a shared component src/components/auth-brand-panel.tsx (dedup: both views import it; local copies + TRUST_POINTS + IconChip/ChipTone/LucideIcon/BrandLogo imports removed from both views; handlers/APIs untouched).
+- New composition follows real government-instrument conventions instead of marketing ones: flat seal lockup (no capsule, "surface is the elevation"), gov.ph letterhead (Republic of the Philippines / DOST / MIRDC) behind a hairline rule, the user-directed motto "Molding the future of metal industries." as the 40px display heading with text-balance natural wrap (a forced <br /> widowed "future" below xl — removed), a hairline-ruled fact ledger (Est. 1966 — RA 4724; CSC merit-based selection; RA 10173 Data Privacy Act) replacing the icon pills, a ghosted official-seal watermark (opacity .05, corner-bleed) replacing the "M", and the Bicutan office address pinned to the panel foot via mt-auto.
+- Fold-fit pass: initial build pushed the page to 888px at 1280x800; measured both columns (aside content 688 → 626 → 596 via rhythm trims pt-12→pt-9, pb-8→pb-6, ledger/address/margins −4 each; sign-in form column sm:py-12→lg:py-7, inner 530) → page now exactly 800 (footerBottom 800/800, noScroll true). max-w-md → max-w-[520px] so the xl two-line motto fits.
+- Verification (agent-browser): 1280×800 exact viewport fit, footer fully visible; 1024×768 lg boundary — 3 balanced lines, no widow/overflow; 390×844 — aside display:none, form + footer intact; signup page renders the identical panel; golden path re-tested (testapplicant chip → Sign in → "Welcome to RMIS" toast → #/home) — refactor broke nothing; console clean (only pre-existing footer-seal LCP warning); bun run lint clean.
+- Evidence: upload/task55-signin-desktop.png, task55-signin-lg.png, task55-signin-mobile.png, task55-signup.png.
+
+Stage Summary:
+- Auth brand panel rebuilt as an institutional document (letterhead, motto, fact ledger, seal watermark, address foot) instead of an AI-marketing hero; shared single source for sign-in and sign-up; page fits 1280×800 exactly. Commit 24642ab.
