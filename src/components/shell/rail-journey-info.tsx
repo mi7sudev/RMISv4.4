@@ -8,9 +8,11 @@
 // dialog. The steps mirror the REAL recruitment pipeline (src/lib/status.ts):
 // Applied → Under Review → Shortlisted, after which the process continues
 // offline — HR emails schedule the interview, skills exam and appointment
-// face-to-face (MOM 2026-09-03 flow). Collapsed rail: the circle recenters,
-// tooltip flips to the right — same affordance, icon-only (consistent with
-// the other rail items).
+// face-to-face (MOM 2026-09-03 flow). The disc is SOLID BRAND BLUE with a
+// white (!) — a deliberate visual twin of the profile avatar beneath it, so
+// the affordance reads instantly on the dark rail. Collapsed rail: the
+// circle recenters, tooltip flips to the right — same affordance, icon-only
+// (consistent with the other rail items).
 // ============================================================================
 
 import {
@@ -72,17 +74,19 @@ export function RailJourneyInfo({ collapsed = false }: { collapsed?: boolean }) 
       type="button"
       aria-label="How hiring works"
       title="How hiring works"
-      className={`flex min-h-[44px] w-full items-center rounded-full text-[var(--rail-text)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink ${
+      className={`group flex min-h-[44px] w-full items-center rounded-full text-[var(--rail-text)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink ${
         collapsed ? "justify-center px-0" : "px-2"
       }`}
     >
+      {/* Solid brand-blue disc + white (!) — matches the profile avatar's
+          size and fill directly below, so the two read as a set. */}
       <span
         aria-hidden="true"
-        className="grid h-8 w-8 place-items-center rounded-full border transition-colors"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full transition-all duration-150 group-hover:scale-[1.06] group-hover:brightness-110"
         style={{
-          borderColor: "var(--rail-border)",
-          background: "var(--snow)",
-          color: "var(--rail-text-dim)",
+          background: "var(--primary)",
+          color: "#ffffff",
+          boxShadow: "0 1px 3px rgb(0 0 0 / 0.25)",
         }}
       >
         <CircleAlert className="h-4 w-4" />
