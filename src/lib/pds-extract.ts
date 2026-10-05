@@ -5,6 +5,12 @@
 //   pdf  → unpdf text → AI      docx → mammoth text → AI      images → AI vision
 // Prompt contract: extract only what is clearly present; NEVER fabricate;
 // not found ⇒ null + confidence "none"; dates → YYYY-MM-DD; JSON only.
+// The deterministic parser is VERSION-ADAPTIVE: it handles the official
+// multi-sheet CS Form 212 (Revised 2017 and agency re-revisions of any year,
+// including 2026-era templates), its continuation sheets, and older/lower
+// single-sheet legacy PDS layouts, by probing labels with boilerplate
+// stripped and resolving table columns from their header rows instead of
+// assuming one template's geometry.
 // ============================================================================
 
 import * as XLSX from "xlsx";
@@ -26,9 +32,13 @@ export type ExtractionResult = {
 const cv = (value: string | number | null, confidence: ConfidentValue["confidence"] = "high"): ConfidentValue =>
   ({ value: value === "" ? null : value, confidence });
 
-// ── Deterministic PDS parsing (CSC Form 212, label-anchored) ────────────────
+// ── Deterministic PDS parsing (CS Form 212 — version-adaptive) ──────────────
 
-const NOISE = /cs\s*form|page\s*\d+\s*of|signature|do not abbreviate|^\s*[ivx]+\.\s*$|over-\s*mark/i;
+// Roman-numeral section titles ("IV. CIVIL SERVICE ELIGIBILITY", "VII.
+// LEARNING AND DEVELOPMENT …") must never anchor a table — the real table
+// header sits 1–2 rows below them. "(Continue on separate sheet …)" notes,
+// signature rows, and template disclaimer banners are never data.
+const NOISE = /cs\s*form|page\s*\d+\s*of|signature|do not abbreviate|^\s*[ivx]+\.\s*$|^\s*[ivxlc]+\s*\.\s|^section\b|continue\s*on\s*separate|over-\s*mark|demonstration\s*data|do\s*not\s*submit/i;
 
 function cellText(v: unknown): string {
   if (v == null) return "";
@@ -43,15 +53,32 @@ function cellText(v: unknown): string {
   return String(v).trim();
 }
 
-function findRow(ws: XLSX.WorkSheet, labelRe: RegExp, maxRow = 80): { row: number; col: number } | null {
+// PDS versions differ in how much boilerplate they embed inside label cells
+// ("POSITION TITLE (Write in full/Do not abbreviate)", "(mm/dd/yyyy)",
+// "(Continue on separate sheet if necessary)"). Probing the text with
+// parentheticals stripped keeps real headers recognizable while page footers
+// ("CS FORM 212 (Revised 2017), Page 1 of 4") are still rejected by NOISE.
+function probeText(v: unknown): string {
+  return cellText(v).replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// "N/A" markers mean the applicant left the cell blank — treat as empty.
+const isNA = (s: string) => !s || /^n\/?a\.?$/i.test(s.trim());
+
+// Real PDS cell values are short; anything beyond this is template
+// boilerplate (disclaimer banners, instructions) that some versions embed in
+// data rows — never extract it as content.
+const MAX_VALUE_LEN = 160;
+const plausible = (v: string, min: number) => !isNA(v) && v.length >= min && v.length <= MAX_VALUE_LEN;
+
+function findRow(ws: XLSX.WorkSheet, labelRe: RegExp, maxRow = 80, startRow?: number): { row: number; col: number } | null {
   const ref = ws["!ref"];
   if (!ref) return null;
   const range = XLSX.utils.decode_range(ref);
   const rEnd = Math.min(range.e.r, maxRow);
-  for (let r = range.s.r; r <= rEnd; r++) {
+  for (let r = startRow ?? range.s.r; r <= rEnd; r++) {
     for (let c = range.s.c; c <= Math.min(range.e.c, range.s.c + 14); c++) {
-      const cell = ws[XLSX.utils.encode_cell({ r, c })];
-      const t = cellText(cell?.v);
+      const t = probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
       if (t && labelRe.test(t) && !NOISE.test(t)) return { row: r, col: c };
     }
   }
@@ -86,6 +113,273 @@ function normDate(v: string): string {
   return "";
 }
 
+const year4 = (v: string): string => (/^\d{4}$/.test(v.trim()) ? v.trim() : (v.match(/\d{4}/)?.[0] ?? ""));
+
+// ── Version-adaptive table reader ────────────────────────────────────────────
+// Every PDS section table (education, eligibility, work, training, awards) is
+// located by its HEADER ROW and each field's column is RESOLVED from the
+// header labels (header row + up to 3 rows below, covering two-row headers
+// with From/To sub-rows). Hardcoded column geometry from one template becomes
+// only a fallback, so re-revisions and older/lower layouts that shifted
+// columns still parse. Tables are collected from EVERY sheet (main pages and
+// continuation sheets alike; Lookup sheets excluded).
+
+type TableRowGetter = (col: number) => string;
+
+type TableSpec = {
+  key: "educations" | "workExperiences" | "trainings" | "eligibilities" | "awards";
+  headerRe: RegExp;
+  fallbackHeaderRe?: RegExp;
+  fields: Record<string, { re?: RegExp; fallback: number[] }>;
+  maxRows: number;
+  build: (get: TableRowGetter, cols: Record<string, number>) => ExtractionSection | null;
+};
+
+function resolveColumns(ws: XLSX.WorkSheet, headerRow: number, fields: TableSpec["fields"]): Record<string, number> {
+  const ref = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+  const cStart = ref ? ref.s.c : 0;
+  const cEnd = ref ? Math.min(ref.e.c, ref.s.c + 14) : 14;
+  const cols: Record<string, number> = {};
+  for (const [key, spec] of Object.entries(fields)) {
+    cols[key] = -1;
+    if (spec.re) {
+      for (let r = headerRow; r <= headerRow + 3 && cols[key] === -1; r++) {
+        for (let c = cStart; c <= cEnd; c++) {
+          const t = probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+          if (t && spec.re.test(t) && !NOISE.test(t)) {
+            cols[key] = c;
+            break;
+          }
+        }
+      }
+    }
+    if (cols[key] === -1) cols[key] = spec.fallback[0] ?? -1;
+  }
+  return cols;
+}
+
+// Pick the first candidate cell that satisfies pred, skipping columns that
+// belong to other resolved fields (e.g. the To-date column next to a merged
+// title) and the header column's merge-neighbors only when they are free.
+function pickCell(cands: number[], exclude: number[], get: TableRowGetter, pred: (v: string) => boolean): string {
+  for (const c of cands) {
+    if (c < 0 || exclude.includes(c)) continue;
+    const v = get(c);
+    if (pred(v)) return v;
+  }
+  return "";
+}
+
+function parseTableAcrossSheets(wb: XLSX.WorkBook, spec: TableSpec): ExtractionSection[] {
+  const entries: ExtractionSection[] = [];
+  for (const name of wb.SheetNames) {
+    if (/lookup/i.test(name)) continue;
+    const ws = wb.Sheets[name];
+    if (!ws) continue;
+    const header = findRow(ws, spec.headerRe, 250) ?? (spec.fallbackHeaderRe ? findRow(ws, spec.fallbackHeaderRe, 250) : null);
+    if (!header) continue;
+    const cols = resolveColumns(ws, header.row, spec.fields);
+    const ref = XLSX.utils.decode_range(ws["!ref"]!);
+    // A section table ends at the next "(Continue on separate sheet …)" note,
+    // the next roman-numeral section title, or a signature row — without this
+    // clamp the scan bleeds into the FOLLOWING section's table (e.g. the
+    // eligibility window reading the work-experience header row). The note is
+    // tested on the RAW text because probeText strips its parentheses.
+    let sectionEnd = Math.min(ref.e.r, header.row + spec.maxRows);
+    for (let r = header.row + 1; r <= sectionEnd; r++) {
+      const raw = [0, 1, 2].map((c) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join(" ");
+      const probe = [0, 1, 2].map((c) => probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join(" ");
+      const tail = [3, 4, 5, 6, 7].map((c) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join("");
+      if (/continue on separate|signature/i.test(raw) || (/^\s*[ivxlc]+\s*\.\s/i.test(probe) && tail === "")) {
+        sectionEnd = r - 1;
+        break;
+      }
+    }
+    for (let r = header.row + 1; r <= sectionEnd; r++) {
+      const get: TableRowGetter = (c) => (c >= 0 ? cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v) : "");
+      try {
+        const entry = spec.build(get, cols);
+        if (entry) entries.push(entry);
+      } catch {
+        // malformed row — skip
+      }
+    }
+  }
+  return entries;
+}
+
+const EDUCATION_LEVEL_MAP = (raw: string): string =>
+  /elementary/i.test(raw) ? "Elementary"
+  : /secondary|high\s*school/i.test(raw) ? "Secondary"
+  : /vocational|trade/i.test(raw) ? "Vocational / Trade"
+  : /graduate|post/i.test(raw) ? "Graduate Studies"
+  : "College";
+
+const TABLE_SPECS: TableSpec[] = [
+  {
+    key: "educations",
+    headerRe: /name\s*of\s*school/i,
+    fields: {
+      level: { re: /\blevel\b/i, fallback: [1] },
+      school: { re: /name\s*of\s*school/i, fallback: [3] },
+      degree: { re: /degree|course/i, fallback: [6] },
+      from: { re: /^from\b/i, fallback: [9] },
+      to: { re: /^to\b/i, fallback: [10] },
+      graduated: { re: /year\s*graduated/i, fallback: [12] },
+      honors: { re: /scholarship|honors/i, fallback: [13] },
+    },
+    maxRows: 40,
+    build: (get, cols) => {
+      const school = get(cols.school);
+      const degree = get(cols.degree);
+      if (isNA(school) && isNA(degree)) return null;
+      if (NOISE.test(school + degree)) return null;
+      const entry: ExtractionSection = {};
+      const level = get(cols.level);
+      if (!isNA(level)) entry.educationLevel = cv(EDUCATION_LEVEL_MAP(level), "medium");
+      if (!isNA(school)) entry.schoolName = cv(school);
+      if (!isNA(degree) && !/^graduated$/i.test(degree)) entry.course = cv(degree, "medium");
+      const from = year4(get(cols.from));
+      if (from) entry.yearFrom = cv(from, "medium");
+      const to = year4(get(cols.to));
+      if (to) entry.yearTo = cv(to, "medium");
+      const grad = year4(get(cols.graduated));
+      if (grad) entry.yearGraduated = cv(grad, "medium");
+      const honors = get(cols.honors);
+      if (!isNA(honors)) entry.awards = cv(honors, "medium");
+      return Object.keys(entry).length > 0 ? entry : null;
+    },
+  },
+  {
+    key: "eligibilities",
+    headerRe: /career\s*service\/?\s*ra\s*1080|date\s*of\s*examination|conferment/i,
+    fallbackHeaderRe: /civil\s*service\s*eligib|\beligib/i,
+    fields: {
+      title: { fallback: [1, 2] },
+      rating: { re: /rating/i, fallback: [5] },
+      examDate: { re: /date\s*of\s*exam|conferment/i, fallback: [6] },
+      examPlace: { re: /place\s*of\s*exam/i, fallback: [7] },
+    },
+    maxRows: 40,
+    build: (get, cols) => {
+      const ratingCell = get(cols.rating);
+      const dateCell = get(cols.examDate);
+      const placeCell = get(cols.examPlace);
+      // A row repeating the column captions (older variants anchor one row
+      // higher) is a header, not data: 2+ caption cells give it away.
+      const captionHits = [ratingCell, dateCell, placeCell].filter((v) => /rating|exam|conferment|place/i.test(v)).length;
+      if (captionHits >= 2) return null;
+      // The title cell is the only unlabeled column (older variants place it
+      // one column off) — exclude the resolved rating/date/place columns and
+      // never accept a purely numeric cell (that is the rating).
+      const title = pickCell(
+        [cols.title, cols.title - 1, cols.title + 1],
+        [cols.rating, cols.examDate, cols.examPlace],
+        get,
+        (v) => plausible(v, 3) && !/^[\d.,\s]+$/.test(v)
+      );
+      if (isNA(title) || NOISE.test(title)) return null;
+      const entry: ExtractionSection = { title: cv(title.replace(/\s*\(.*?\)\s*$/, "")) };
+      if (ratingCell && /^\d/.test(ratingCell)) entry.rating = cv(ratingCell, "medium");
+      if (dateCell) entry.examDate = cv(normDate(dateCell) || dateCell, "medium");
+      if (placeCell) entry.examPlace = cv(placeCell, "medium");
+      return entry;
+    },
+  },
+  {
+    key: "workExperiences",
+    headerRe: /position\s*title/i,
+    fields: {
+      from: { re: /^from\b/i, fallback: [0, 1] },
+      to: { re: /^to\b/i, fallback: [2, 3] },
+      title: { re: /position\s*title/i, fallback: [4, 3] },
+      employer: { re: /department|agency|company/i, fallback: [6, 5] },
+      salary: { re: /monthly\s*salary/i, fallback: [9, 8] },
+    },
+    maxRows: 200,
+    build: (get, cols) => {
+      const position = pickCell([cols.title, cols.title - 1, cols.title + 1], [cols.from, cols.to], get, (v) => plausible(v, 3));
+      if (!position || NOISE.test(position)) return null;
+      const entry: ExtractionSection = { positionTitle: cv(position) };
+      const employer = pickCell([cols.employer, cols.employer - 1], [cols.from, cols.to], get, (v) => !isNA(v) && v.length > 2);
+      if (employer) entry.employerName = cv(employer, "medium");
+      const dFrom = normDate(get(cols.from));
+      if (dFrom) entry.dateFrom = cv(dFrom, "medium");
+      const toRaw = get(cols.to);
+      const dTo = normDate(toRaw);
+      if (dTo) entry.dateTo = cv(dTo, "medium");
+      else if (isNA(toRaw) || /present/i.test(toRaw)) entry.isPresentWork = cv("true", "medium");
+      const salary = get(cols.salary);
+      if (!isNA(salary)) {
+        const n = Number(salary.replace(/[^\d.]/g, ""));
+        if (!Number.isNaN(n) && n > 0) entry.monthlySalary = cv(n, "medium");
+      }
+      return entry;
+    },
+  },
+  {
+    key: "trainings",
+    headerRe: /title\s*of\s*(learning|training)|learning\s*(and|&)\s*development/i,
+    fields: {
+      title: { fallback: [0, 1] },
+      from: { re: /^from\b/i, fallback: [4, 2] },
+      to: { re: /^to\b/i, fallback: [5, 3] },
+      hours: { re: /number\s*of\s*hours|hours/i, fallback: [6] },
+      type: { re: /type\s*of/i, fallback: [7] },
+    },
+    maxRows: 200,
+    build: (get, cols) => {
+      const title = pickCell([cols.title, cols.title + 1], [cols.from, cols.to], get, (v) => plausible(v, 4));
+      if (isNA(title) || NOISE.test(title) || /^\d+$/.test(title)) return null;
+      const entry: ExtractionSection = { title: cv(title) };
+      const dFrom = normDate(get(cols.from));
+      if (dFrom) entry.dateFrom = cv(dFrom, "medium");
+      const dTo = normDate(get(cols.to));
+      if (dTo) entry.dateTo = cv(dTo, "medium");
+      const hours = get(cols.hours);
+      const hNum = Number(String(hours).replace(/[^\d.]/g, ""));
+      if (!isNA(hours) && !Number.isNaN(hNum) && hNum > 0) entry.numberHours = cv(hNum, "medium");
+      const type = get(cols.type);
+      if (!isNA(type) && type.length > 2 && !NOISE.test(type)) entry.typeOfTraining = cv(type, "medium");
+      return entry;
+    },
+  },
+  {
+    key: "awards",
+    headerRe: /non-?academic\s*distinctions/i,
+    fields: {
+      details: { re: /non-?academic\s*distinctions/i, fallback: [3] },
+    },
+    maxRows: 60,
+    build: (get, cols) => {
+      // The distinctions cell is a merge whose anchor often sits one column
+      // left of its caption; the Special Skills and Membership columns share
+      // the row and must NOT leak in.
+      const details = pickCell([cols.details, cols.details - 1, cols.details + 1], [], get, (v) => plausible(v, 7));
+      if (!details || NOISE.test(details) || /^\d+$/.test(details) || /membership|special\s*skills|hobbies/i.test(details)) return null;
+      return { details: cv(details), recognitionType: cv("Award", "medium") };
+    },
+  },
+];
+
+function detectRevision(wb: XLSX.WorkBook): string | null {
+  for (const name of wb.SheetNames) {
+    if (/lookup/i.test(name)) continue;
+    const ws = wb.Sheets[name];
+    const ref = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+    if (!ref) continue;
+    for (let r = ref.s.r; r <= Math.min(ref.e.r, 120); r++) {
+      for (let c = ref.s.c; c <= Math.min(ref.e.c, ref.s.c + 15); c++) {
+        const t = cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+        const m = t.match(/revised\s*(20\d{2})/i);
+        if (m) return `CS Form 212 (Revised ${m[1]})`;
+        if (/cs\s*form\s*no\.?\s*\.?\s*212/i.test(t)) return "CS Form 212";
+      }
+    }
+  }
+  return null;
+}
+
 export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   let wb: XLSX.WorkBook;
   try {
@@ -96,7 +390,7 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   const sheetName = wb.SheetNames.find((n) => /C1|Sheet1|personal/i.test(n)) || wb.SheetNames[0];
   if (!sheetName) return null;
   const ws = wb.Sheets[sheetName];
-  const a1 = cellText(ws["A1"]?.v ?? ws["A2"]?.v);
+  const a1 = probeText(ws["A1"]?.v ?? ws["A2"]?.v ?? ws["A3"]?.v);
   const looksLikePds =
     /personal\s*data\s*sheet/i.test(a1) ||
     wb.SheetNames.some((n) => /C\d/i.test(n)) ||
@@ -104,8 +398,10 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   if (!looksLikePds) return null;
 
   const result: ExtractionResult = { warnings: [] };
-  const personal: ExtractionSection = {};
+  const revision = detectRevision(wb);
+  if (revision) result.warnings?.push(`Detected ${revision} layout.`);
 
+  const personal: ExtractionSection = {};
   const put = (key: string, v: string, conf: ConfidentValue["confidence"] = "high") => {
     if (v) personal[key] = cv(v, conf);
   };
@@ -160,127 +456,36 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
     result.warnings?.push("No PDS labels recognized");
     return result;
   }
-  result.personalInfo = personal;
+  if (fieldsExtracted > 0) result.personalInfo = personal;
 
-  // ── Education table (sheet C1: header "NAME OF SCHOOL") ──────────────────
-  const eduSheet = wb.Sheets[sheetName];
-  const eduHeader = findRow(eduSheet, /name\s*of\s*school/i, 200);
-  const educations: ExtractionSection[] = [];
-  if (eduHeader) {
-    const ref = XLSX.utils.decode_range(eduSheet["!ref"]!);
-    for (let r = eduHeader.row + 1; r <= Math.min(ref.e.r, eduHeader.row + 20); r++) {
-      const level = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 1 })]?.v);
-      const school = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 3 })]?.v);
-      const degree = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 6 })]?.v);
-      const from = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 9 })]?.v);
-      const to = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 10 })]?.v);
-      const grad = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 12 })]?.v);
-      const honors = cellText(eduSheet[XLSX.utils.encode_cell({ r, c: 13 })]?.v);
-      if (!school && !degree) continue;
-      if (NOISE.test(school + degree)) continue;
-      const entry: ExtractionSection = {};
-      if (level) entry.educationLevel = cv(/elementary/i.test(level) ? "Elementary" : /secondary/i.test(level) ? "Secondary" : /vocational/i.test(level) ? "Vocational / Trade" : /graduate/i.test(level) ? "Graduate Studies" : "College", "medium");
-      if (school) entry.schoolName = cv(school);
-      if (degree && !/^graduated$/i.test(degree)) entry.course = cv(degree, "medium");
-      if (from) entry.yearFrom = cv(/^\d{4}$/.test(from) ? from : (from.match(/\d{4}/)?.[0] ?? ""), "medium");
-      if (to) entry.yearTo = cv(/^\d{4}$/.test(to) ? to : (to.match(/\d{4}/)?.[0] ?? ""), "medium");
-      if (grad) entry.yearGraduated = cv(/^\d{4}$/.test(grad) ? grad : (grad.match(/\d{4}/)?.[0] ?? ""), "medium");
-      if (honors) entry.awards = cv(honors, "medium");
-      if (Object.keys(entry).length > 0) educations.push(entry);
-    }
-    if (educations.length > 0) result.educations = educations;
+  // ── Section tables — header-resolved, collected across every sheet ────────
+  for (const spec of TABLE_SPECS) {
+    const entries = dedupeSectionArray(parseTableAcrossSheets(wb, spec), spec.key);
+    if (entries.length > 0) result[spec.key] = entries;
   }
 
-  // ── Sheets C2 (eligibility + work) and C3 (training + awards) ────────────
-  const c2 = wb.SheetNames.find((n) => /C2/i.test(n));
-  if (c2) {
-    const ws2 = wb.Sheets[c2];
-    const eligHeader = findRow(ws2, /career\s*service(?!.*eligibility)|\bscreligib|eligib/i, 120);
-    const eligibilities: ExtractionSection[] = [];
-    if (eligHeader) {
-      const ref = XLSX.utils.decode_range(ws2["!ref"]!);
-      for (let r = eligHeader.row + 1; r <= Math.min(ref.e.r, eligHeader.row + 12); r++) {
-        const title = cellText(ws2[XLSX.utils.encode_cell({ r, c: 1 })]?.v) || cellText(ws2[XLSX.utils.encode_cell({ r, c: 2 })]?.v);
-        const rating = cellText(ws2[XLSX.utils.encode_cell({ r, c: 5 })]?.v);
-        const date = cellText(ws2[XLSX.utils.encode_cell({ r, c: 6 })]?.v);
-        const place = cellText(ws2[XLSX.utils.encode_cell({ r, c: 7 })]?.v);
-        if (!title || NOISE.test(title)) continue;
-        const entry: ExtractionSection = { title: cv(title.replace(/\s*\(.*?\)\s*$/, "")) };
-        if (rating && /^\d/.test(rating)) entry.rating = cv(rating, "medium");
-        if (date) entry.examDate = cv(normDate(date) || date, "medium");
-        if (place) entry.examPlace = cv(place, "medium");
-        eligibilities.push(entry);
-      }
-      if (eligibilities.length > 0) result.eligibilities = eligibilities;
-    }
-
-    const workHeader = findRow(ws2, /position\s*title/i, 200);
-    const work: ExtractionSection[] = [];
-    if (workHeader) {
-      const ref = XLSX.utils.decode_range(ws2["!ref"]!);
-      for (let r = workHeader.row + 1; r <= Math.min(ref.e.r, workHeader.row + 30); r++) {
-        const from = cellText(ws2[XLSX.utils.encode_cell({ r, c: 0 })]?.v) || cellText(ws2[XLSX.utils.encode_cell({ r, c: 1 })]?.v);
-        const to = cellText(ws2[XLSX.utils.encode_cell({ r, c: 2 })]?.v) || cellText(ws2[XLSX.utils.encode_cell({ r, c: 3 })]?.v);
-        const position = cellText(ws2[XLSX.utils.encode_cell({ r, c: 4 })]?.v) || cellText(ws2[XLSX.utils.encode_cell({ r, c: 3 })]?.v);
-        const employer = cellText(ws2[XLSX.utils.encode_cell({ r, c: 6 })]?.v) || cellText(ws2[XLSX.utils.encode_cell({ r, c: 5 })]?.v);
-        const salary = cellText(ws2[XLSX.utils.encode_cell({ r, c: 8 })]?.v);
-        if (!position || position.length < 3 || NOISE.test(position)) continue;
-        const entry: ExtractionSection = { positionTitle: cv(position) };
-        if (employer && employer.length > 2) entry.employerName = cv(employer, "medium");
-        const dFrom = normDate(from);
-        if (dFrom) entry.dateFrom = cv(dFrom, "medium");
-        const dTo = normDate(to);
-        if (dTo) entry.dateTo = cv(dTo, "medium");
-        else if (!to || /present/i.test(to)) entry.isPresentWork = cv("true", "medium");
-        if (salary && Number(salary.replace(/[^\d.]/g, "")) > 0) entry.monthlySalary = cv(Number(salary.replace(/[^\d.]/g, "")), "medium");
-        work.push(entry);
-      }
-      if (work.length > 0) result.workExperiences = work;
-    }
-  }
-
-  const c3 = wb.SheetNames.find((n) => /C3/i.test(n));
-  if (c3) {
-    const ws3 = wb.Sheets[c3];
-    const trainHeader = findRow(ws3, /title\s*of\s*learning|title\s*of\s*training/i, 200);
-    const trainings: ExtractionSection[] = [];
-    if (trainHeader) {
-      const ref = XLSX.utils.decode_range(ws3["!ref"]!);
-      for (let r = trainHeader.row + 1; r <= Math.min(ref.e.r, trainHeader.row + 30); r++) {
-        const title = cellText(ws3[XLSX.utils.encode_cell({ r, c: 0 })]?.v) || cellText(ws3[XLSX.utils.encode_cell({ r, c: 1 })]?.v);
-        const from = cellText(ws3[XLSX.utils.encode_cell({ r, c: 4 })]?.v) || cellText(ws3[XLSX.utils.encode_cell({ r, c: 2 })]?.v);
-        const to = cellText(ws3[XLSX.utils.encode_cell({ r, c: 5 })]?.v) || cellText(ws3[XLSX.utils.encode_cell({ r, c: 3 })]?.v);
-        const hours = cellText(ws3[XLSX.utils.encode_cell({ r, c: 6 })]?.v);
-        const type = cellText(ws3[XLSX.utils.encode_cell({ r, c: 7 })]?.v);
-        if (!title || title.length < 4 || NOISE.test(title) || /^\d+$/.test(title)) continue;
-        const entry: ExtractionSection = { title: cv(title) };
-        const dFrom = normDate(from);
-        if (dFrom) entry.dateFrom = cv(dFrom, "medium");
-        const dTo = normDate(to);
-        if (dTo) entry.dateTo = cv(dTo, "medium");
-        const hNum = Number(String(hours).replace(/[^\d.]/g, ""));
-        if (hours && !Number.isNaN(hNum) && hNum > 0) entry.numberHours = cv(hNum, "medium");
-        if (type && type.length > 2 && !NOISE.test(type)) entry.typeOfTraining = cv(type, "medium");
-        trainings.push(entry);
-      }
-      if (trainings.length > 0) result.trainings = trainings;
-    }
-
-    const awardsHeader = findRow(ws3, /non-?academic\s*distinctions/i, 250);
-    const awards: ExtractionSection[] = [];
-    if (awardsHeader) {
-      const ref = XLSX.utils.decode_range(ws3["!ref"]!);
-      for (let r = awardsHeader.row + 1; r <= Math.min(ref.e.r, awardsHeader.row + 15); r++) {
-        for (let c = 0; c <= 7; c++) {
-          const v = cellText(ws3[XLSX.utils.encode_cell({ r, c })]?.v);
-          if (v && v.length > 6 && !NOISE.test(v) && !/^\d+$/.test(v) && !/membership/i.test(v)) {
-            awards.push({ details: cv(v), recognitionType: cv("Award", "medium") });
-            break;
-          }
+  // ── Legacy/lower-version fallback: simple label:value education rows ──────
+  // Older single-sheet PDS exports list educational background as plain
+  // "ELEMENTARY: <school>" style rows instead of a headered table.
+  if (!result.educations) {
+    const legacyEdu: ExtractionSection[] = [];
+    for (const name of wb.SheetNames) {
+      if (/lookup/i.test(name)) continue;
+      const s = wb.Sheets[name];
+      const ref = s["!ref"] ? XLSX.utils.decode_range(s["!ref"]) : null;
+      if (!ref) continue;
+      for (let r = ref.s.r; r <= Math.min(ref.e.r, 120); r++) {
+        for (let c = ref.s.c; c <= Math.min(ref.e.c, ref.s.c + 3); c++) {
+          const label = probeText(s[XLSX.utils.encode_cell({ r, c })]?.v);
+          if (!/^(elementary|secondary|high\s*school|vocational|college|bachelor|graduate|post\s*graduate)/i.test(label)) continue;
+          const value = scanRight(s, r, c);
+          if (isNA(value) || value.length < 3) continue;
+          legacyEdu.push({ educationLevel: cv(EDUCATION_LEVEL_MAP(label), "medium"), schoolName: cv(value, "medium") });
         }
       }
-      if (awards.length > 0) result.awards = awards;
     }
+    const deduped = dedupeSectionArray(legacyEdu, "educations");
+    if (deduped.length > 0 && deduped.length <= 8) result.educations = deduped;
   }
 
   return result;
