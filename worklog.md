@@ -627,3 +627,18 @@ Work Log:
 
 Stage Summary:
 - Task 49 stands complete and re-verified end-to-end; no code changes needed. Awaiting user direction on Task 47 (primary color) vs Task 46 (frontpage scroll bug).
+
+---
+Task ID: 49 (placement fix)
+Agent: Z.ai Code (main)
+Task: User refinement — the info circle must sit ABOVE the bottom spacer line, not below it ("it should be above the spacer which is the line not under the line").
+
+Work Log:
+- Root cause: RailJourneyInfo rendered inside the bordered bottom block (borderTop = the divider), so the circle landed under the line next to the profile card.
+- nav-rail.tsx: moved the circle out into its own shrink-0 block (px-2.5 pb-1.5) directly above the bordered profile-card block — final bottom stack: circle → divider line → profile card.
+- rail-journey-info.tsx: trigger px-3.5 → px-2 so the disc left-aligns with the profile avatar (both 18px from rail edge).
+- Browser verification: expanded — circle bottom 506px vs line 512px (6px gap, above line), card below line; modal opens with full infographic. Collapsed — circle & avatar both centered x=32, circle above line, modal opens. Evaluator — no circle (role gate). Console 0 errors. lint clean.
+- Evidence: upload/task49c-above-line.png, task49c-above-line-modal.png, task49c-collapsed.png. Committed 812e68e.
+
+Stage Summary:
+- Final placement per user: the ( ! ) circle sits above the bottom spacer line; TA profile card stays pinned under the line. Task 49 fully settled.
