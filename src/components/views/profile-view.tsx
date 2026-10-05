@@ -240,13 +240,15 @@ export default function ProfileView() {
       <div className="space-y-6">
         {/* Record panel skeleton */}
         <div className="dlg-card-plain p-5 sm:p-6">
-          <div className="flex items-center gap-4">
-            <div className="skel h-14 w-14 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="skel h-5 w-48" />
-              <div className="skel h-3 w-36" />
+          <div className="rounded-xl bg-cloud/60 p-4 sm:p-5">
+            <div className="flex items-center gap-4">
+              <div className="skel h-14 w-14 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="skel h-5 w-48" />
+                <div className="skel h-3 w-36" />
+              </div>
+              <div className="skel h-[72px] w-[72px] shrink-0 rounded-full lg:hidden" />
             </div>
-            <div className="skel h-[72px] w-[72px] shrink-0 rounded-full lg:hidden" />
           </div>
           <div className="skel mt-5 h-16 w-full" />
         </div>
@@ -292,7 +294,12 @@ export default function ProfileView() {
               indicator, the quiet completion note, and the PDS import
               card. ── */}
       <section aria-label="Profile record" className="dlg-card-plain p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+        {/* Cloud-surface header block — the same bg-cloud/60 treatment the
+            form sections give their entry rows, so the identity + completion
+            lockup sits on a tinted surface instead of floating bare on the
+            white canvas. */}
+        <div className="rounded-xl bg-cloud/60 p-4 sm:p-5">
+          <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
           {/* Identity — avatar + name/status/documents. The completion ring
               is pinned to the RIGHT of this row on phones (shrink-0, and
               the name column is min-w-0 + truncate, so a long applicant
@@ -362,6 +369,7 @@ export default function ProfileView() {
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Mark Complete
               </button>
             )}
+          </div>
           </div>
         </div>
 
