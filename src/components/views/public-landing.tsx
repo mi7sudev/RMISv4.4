@@ -12,8 +12,12 @@
 // (display title, verified company row + "View all jobs", icon meta rows,
 // posted age, brand-blue Quick apply + ghost Save, description,
 // Responsibilities / Qualifications / Compensation sections). The selected
-// card carries the brand-blue ring (RMIS Electric Blue #1591dc). Mobile swaps panes
-// (list → detail with back).
+// card carries the brand-blue ring (RMIS Electric Blue #1591dc). Both columns
+// are viewport-adaptive: each grows to its full content height when the screen
+// has room (complete description, no internal scrolling) and caps at the live
+// viewport — scrolling internally while sticky under the header — when it
+// doesn't. Neither column is ever cut off by or hidden behind the footer.
+// Mobile swaps panes (list → detail with back).
 // Data from GET /api/jobs (30s silent poll + refetch on focus); visitors
 // without a session are routed to sign-in by the shared apply gate; saves
 // persist in localStorage. Apply actions are cancelled-only on the landing.
@@ -553,16 +557,15 @@ export default function PublicLanding() {
   const showDetail = isDesktop || selectedId !== null;
 
   return (
-    // Root height is conditionally capped via the `pinned` custom variant
-    // (lg width AND ≥1040px tall — see globals.css): only then is the page
-    // app-pinned at h-dvh with internally-scrolling panes. Below that the
-    // `flow` mode applies: the page scrolls naturally, the footer appears
-    // only at the real bottom, the job list scrolls with the page, and the
-    // posting pane sticks to the top (see the pane below).
-    <div className="flex min-h-screen flex-col pinned:h-dvh">
+    // Viewport-adaptive board (no app pinning): a normal min-h-screen flex
+    // column whose footer always sits at the real bottom — pinned to the
+    // viewport on short pages (mt-auto), pushed down naturally on tall ones.
+    // Each board column (list + posting) is its own sticky, viewport-capped
+    // scroller — see the grid below.
+    <div className="flex min-h-screen flex-col">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
+      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
         {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer,
             arranged as a split: display headline + copy + single charcoal
             capsule CTA left; official brand mark + authority line right as
@@ -637,24 +640,29 @@ export default function PublicLanding() {
             </div>
           </div>
         ) : (
-          // Board height is derived, not a magic viewport constant: on tall
-          // viewports (root pinned at h-dvh) the grid flex-fills whatever is
-          // left between the real header and footer, so the page itself never
-          // scrolls and the open posting stays pinned in view — the reference
-          // board's "sticky description" behavior. The 400px floor is the
-          // safety net: on short laptops the root flows naturally instead of
-          // pinning, and flex may never shrink the board below a usable pane.
-          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:flex-1 lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
-            {/* Left · the register — scrolls internally ONLY in pinned mode;
-                in flow mode it is a plain block so the wheel over the cards
-                scrolls the page (an overflow container here would swallow
-                it). 8px of ring room on every side (pl/py) with matching
-                negative margins keeps the cards, the column alignment, and
-                the pinned-mode scrollbar exactly where they were. */}
+          // Viewport-adaptive two-pane board. Each column sizes to its own
+          // content and contributes that height to the row (a short list no
+          // longer squeezes the posting), and every column is simultaneously
+          // capped at the LIVE viewport height (100dvh − 88px sticky offset −
+          // 24px breathing room — no fixed pixel constant), so:
+          //   • tall screens — the complete description renders in full with
+          //     no internal scrolling; the footer only ever sits BELOW it;
+          //   • short screens — the column caps at the available space and
+          //     scrolls internally while sticky under the header (the
+          //     reference board's "sticky description"), and the grid-row
+          //     clamp keeps it above the footer at every scroll position.
+          // The 400px floor keeps the board usable when both columns are
+          // short.
+          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
+            {/* Left · the register — a sticky viewport-capped scroller, the
+                same adaptive treatment as the posting pane. 8px of ring room
+                on every side (pl/py) with matching negative margins keeps
+                the cards, the column alignment, and the scrollbar exactly
+                where they were. */}
             {showList && (
               <div
                 aria-label="Job opportunities list"
-                className="scroll-thin min-h-0 space-y-3.5 lg:-ml-2 lg:-my-2 lg:py-2 lg:pl-2 lg:pr-1.5 pinned:overflow-y-auto"
+                className="scroll-thin space-y-3.5 lg:sticky lg:top-[88px] lg:self-start lg:max-h-[calc(100dvh-112px)] lg:overflow-y-auto lg:-ml-2 lg:-my-2 lg:py-2 lg:pl-2 lg:pr-1.5"
               >
                 {openJobs.map((job) => (
                   <JobListCard
@@ -671,42 +679,39 @@ export default function PublicLanding() {
               </div>
             )}
 
-            {/* Right · the posting — sticky-column pattern. The outer grid
-                item is the ref anchor; in flow mode it contributes ZERO to
-                the row size (h-0 + min-h-full) so the LIST sizes the row,
-                and the inner wrapper is position:sticky, capped to the
-                viewport under the sticky header AND to its own container
-                (min() with 100%) — a sticky pane taller than its container
-                would overflow past the row bottom and paint over the footer
-                (short lists: 3 cards ≈ 470px row vs a 688px viewport cap).
-                It stays in view while the list scrolls with the page. In
-                pinned mode the root never scrolls: the outer item stretches
-                to the flexed row, the inner fills it (h-full) and scrolls
-                internally exactly as before. On mobile both are plain
-                blocks (single-pane swap, page scroll). */}
+            {/* Right · the posting — ONE sticky, viewport-capped scroller
+                (paneRef sits on the scroller itself, so the select-reset
+                actually zeroes it). Its natural height is the full posting,
+                capped at the live viewport: complete content with no inner
+                scroll when the screen has room; capped + internally
+                scrollable when it doesn't. Sticky keeps it in view while the
+                page scrolls; the grid-row clamp keeps it above the footer.
+                On mobile it is a plain block (single-pane swap, page
+                scroll). */}
             {showDetail && (
-              <div ref={paneRef} className="min-h-0 flow:h-0 flow:min-h-full">
-                <div className="scroll-thin flow:sticky flow:top-[88px] flow:max-h-[min(calc(100dvh_-_112px),100%)] flow:overflow-y-auto flow:pr-2 pinned:h-full pinned:overflow-y-auto pinned:pr-2">
-                  {selectedJob ? (
-                    <div className="dlg-card p-6 sm:p-8">
-                      <JobDetail
-                        job={selectedJob}
-                        saved={saved.includes(selectedJob.id)}
-                        onApply={() => requestApply(selectedJob)}
-                        onSave={() => saveAndToast(selectedJob)}
-                        onBack={() => setSelectedId(null)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="dlg-card">
-                      <EmptyState
-                        icon={Briefcase}
-                        title="Select a position"
-                        description="Choose a role from the list to read the full posting."
-                      />
-                    </div>
-                  )}
-                </div>
+              <div
+                ref={paneRef}
+                className="scroll-thin lg:sticky lg:top-[88px] lg:self-start lg:max-h-[calc(100dvh-112px)] lg:overflow-y-auto lg:pr-2"
+              >
+                {selectedJob ? (
+                  <div className="dlg-card p-6 sm:p-8">
+                    <JobDetail
+                      job={selectedJob}
+                      saved={saved.includes(selectedJob.id)}
+                      onApply={() => requestApply(selectedJob)}
+                      onSave={() => saveAndToast(selectedJob)}
+                      onBack={() => setSelectedId(null)}
+                    />
+                  </div>
+                ) : (
+                  <div className="dlg-card">
+                    <EmptyState
+                      icon={Briefcase}
+                      title="Select a position"
+                      description="Choose a role from the list to read the full posting."
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
