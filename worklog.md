@@ -672,3 +672,17 @@ Work Log:
 
 Stage Summary:
 - Profile record header now sits on the same cloud tint as the forms' surfaces — the record panel reads as one cohesive tinted system (header block + notice + PDS card).
+
+---
+Task ID: 50 (layering inversion)
+Agent: Z.ai Code (main)
+Task: User refinement with reference screenshot — instead of tint-block-on-white-panel, do it like the job description: the WHOLE record panel is the tinted box and the inner contents (header, notice, PDS card) sit on it as WHITE cards.
+
+Work Log:
+- profile-view.tsx: record section dlg-card-plain -> dlg-card (tinted #ebf0f8, 24px); header block bg-cloud/60 -> bg-white; notice banner bg-cloud/60 rounded-lg -> bg-white rounded-xl; loading skeleton follows.
+- pds-upload-card.tsx internals re-tinted for the new white parent (inverse of the old white-on-tint scheme): card dlg-card -> dlg-card-plain; trigger hover white/60 -> cloud/60; progress track, extraction-rows panel, one-extraction lock strip white/70 -> cloud/60; dashed dropzone bg-white hover:bg-fog -> bg-cloud/60 hover:bg-cloud (drag state bg-fog -> bg-cloud). Clear button stays white on the cloud strip.
+- Verification: computed styles — panel rgb(235,240,248), header/notice/PDS all rgb(255,255,255); PDS expanded shows cloud-tinted dropzone on white card; desktop 1280 + mobile 390 screenshots; 0 console errors; lint clean.
+- Evidence: upload/task50b-inverted.png, task50b-pds-expanded.png, task50b-mobile.png. Committed 2403ebe.
+
+Stage Summary:
+- Profile record panel now uses the job-description layering: cloud box outside, white cards inside. Consistent with the design system's "white variant for content sitting ON cloud surfaces".
