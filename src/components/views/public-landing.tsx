@@ -6,18 +6,21 @@
 // in a split composition (Google-Workspace rhythm): display headline + copy
 // + charcoal capsule CTA on the left, the official DOST-MIRDC brand mark
 // with the agency authority line as the institutional proof block on the
-// right; LEFT: a scrollable register of Cloud Card
+// right; LEFT: a register of Cloud Card
 // job cards (title · company · place · salary · clamped snippet · posted
 // age · chevron quick-view + bookmark); RIGHT: the full posting pane
 // (display title, verified company row + "View all jobs", icon meta rows,
 // posted age, brand-blue Quick apply + ghost Save, description,
 // Responsibilities / Qualifications / Compensation sections). The selected
-// card carries the brand-blue ring (RMIS Electric Blue #1591dc). The posting
-// pane is viewport-adaptive: it grows to its full content height when the
+// card carries the brand-blue ring (RMIS Electric Blue #1591dc). Only the
+// posting pane is sticky: it grows to its full content height when the
 // screen has room (complete description, no internal scrolling) and caps at
-// the live viewport — scrolling internally while sticky under the header —
-// when it doesn't, never cut off by or hidden behind the footer. The job
-// list is a plain block that scrolls with the page. Mobile swaps panes
+// the live viewport — scrolling internally while pinned under the header —
+// when it doesn't, never cut off by or hidden behind the footer. The board
+// row always reserves at least a full viewport plus a 240px pin phase
+// (min-h 100dvh+128px), so the pane has travel room to stay pinned while
+// the page scrolls even when the register is shorter than the posting. The
+// job list is a plain block that scrolls with the page. Mobile swaps panes
 // (list → detail with back).
 // Data from GET /api/jobs (30s silent poll + refetch on focus); visitors
 // without a session are routed to sign-in by the shared apply gate; saves
@@ -561,8 +564,8 @@ export default function PublicLanding() {
     // Viewport-adaptive board (no app pinning): a normal min-h-screen flex
     // column whose footer always sits at the real bottom — pinned to the
     // viewport on short pages (mt-auto), pushed down naturally on tall ones.
-    // Each board column (list + posting) is its own sticky, viewport-capped
-    // scroller — see the grid below.
+    // Only the posting pane is sticky (viewport-capped); the register is a
+    // plain block that scrolls with the page — see the grid below.
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
 
@@ -642,20 +645,27 @@ export default function PublicLanding() {
           </div>
         ) : (
           // Viewport-adaptive two-pane board. The posting pane sizes to its
-          // own content and contributes that height to the row (a short list
-          // no longer squeezes it), capped at the LIVE viewport height
-          // (100dvh − 88px sticky offset − 24px breathing room — no fixed
-          // pixel constant), so:
+          // own content, capped at the LIVE viewport height (100dvh − 88px
+          // sticky offset − 24px breathing room — no fixed pixel constant):
           //   • tall screens — the complete description renders in full with
           //     no internal scrolling; the footer only ever sits BELOW it;
           //   • short screens — the pane caps at the available space and
-          //     scrolls internally while sticky under the header (the
-          //     reference board's "sticky description"), and the grid-row
-          //     clamp keeps it above the footer at every scroll position.
+          //     scrolls internally while pinned under the header, and the
+          //     grid-row clamp keeps it above the footer at every position.
+          // Sticky needs TRAVEL ROOM: a sticky element only stays put while
+          // its containing row is TALLER than itself, and the row height is
+          // max(register, posting). When the register is shorter than the
+          // posting (few vacancies — e.g. the sandbox's two cards), the row
+          // would equal the pane's height and the pane could never pin — it
+          // would just scroll away with the page. So the row reserves at
+          // least 100dvh + 128px (= the pane's cap + a 240px pin phase on
+          // cap-limited screens): the pane rides up with the hero, pins at
+          // top-88 for ~240px of scroll, then yields only as the footer
+          // rises. With a tall register the row is the register's natural
+          // height and this floor is inert.
           // The job list is deliberately NOT sticky — a plain block that
-          // scrolls with the page (user clarification). The 400px floor
-          // keeps the board usable when both columns are short.
-          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
+          // scrolls with the page (user clarification).
+          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[calc(100dvh+128px)] lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
             {/* Left · the register — plain block, natural height, scrolls
                 with the page (NOT sticky, per user clarification). */}
             {showList && (

@@ -744,3 +744,22 @@ Work Log:
 
 Stage Summary:
 - Final board behavior per user direction: job list = plain scrolling block; job description = sticky + viewport-adaptive (full height on tall screens, capped internal scroll on short ones), never crossing the footer.
+
+---
+Task ID: 52-fix
+Agent: Z.ai Code (main)
+Task: User report — "it did not work when scrolling down across the page the job description … is not becoming sticky" (after 61f6ae1 made the register plain flow with only the posting sticky)
+
+Work Log:
+- Diagnosed via in-browser geometry at 1280×800: sandbox has only 2 postings, so the register is SHORTER than the posting pane; grid row height = max(register, posting) = pane's capped 688px → sticky travel room = row − pane = 0 → position:sticky can mathematically never engage; the pane scrolled away 1:1 with the page. (This also means the Task 52 both-columns-sticky build never actually pinned either.)
+- Fix: board grid row now reserves lg:min-h-[calc(100dvh+128px)] — the pane's cap (100dvh−112px) + a 240px pin phase on cap-limited screens. The plain register stretches to the row; the pane keeps lg:sticky lg:top-[88px] lg:self-start lg:max-h-[calc(100dvh-112px)] lg:overflow-y-auto. With a tall register the floor is inert (row = register's natural height, min-height never binds). Updated file-header + board comments with the pin-phase rationale; replaced the stale 400px floor.
+- bun run lint clean.
+- agent-browser verification, 1280×800 (2 cards): travel 240px; scrolled 0→694 in 9 steps — paneTop 406→88 (pins at scrollY 318), FROZEN at 88 for scrollY 318–558 (240px) while cards scroll 1:1 (cardTop 88→−152), then yields only as the footer rises (558→694); pane/footer overlap = false at every step; footer fully visible at max scroll.
+- 1280×1200: pane 908 = content 908 (complete description, no internal scroll), row 1328, travel 420, pinned=true at scrollY 600, footer below row.
+- 390×844: single-pane swap unchanged, pane position static, footer at the real bottom.
+- Console clean (HMR logs only). Evidence: upload/task52f-pinned.png (scrollY 430 — description pinned under header, list scrolled up).
+
+Stage Summary:
+- Root cause: a sticky element only pins while its containing row is TALLER than itself; with few vacancies the row equaled the pane height → zero travel → never pinned.
+- New rule: board row min-height 100dvh+128px guarantees a ~240px pin phase at any register length; the description pins under the header while the page scrolls, yields only when the footer arrives, and never covers the footer.
+- Register remains a plain non-sticky block (user clarification respected). Committed as the 52-fix change on public-landing.tsx.
