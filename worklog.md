@@ -642,3 +642,18 @@ Work Log:
 
 Stage Summary:
 - Final placement per user: the ( ! ) circle sits above the bottom spacer line; TA profile card stays pinned under the line. Task 49 fully settled.
+
+---
+Task ID: 49 (visibility polish)
+Agent: Z.ai Code (main)
+Task: User refinement — make the ( ! ) much more visible ("change its color to be much visible").
+
+Work Log:
+- rail-journey-info.tsx disc restyled: pale bordered chip (snow bg, dim icon) -> SOLID var(--primary) #1591dc disc with white CircleAlert icon; h-9 w-9 to mirror the 36px profile avatar directly below, so the bottom block reads as a matched blue pair; soft shadow for lift.
+- Hover affordance: row-level group-hover -> disc scale(1.06) + brightness(110%).
+- Debugging detour worth remembering: headless sandbox computes (hover: none) / (pointer: fine = false), so Tailwind 4's @media (hover:hover)-gated hover variants never apply there even though matches(':hover') is true — verified the generated rules exist (.group-hover\:scale-\[1\.06\] { scale: 1.06 }) and the span matches the selector; effect will render for real pointer users. Not a code bug.
+- Browser verification: disc bg rgb(21,145,220), icon white, 36px == avatar; above the divider line (from prior fix); modal opens expanded + collapsed (centered x=32, above line); evaluator rail clean; 0 console errors; lint clean.
+- Evidence: upload/task49d-blue-disc.png, task49d-hover.png, task49d-collapsed-blue.png, task49d-final.png. Committed 5558300.
+
+Stage Summary:
+- The ( ! ) affordance is now a solid brand-blue disc twinned with the profile avatar — instantly visible at the bottom of the applicant rail. Task 49 complete through three refinement rounds (placement -> above-line -> visibility).
