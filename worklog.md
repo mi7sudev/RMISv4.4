@@ -729,3 +729,18 @@ Work Log:
 
 Stage Summary:
 - The frontpage board is now fully viewport-adaptive: the posting pane and the job list each use all available vertical space, show their complete content when the screen has room, and only cap + scroll internally (sticky under the header, above the footer at all times) when they don't. The pinned/flow duality and its h-dvh pinning are gone.
+
+---
+Task ID: 52 (clarification)
+Agent: Z.ai Code (main)
+Task: User clarification on the adaptive board — "only the job description are sticky, not the job cards list on the left side".
+
+Work Log:
+- public-landing.tsx: removed the sticky/viewport-cap treatment from the job list (lg:sticky lg:top-[88px] lg:self-start lg:max-h-[calc(100dvh-112px)] lg:overflow-y-auto + the 8px ring-room padding/negative margins that existed for its scrollbar). The register is back to a plain block: `scroll-thin space-y-3.5` — natural height, scrolls with the page, no cap, not sticky.
+- The posting pane keeps the Task 52 adaptive behavior unchanged: sticky top-88, capped at calc(100dvh - 112px), full content height with no internal scroll when the screen has room.
+- Row sizing note: the pane still contributes its capped natural height to the grid row (the Task 52 anti-squeeze fix stands — a short list never shrinks the description). With a short list the pane fills its row and simply scrolls with the page; with a long list the row exceeds the pane and the sticky engages (travel = row − pane), the same mechanics verified in Task 52.
+- Verification (agent-browser): 1280×800 mid-scroll — list position static, top tracks scrollY (106 → 6 → −48), maxH none; pane capped 688. Max scroll — footer fully visible (680..800.4), pane above footer. 1280×1200 — pane 908 full content, zero internal scroll, list static. 1280×1600 — no page scroll, footer at viewport bottom. Mobile unchanged (lg-only classes). Console clean; lint clean.
+- Evidence: measured in-browser (see values above). Committed 61f6ae1.
+
+Stage Summary:
+- Final board behavior per user direction: job list = plain scrolling block; job description = sticky + viewport-adaptive (full height on tall screens, capped internal scroll on short ones), never crossing the footer.
