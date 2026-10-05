@@ -9,9 +9,10 @@
 // document is EXTRACTED/PARTIALLY_EXTRACTED the dropzone is replaced by a
 // locked strip whose only way back is "Clear Forms & Re-upload" → confirm →
 // POST /api/applicant/profile/clear (files stay). Extraction errors show the
-// server message + file name + Try Again. Bevel pass: cloud collapsible card
-// with a white dashed drop zone, Metric Blue progress/ring, capsule
-// destructive actions. Presentation-only changes.
+// server message + file name + Try Again. Bevel pass: WHITE collapsible card
+// (sits on the record panel's cloud tint) with a cloud dashed drop zone,
+// Metric Blue progress/ring, capsule destructive actions. Presentation-only
+// changes.
 // ============================================================================
 
 import { useMemo, useRef, useState } from "react";
@@ -191,14 +192,14 @@ export default function PdsUploadCard({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="dlg-card overflow-hidden"
+      className="dlg-card-plain overflow-hidden"
     >
       {/* Compact resting row — the screenshot look: chip · title · drop hints */}
       <CollapsibleTrigger asChild>
         <button
           type="button"
           aria-expanded={open}
-          className="flex min-h-[44px] w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-white/60"
+          className="flex min-h-[44px] w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-cloud/60"
         >
           <IconChip icon={CloudUpload} tone="plum" size={40} />
           <span className="min-w-0 flex-1">
@@ -221,7 +222,7 @@ export default function PdsUploadCard({
           {/* Phase progress — thin capsule bar with a Metric Blue fill */}
           {busy && (
             <div className="mb-4">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/70">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-cloud/60">
                 <div
                   className="h-full rounded-full bg-metric-blue motion-safe:transition-[width] duration-500"
                   style={{ width: `${progress}%` }}
@@ -249,7 +250,7 @@ export default function PdsUploadCard({
 
           {/* Extraction result — quiet rows with tabular counts */}
           {!busy && applyRows.length > 0 && (
-            <div className="mb-4 rounded-xl bg-white/70 p-4">
+            <div className="mb-4 rounded-xl bg-cloud/60 p-4">
               <p className="text-xs font-medium text-stone">Extraction applied to your profile</p>
               <dl className="mt-2 divide-y divide-divider">
                 {applyRows.map(([label, count]) => (
@@ -264,7 +265,7 @@ export default function PdsUploadCard({
 
           {locked ? (
             /* One-extraction lock (§7.5) — the only way back is a full clear. */
-            <div className="flex flex-col gap-3 rounded-xl bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl bg-cloud/60 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <IconChip icon={Lock} tone="ink" size={36} iconSize={16} className="mt-0.5" />
                 <div>
@@ -301,9 +302,9 @@ export default function PdsUploadCard({
                   if (f && !busy) void runPipeline(f);
                 }}
                 className={cn(
-                  "focus-ring flex min-h-[132px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-divider bg-white p-6 text-center transition-all duration-200 hover:bg-fog disabled:opacity-60",
+                  "focus-ring flex min-h-[132px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-divider bg-cloud/60 p-6 text-center transition-all duration-200 hover:bg-cloud disabled:opacity-60",
                   dragOver &&
-                    "border-metric-blue bg-fog ring-2 ring-metric-blue/30 bg-[radial-gradient(460px_200px_at_50%_10%,rgba(21,145,220,0.10),transparent_70%)]"
+                    "border-metric-blue bg-cloud ring-2 ring-metric-blue/30 bg-[radial-gradient(460px_200px_at_50%_10%,rgba(21,145,220,0.10),transparent_70%)]"
                 )}
               >
                 <IconChip icon={CloudUpload} tone="plum" size={44} />

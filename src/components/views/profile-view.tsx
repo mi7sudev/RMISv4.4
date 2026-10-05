@@ -239,8 +239,8 @@ export default function ProfileView() {
     return (
       <div className="space-y-6">
         {/* Record panel skeleton */}
-        <div className="dlg-card-plain p-5 sm:p-6">
-          <div className="rounded-xl bg-cloud/60 p-4 sm:p-5">
+        <div className="dlg-card p-5 sm:p-6">
+          <div className="rounded-xl bg-white p-4 sm:p-5">
             <div className="flex items-center gap-4">
               <div className="skel h-14 w-14 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 space-y-2">
@@ -293,12 +293,12 @@ export default function ProfileView() {
       {/* ── A–C. Employee record — ONE cohesive panel: identity + completion
               indicator, the quiet completion note, and the PDS import
               card. ── */}
-      <section aria-label="Profile record" className="dlg-card-plain p-5 sm:p-6">
-        {/* Cloud-surface header block — the same bg-cloud/60 treatment the
-            form sections give their entry rows, so the identity + completion
-            lockup sits on a tinted surface instead of floating bare on the
-            white canvas. */}
-        <div className="rounded-xl bg-cloud/60 p-4 sm:p-5">
+      <section aria-label="Profile record" className="dlg-card p-5 sm:p-6">
+        {/* Cloud-panel layering (mirrors the job description surface): the
+            whole record panel is the tinted cloud box; the identity +
+            completion lockup, the notice banner and the PDS card inside it
+            are WHITE surfaces that sit on the tint. */}
+        <div className="rounded-xl bg-white p-4 sm:p-5">
           <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
           {/* Identity — avatar + name/status/documents. The completion ring
               is pinned to the RIGHT of this row on phones (shrink-0, and
@@ -375,7 +375,7 @@ export default function ProfileView() {
 
         {/* ── B. Completion note — quiet informational banner (never an alert). ── */}
         {!isComplete && (
-          <div className="mt-5 flex items-start gap-3 rounded-lg bg-cloud/60 px-4 py-3">
+          <div className="mt-5 flex items-start gap-3 rounded-xl bg-white px-4 py-3">
             <Info className="h-4 w-4 shrink-0 text-stone" aria-hidden="true" />
             <p className="min-w-0 flex-1 text-sm leading-relaxed text-stone">
               Profile completion requires your Personal Information (first name, last name, and email) and at least one
