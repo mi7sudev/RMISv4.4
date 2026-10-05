@@ -657,3 +657,18 @@ Work Log:
 
 Stage Summary:
 - The ( ! ) affordance is now a solid brand-blue disc twinned with the profile avatar — instantly visible at the bottom of the applicant rail. Task 49 complete through three refinement rounds (placement -> above-line -> visibility).
+
+---
+Task ID: 50
+Agent: Z.ai Code (main)
+Task: User report with screenshot — the profile record header (avatar + name + completion ring) has no background color, unlike the tinted surfaces used on the forms; it looks bare.
+
+Work Log:
+- Diagnosis: the page's design language is white dlg-card-plain panels carrying tinted bg-cloud/60 blocks (education entries, personal-info rows, notice banner); the record panel's identity/completion row was the only content with no surface — white on white.
+- profile-view.tsx: wrapped the identity + completion lockup flex row in a rounded-xl bg-cloud/60 p-4 sm:p-5 block (matches the forms' entry-row treatment; rounded-xl resolves to the app's 24px family radius). Hairline divider, ring, Mark Complete CTA untouched.
+- Loading skeleton wrapped identically so loading -> loaded doesn't shift composition.
+- Verification: desktop 1280 — header block bg renders lab ~94.6% @60% alpha (cloud/60), holds TA / Test Applicant / Incomplete / 4 documents / 29% ring / "2 of 7 sections · 5 to go"; mobile 390 — same block with name truncation and stacked readout; notice + PDS still tinted; 0 console errors; lint clean.
+- Evidence: upload/task50-profile-tint.png, task50-profile-tint-mobile.png. Committed e567e36.
+
+Stage Summary:
+- Profile record header now sits on the same cloud tint as the forms' surfaces — the record panel reads as one cohesive tinted system (header block + notice + PDS card).
