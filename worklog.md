@@ -686,3 +686,21 @@ Work Log:
 
 Stage Summary:
 - Profile record panel now uses the job-description layering: cloud box outside, white cards inside. Consistent with the design system's "white variant for content sitting ON cloud surfaces".
+
+---
+Task ID: 51
+Agent: Z.ai Code (main)
+Task: User reported two bugs — (1) the applicant "How hiring works" infographic is not visible on the mobile sidebar, and (2) on the frontpage the footer overlaps the job lists.
+
+Work Log:
+- Bug 1 root cause: RailJourneyInfo was only wired into the desktop NavRail (hidden below lg). The mobile navigation is a separate component — mobile-nav.tsx Sheet drawer — which had no journey affordance at all.
+- rail-journey-info.tsx: added a `variant` prop ("rail" default | "drawer"). Drawer variant renders the trigger flush (px-0) inside a px-4 wrapper so the 36px blue disc left-aligns with the 40px account avatar below it; rail variant keeps the original px-2 inset. Disc styles, tooltip, and the 4-step modal are unchanged.
+- mobile-nav.tsx: for APPLICANT only, renders the disc block (px-4 pb-1.5) directly above the account block — the drawer's bottom stack now mirrors the desktop rail: circle → divider line → profile card. Evaluator/admin drawers unchanged.
+- Bug 2 root cause (measured in-browser): on the public landing in flow mode (lg width, viewport < 1040px tall), the sticky posting pane was capped at calc(100dvh - 112px) = 688px, but its container (the grid item that contributes zero height so the LIST sizes the row) was only ~467px when the list is short (3 cards). A sticky element taller than its container is not clamped in its natural position — it overflowed the row bottom and, being positioned, painted OVER the footer (detail card 908px content visible past the footer, document scrollHeight exceeded the root by ~61px).
+- public-landing.tsx: sticky pane max-height is now min(calc(100dvh - 112px), 100%) — capped by the viewport AND its container. Long lists keep the old 688px cap (100% > 688 → dvh wins); short lists cap at the row height so the pane can never cross the footer. Pinned mode (≥1040px tall) untouched (h-full stretch, no sticky).
+- Verification (agent-browser): flow 1280×800 — computed maxH "min(688px, 100%)", pane 467px, pane bottom 640 < footer top 680, internal scroll intact (908px content), no phantom overflow (scrollHeight == root). Pinned 1280×1200 — root h-dvh, footer in-frame, board flex-fills, no overlap. Mobile 390×844 — footer clean, last card bottom 648 < footer 688. Applicant drawer — disc visible above divider, aligned with avatar, modal opens with all 4 steps + email footnote (screenshots task51-mobile-drawer/-journey-modal). Evaluator drawer — no disc (role gate). Desktop rail regression — disc still blue at left 18px, bottom 725 above line 735. Console: 0 errors. lint clean.
+- Evidence: upload/bug-footer-flow-scrolled.png (broken), task51-footer-fixed-flow.png, task51-footer-pinned.png, task51-footer-mobile.png, task51-mobile-drawer.png, task51-mobile-journey-modal.png, task51-final-flow.png. Committed e353c19.
+
+Stage Summary:
+- The hiring-journey infographic now follows the applicant across every surface: desktop rail (dark, icon-inset) and mobile drawer (white, avatar-aligned), with the same circle → divider → profile-card bottom stack and the same 4-step modal.
+- The frontpage footer can no longer be overlapped: the sticky posting pane respects both the viewport and its grid container; the reference-board sticky-description behavior is unchanged on tall viewports.

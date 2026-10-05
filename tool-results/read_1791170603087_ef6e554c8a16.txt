@@ -1,0 +1,719 @@
+     1→"use client";
+     2→
+     3→// ============================================================================
+     4→// RMIS — Public landing (spec §7.1): a two-pane job explorer in the
+     5→// reference-board style — TOP: a Bevel "Hero Sky" rounded-32 gradient field
+     6→// in a split composition (Google-Workspace rhythm): display headline + copy
+     7→// + charcoal capsule CTA on the left, the official DOST-MIRDC brand mark
+     8→// with the agency authority line as the institutional proof block on the
+     9→// right; LEFT: a scrollable register of Cloud Card
+    10→// job cards (title · company · place · salary · clamped snippet · posted
+    11→// age · chevron quick-view + bookmark); RIGHT: the full posting pane
+    12→// (display title, verified company row + "View all jobs", icon meta rows,
+    13→// posted age, brand-blue Quick apply + ghost Save, description,
+    14→// Responsibilities / Qualifications / Compensation sections). The selected
+    15→// card carries the brand-blue ring (RMIS Electric Blue #1591dc). Mobile swaps panes
+    16→// (list → detail with back).
+    17→// Data from GET /api/jobs (30s silent poll + refetch on focus); visitors
+    18→// without a session are routed to sign-in by the shared apply gate; saves
+    19→// persist in localStorage. Apply actions are cancelled-only on the landing.
+    20→// ============================================================================
+    21→
+    22→import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+    23→import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+    24→import {
+    25→  AlertCircle,
+    26→  ArrowRight,
+    27→  BadgeCheck,
+    28→  Banknote,
+    29→  Bookmark,
+    30→  Briefcase,
+    31→  Building2,
+    32→  ChevronDown,
+    33→  ChevronLeft,
+    34→  Clock,
+    35→  Inbox,
+    36→  MapPin,
+    37→} from "lucide-react";
+    38→import { toast } from "sonner";
+    39→import { SiteHeader } from "@/components/shell/site-header";
+    40→import { Footer } from "@/components/shell/footer";
+    41→import { BrandLogo } from "@/components/brand-logo";
+    42→import { useApplyFlow } from "@/components/apply/apply-dialogs";
+    43→import { EmptyState } from "@/components/ui/shell";
+    44→import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
+    45→import { navigate } from "@/lib/router";
+    46→import type { JobWire } from "@/lib/router";
+    47→import { cn } from "@/lib/utils";
+    48→
+    49→// ── Bevel accents ───────────────────────────────────────────────────────────
+    50→
+    51→const TITLE_SELECTED = "text-metric-blue";
+    52→// Charcoal Download Pill (spec): Charcoal fill, Cloud text, 128px radius,
+    53→// 16px/22.4 weight-500 text, 8px vertical / 16px horizontal padding.
+    54→const QUICK_APPLY_BTN =
+    55→  "dlg-cta text-nav inline-flex min-h-[44px] items-center justify-center gap-2 px-4 font-medium disabled:cursor-not-allowed disabled:opacity-50";
+    56→const SAVE_BTN =
+    57→  "dlg-ghost text-nav inline-flex min-h-[44px] items-center justify-center gap-2 px-5 font-medium";
+    58→
+    59→// ── Helpers ─────────────────────────────────────────────────────────────────
+    60→
+    61→const PLACE_FALLBACK = "DOST Compound, Taguig";
+    62→
+    63→/** Display place — nested position read, then the agency address. */
+    64→function jobPlace(job: JobWire): string {
+    65→  return job.position?.placeOfAssignment ?? PLACE_FALLBACK;
+    66→}
+    67→
+    68→/** Posting age source — editorial publish date, else the record timestamp. */
+    69→function postedAt(job: JobWire): string {
+    70→  return job.publishDate ?? job.publishedAt;
+    71→}
+    72→
+    73→const SAVED_KEY = "rmis-frontpage-saved-jobs";
+    74→
+    75→/** Client-persisted bookmark list for the frontpage explorer. */
+    76→function useSavedJobs() {
+    77→  const [saved, setSaved] = useState<number[]>(() => {
+    78→    if (typeof window === "undefined") return [];
+    79→    try {
+    80→      const raw = window.localStorage.getItem(SAVED_KEY);
+    81→      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    82→      return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
+    83→    } catch {
+    84→      return [];
+    85→    }
+    86→  });
+    87→
+    88→  const toggle = useCallback((id: number) => {
+    89→    setSaved((prev) => {
+    90→      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+    91→      try {
+    92→        window.localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+    93→      } catch {
+    94→        /* storage unavailable — in-session state still works */
+    95→      }
+    96→      return next;
+    97→    });
+    98→  }, []);
+    99→
+   100→  return { saved, toggle };
+   101→}
+   102→
+   103→// ── Quick-view cell (shared card expansion facts) ───────────────────────────
+   104→
+   105→/** One definition-list cell of the quick view: micro-kicker label over a
+   106→ *  semibold tabular value. `danger` flags a passed deadline. */
+   107→function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+   108→  return (
+   109→    <div>
+   110→      <dt className="eyebrow">{label}</dt>
+   111→      <dd
+   112→        className={cn(
+   113→          "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",
+   114→          danger ? "text-[var(--bad)]" : "text-ink"
+   115→        )}
+   116→      >
+   117→        {value}
+   118→      </dd>
+   119→    </div>
+   120→  );
+   121→}
+   122→
+   123→// ── Job card (left register) ────────────────────────────────────────────────
+   124→
+   125→function JobListCard({
+   126→  job,
+   127→  selected,
+   128→  expanded,
+   129→  saved,
+   130→  onSelect,
+   131→  onToggle,
+   132→  onSave,
+   133→}: {
+   134→  job: JobWire;
+   135→  selected: boolean;
+   136→  expanded: boolean;
+   137→  saved: boolean;
+   138→  onSelect: () => void;
+   139→  onToggle: () => void;
+   140→  onSave: () => void;
+   141→}) {
+   142→  const reduced = useReducedMotion();
+   143→  const pos = job.position;
+   144→  const title = pos?.positionTitle || job.title || "Position Title Unavailable";
+   145→  const company = pos?.division || "DOST-MIRDC";
+   146→  const salary = pos?.salaryAmount ?? null;
+   147→  const deadline = job.deadlineDate;
+   148→  const overdue = deadline ? new Date(deadline).getTime() < Date.now() : false;
+   149→
+   150→  return (
+   151→    <article className={cn("dlg-card lift", selected && "ring-2 ring-metric-blue/60")}>
+   152→      {/* Select target — title, company, vitals, snippet */}
+   153→      <button
+   154→        type="button"
+   155→        onClick={onSelect}
+   156→        aria-current={selected ? "true" : undefined}
+   157→        aria-label={`View ${humanize(title)}`}
+   158→        className="focus-ring block w-full px-4 pt-4 text-left sm:px-5 sm:pt-5"
+   159→      >
+   160→        <h3
+   161→          className={cn(
+   162→            "text-lg font-semibold leading-snug",
+   163→            selected ? TITLE_SELECTED : "text-ink"
+   164→          )}
+   165→        >
+   166→          {humanize(title)}
+   167→        </h3>
+   168→        <p className="text-lg mt-1 text-ink">{company}</p>
+   169→        <p className="mt-2.5 text-sm text-stone">{jobPlace(job)}</p>
+   170→        {salary != null && <p className="num mt-0.5 text-sm text-stone">{formatCurrency(salary)} per month</p>}
+   171→        {job.briefDescription && (
+   172→          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
+   173→        )}
+   174→      </button>
+   175→
+   176→      {/* Bottom register — posted age left, quick-view + bookmark right */}
+   177→      <div className="flex items-center justify-between gap-2 px-2.5 pb-2 sm:px-3.5">
+   178→        <button
+   179→          type="button"
+   180→          onClick={onSelect}
+   181→          className="focus-ring num rounded-full px-2 py-1.5 text-xs text-stone transition-colors hover:text-ink"
+   182→          aria-label={`Open ${humanize(title)}`}
+   183→        >
+   184→          {timeAgo(postedAt(job))}
+   185→        </button>
+   186→        <div className="flex items-center">
+   187→          <button
+   188→            type="button"
+   189→            onClick={onToggle}
+   190→            aria-expanded={expanded}
+   191→            aria-label={expanded ? `Collapse: ${humanize(title)}` : `Quick view: ${humanize(title)}`}
+   192→            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
+   193→          >
+   194→            <ChevronDown
+   195→              className={cn("h-[18px] w-[18px] transition-transform duration-200", expanded && "rotate-180")}
+   196→            />
+   197→          </button>
+   198→          <button
+   199→            type="button"
+   200→            onClick={onSave}
+   201→            aria-pressed={saved}
+   202→            aria-label={saved ? `Remove ${humanize(title)} from saved` : `Save ${humanize(title)}`}
+   203→            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
+   204→          >
+   205→            <Bookmark className={cn("h-[18px] w-[18px]", saved && "fill-current text-metric-blue")} />
+   206→          </button>
+   207→        </div>
+   208→      </div>
+   209→
+   210→      {/* Quick view — inline expansion with the house ease (reduced-motion
+   211→          users get a plain opacity crossfade). */}
+   212→      <AnimatePresence initial={false}>
+   213→        {expanded && (
+   214→          <motion.div
+   215→            key="quickview"
+   216→            initial={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+   217→            animate={reduced ? { opacity: 1 } : { height: "auto", opacity: 1 }}
+   218→            exit={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+   219→            transition={
+   220→              reduced
+   221→                ? { duration: 0.15, ease: "linear" }
+   222→                : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+   223→            }
+   224→            className="overflow-hidden"
+   225→          >
+   226→            <div className="border-t border-divider px-4 pb-6 pt-4 sm:px-5 sm:pt-5">
+   227→              {job.briefDescription && (
+   228→                <div>
+   229→                  <h4 className="font-display text-lg text-ink">Job description</h4>
+   230→                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-stone">
+   231→                    {job.briefDescription}
+   232→                  </p>
+   233→                </div>
+   234→              )}
+   235→              {/* 3-up everywhere — a 6-up row wraps currency mid-number. */}
+   236→              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
+   237→                <QuickFact label="Item No." value={pos?.itemNumber ?? "-"} />
+   238→                <QuickFact label="Vacancies" value={String(job.numberOfVacancy ?? "-")} />
+   239→                <QuickFact
+   240→                  label="Salary Grade"
+   241→                  value={
+   242→                    pos?.salaryGrade
+   243→                      ? `SG ${pos.salaryGrade}${pos.salaryStep ? `/${pos.salaryStep}` : ""}`
+   244→                      : "-"
+   245→                  }
+   246→                />
+   247→                <QuickFact label="Monthly Salary" value={salary != null ? formatCurrency(salary) : "-"} />
+   248→                <QuickFact label="Published" value={formatDate(job.publishDate)} />
+   249→                <QuickFact label="Deadline" value={formatDate(deadline)} danger={overdue} />
+   250→              </dl>
+   251→              <div className="mt-6 flex flex-wrap items-center gap-3">
+   252→                <button
+   253→                  type="button"
+   254→                  onClick={onSelect}
+   255→                  className="focus-ring group/link inline-flex min-h-[44px] items-center gap-3 text-sm font-medium text-ink transition-colors hover:text-metric-blue"
+   256→                >
+   257→                  Read full description
+   258→                  <span className="dlg-cta grid h-8 w-8 place-items-center">
+   259→                    <ArrowRight
+   260→                      className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-0.5"
+   261→                      strokeWidth={2.5}
+   262→                      aria-hidden="true"
+   263→                    />
+   264→                  </span>
+   265→                </button>
+   266→                {overdue && (
+   267→                  <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--bad)]">
+   268→                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" /> Deadline passed
+   269→                  </span>
+   270→                )}
+   271→              </div>
+   272→            </div>
+   273→          </motion.div>
+   274→        )}
+   275→      </AnimatePresence>
+   276→    </article>
+   277→  );
+   278→}
+   279→
+   280→// ── Detail pane (right) ─────────────────────────────────────────────────────
+   281→
+   282→/** Plain-text posting section rendered as a disc bullet list. */
+   283→function TextBullets({ text }: { text: string }) {
+   284→  const items = text
+   285→    .split(/\r?\n/)
+   286→    .map((l) => l.replace(/^[-•*]\s*/, "").trim())
+   287→    .filter(Boolean);
+   288→  if (items.length === 0) return null;
+   289→  return (
+   290→    <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed text-stone">
+   291→      {items.map((item, i) => (
+   292→        <li key={i}>{item}</li>
+   293→      ))}
+   294→    </ul>
+   295→  );
+   296→}
+   297→
+   298→/** Posting section: sanitized rich HTML when present, else text bullets. */
+   299→function PostingSection({ title, html, text }: { title: string; html: string | null; text: string | null }) {
+   300→  if (html && html.trim()) {
+   301→    return (
+   302→      <section className="space-y-3">
+   303→        <h3 className="text-lg font-semibold tracking-[-0.01em] text-ink">{title}</h3>
+   304→        <div className="rich-text text-base leading-relaxed text-stone" dangerouslySetInnerHTML={{ __html: html }} />
+   305→      </section>
+   306→    );
+   307→  }
+   308→  if (text && text.trim()) {
+   309→    return (
+   310→      <section className="space-y-3">
+   311→        <h3 className="text-lg font-semibold tracking-[-0.01em] text-ink">{title}</h3>
+   312→        <TextBullets text={text} />
+   313→      </section>
+   314→    );
+   315→  }
+   316→  return null;
+   317→}
+   318→
+   319→function JobDetail({
+   320→  job,
+   321→  saved,
+   322→  onApply,
+   323→  onSave,
+   324→  onBack,
+   325→}: {
+   326→  job: JobWire;
+   327→  saved: boolean;
+   328→  onApply: () => void;
+   329→  onSave: () => void;
+   330→  onBack: () => void;
+   331→}) {
+   332→  const pos = job.position;
+   333→  const title = pos?.positionTitle || job.title || "Position Title Unavailable";
+   334→  const salary = pos?.salaryAmount ?? null;
+   335→  const deadline = job.deadlineDate;
+   336→  const overdue = deadline ? new Date(deadline).getTime() < Date.now() : false;
+   337→
+   338→  const meta: { icon: typeof MapPin; label: string; num?: boolean; danger?: boolean }[] = [];
+   339→  if (job.position?.division) meta.push({ icon: Building2, label: job.position.division });
+   340→  if (job.positionType) meta.push({ icon: Briefcase, label: humanize(job.positionType) });
+   341→  if (salary != null)
+   342→    meta.push({
+   343→      icon: Banknote,
+   344→      label: `${formatCurrency(salary)} per month${
+   345→        pos?.salaryGrade ? ` · SG ${pos.salaryGrade}${pos.salaryStep ? `/${pos.salaryStep}` : ""}` : ""
+   346→      }`,
+   347→      num: true,
+   348→    });
+   349→  meta.push({
+   350→    icon: Clock,
+   351→    label: overdue ? "Closed: deadline passed" : deadline ? `Closes ${formatDate(deadline)}` : "Open until filled",
+   352→    num: !overdue && !deadline,
+   353→    danger: overdue,
+   354→  });
+   355→
+   356→  return (
+   357→    <div>
+   358→      {/* Mobile — back to the register */}
+   359→      <button
+   360→        type="button"
+   361→        onClick={onBack}
+   362→        className="focus-ring mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-metric-blue lg:hidden"
+   363→      >
+   364→        <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Back to job list
+   365→      </button>
+   366→
+   367→      <h2 className="text-2xl font-semibold leading-tight tracking-[-0.01em] text-ink sm:text-3xl">
+   368→        {humanize(title)}
+   369→      </h2>
+   370→      <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+   371→        <span className="text-base font-medium text-ink">DOST-MIRDC</span>
+   372→        <BadgeCheck className="h-[18px] w-[18px] shrink-0 text-stone" aria-label="Verified agency" />
+   373→        <button
+   374→          type="button"
+   375→          onClick={() => navigate("vacant-positions")}
+   376→          className="focus-ring text-[15px] text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+   377→        >
+   378→          View all jobs
+   379→        </button>
+   380→      </div>
+   381→
+   382→      <ul className="mt-4 space-y-2.5">
+   383→        <li className="flex items-start gap-2.5 text-base text-stone">
+   384→          <MapPin className="mt-0.5 h-[18px] w-[18px] shrink-0 text-stone" aria-hidden="true" />
+   385→          {jobPlace(job)}
+   386→        </li>
+   387→        {meta.map((m, i) => (
+   388→          <li
+   389→            key={i}
+   390→            className={cn(
+   391→              "flex items-start gap-2.5 text-base",
+   392→              m.danger ? "font-semibold text-[var(--bad)]" : "text-stone"
+   393→            )}
+   394→          >
+   395→            <m.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-stone" aria-hidden="true" />
+   396→            <span className={cn(m.num && "num")}>{m.label}</span>
+   397→          </li>
+   398→        ))}
+   399→      </ul>
+   400→
+   401→      <p className="num mt-4 text-sm text-stone">Posted {timeAgo(postedAt(job))}</p>
+   402→
+   403→      <div className="mt-5 flex flex-wrap items-center gap-3">
+   404→        <button type="button" onClick={onApply} disabled={overdue} className={QUICK_APPLY_BTN}>
+   405→          Quick apply
+   406→        </button>
+   407→        <button
+   408→          type="button"
+   409→          onClick={onSave}
+   410→          aria-pressed={saved}
+   411→          className={SAVE_BTN}
+   412→        >
+   413→          <Bookmark className={cn("h-4 w-4", saved && "fill-current")} aria-hidden="true" />
+   414→          {saved ? "Saved" : "Save"}
+   415→        </button>
+   416→        {overdue && (
+   417→          <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--bad)]">
+   418→            <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" /> Deadline passed
+   419→          </span>
+   420→        )}
+   421→      </div>
+   422→
+   423→      {/* Posting body */}
+   424→      <div className="mt-8 space-y-8 border-t border-divider pt-8">
+   425→        {job.briefDescription &&
+   426→          job.briefDescription
+   427→            .split(/\n{2,}/)
+   428→            .filter((p) => p.trim())
+   429→            .map((p, i) => (
+   430→              <p key={i} className="text-base leading-relaxed text-stone">
+   431→                {p}
+   432→              </p>
+   433→            ))}
+   434→        <PostingSection title="Responsibilities" html={job.dutiesHtml} text={job.dutiesResponsibilities} />
+   435→        <PostingSection
+   436→          title="Qualifications"
+   437→          html={job.otherQualificationsHtml}
+   438→          text={job.otherQualifications}
+   439→        />
+   440→        <PostingSection title="Compensation" html={job.compensationHtml} text={job.compensationPackage} />
+   441→      </div>
+   442→    </div>
+   443→  );
+   444→}
+   445→
+   446→// ── View ────────────────────────────────────────────────────────────────────
+   447→
+   448→export default function PublicLanding() {
+   449→  const [jobs, setJobs] = useState<JobWire[] | null>(null);
+   450→  const [error, setError] = useState<string | null>(null);
+   451→  const [selectedId, setSelectedId] = useState<number | null>(null);
+   452→  const [expandedId, setExpandedId] = useState<number | null>(null);
+   453→  const [isDesktop, setIsDesktop] = useState(false);
+   454→  const lastJson = useRef("");
+   455→  const paneRef = useRef<HTMLDivElement>(null);
+   456→  const { saved, toggle: toggleSave } = useSavedJobs();
+   457→  // Shared apply gate — anonymous visitors get the sign-in prompt, complete
+   458→  // applicants get the confirm flow (same as the board), incomplete profiles
+   459→  // are sent to finish their profile first (the fast-track was retired).
+   460→  const { requestApply, dialogs } = useApplyFlow();
+   461→
+   462→  const load = useCallback(async (silent: boolean) => {
+   463→    try {
+   464→      const data = await apiFetch<JobWire[]>("/api/jobs?limit=200");
+   465→      const json = JSON.stringify(data);
+   466→      if (!silent || json !== lastJson.current) {
+   467→        lastJson.current = json;
+   468→        setJobs(data);
+   469→      }
+   470→      setError(null);
+   471→    } catch (e) {
+   472→      if (!silent) setError(e instanceof Error ? e.message : "Failed to load positions");
+   473→    }
+   474→  }, []);
+   475→
+   476→  // Mount + 30s silent poll + refetch on focus (spec §13 cadence).
+   477→  useEffect(() => {
+   478→    void load(false);
+   479→    const timer = setInterval(() => {
+   480→      if (!document.hidden) void load(true);
+   481→    }, 30_000);
+   482→    const onFocus = () => void load(true);
+   483→    window.addEventListener("focus", onFocus);
+   484→    return () => {
+   485→      clearInterval(timer);
+   486→      window.removeEventListener("focus", onFocus);
+   487→    };
+   488→  }, [load]);
+   489→
+   490→  // Breakpoint sync — desktop keeps both panes; mobile swaps list ↔ detail.
+   491→  useEffect(() => {
+   492→    const mq = window.matchMedia("(min-width: 1024px)");
+   493→    const sync = () => setIsDesktop(mq.matches);
+   494→    sync();
+   495→    mq.addEventListener("change", sync);
+   496→    return () => mq.removeEventListener("change", sync);
+   497→  }, []);
+   498→
+   499→  const openJobs = useMemo(
+   500→    () => (jobs ?? []).filter((j) => !deadlineState(j.deadlineDate).overdue),
+   501→    [jobs]
+   502→  );
+   503→
+   504→  const selectedJob = useMemo(
+   505→    () => openJobs.find((j) => j.id === selectedId) ?? null,
+   506→    [openJobs, selectedId]
+   507→  );
+   508→
+   509→  // Desktop opens with the first posting pre-selected (reference-board
+   510→  // behavior); a stale selection after a poll snaps back to the top card.
+   511→  useEffect(() => {
+   512→    if (isDesktop && selectedId === null && openJobs.length > 0) {
+   513→      setSelectedId(openJobs[0].id);
+   514→    }
+   515→  }, [isDesktop, openJobs, selectedId]);
+   516→
+   517→  useEffect(() => {
+   518→    if (selectedId !== null && !openJobs.some((j) => j.id === selectedId)) {
+   519→      setSelectedId(openJobs[0]?.id ?? null);
+   520→    }
+   521→  }, [openJobs, selectedId]);
+   522→
+   523→  // Reference-board behavior — a freshly picked posting opens from the top,
+   524→  // even when the previous posting was scrolled deep into its body.
+   525→  useEffect(() => {
+   526→    if (paneRef.current) paneRef.current.scrollTop = 0;
+   527→  }, [selectedId]);
+   528→
+   529→  const select = useCallback(
+   530→    (id: number) => {
+   531→      setSelectedId(id);
+   532→      if (!window.matchMedia("(min-width: 1024px)").matches) {
+   533→        window.scrollTo({ top: 0, behavior: "smooth" });
+   534→      }
+   535→    },
+   536→    []
+   537→  );
+   538→
+   539→  const saveAndToast = useCallback(
+   540→    (job: JobWire) => {
+   541→      const wasSaved = saved.includes(job.id);
+   542→      toggleSave(job.id);
+   543→      toast.success(
+   544→        wasSaved
+   545→          ? "Removed from your saved jobs"
+   546→          : `Saved ${humanize(job.position?.positionTitle || job.title)}`
+   547→      );
+   548→    },
+   549→    [saved, toggleSave]
+   550→  );
+   551→
+   552→  const showList = isDesktop || selectedId === null;
+   553→  const showDetail = isDesktop || selectedId !== null;
+   554→
+   555→  return (
+   556→    // Root height is conditionally capped via the `pinned` custom variant
+   557→    // (lg width AND ≥1040px tall — see globals.css): only then is the page
+   558→    // app-pinned at h-dvh with internally-scrolling panes. Below that the
+   559→    // `flow` mode applies: the page scrolls naturally, the footer appears
+   560→    // only at the real bottom, the job list scrolls with the page, and the
+   561→    // posting pane sticks to the top (see the pane below).
+   562→    <div className="flex min-h-screen flex-col pinned:h-dvh">
+   563→      <SiteHeader />
+   564→
+   565→      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:flex lg:min-h-0 lg:flex-col lg:px-8">
+   566→        {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer,
+   567→            arranged as a split: display headline + copy + single charcoal
+   568→            capsule CTA left; official brand mark + authority line right as
+   569→            the quiet institutional proof strip (real marks only). */}
+   570→        <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10 lg:[@media(max-height:860px)]:py-8">
+   571→          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
+   572→            {/* QA 2026-02: header renamed to "Job Opportunities" to match the
+   573→                Positions tab; the live "N open" pill was removed — it read as
+   574→                an unclickable button. */}
+   575→            <div className="min-w-0">
+   576→              <h1 className="text-display-hero">Job Opportunities</h1>
+   577→              <p className="text-body mt-3 max-w-xl text-body-gray">
+   578→                Current vacancies at DOST-MIRDC. Pick a role to read the full posting.
+   579→              </p>
+   580→              <div className="mt-6">
+   581→                <button
+   582→                  onClick={() => navigate("vacant-positions")}
+   583→                  className="dlg-cta text-nav inline-flex min-h-[44px] items-center gap-2 px-4 font-medium"
+   584→                >
+   585→                  Browse the full board
+   586→                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+   587→                </button>
+   588→              </div>
+   589→            </div>
+   590→            {/* Institutional proof — the same emblems and authority line the
+   591→                footer carries, moved into the hero as the trust anchor. */}
+   592→            <div className="flex items-center gap-4 lg:flex-col lg:items-end lg:gap-3 lg:text-right">
+   593→              <BrandLogo logoSize={36} tone="light" />
+   594→              <div className="min-w-0">
+   595→                <p className="text-sm font-semibold leading-snug text-ink">
+   596→                  Metals Industry Research and Development Center
+   597→                </p>
+   598→                <p className="mt-0.5 text-xs leading-relaxed text-stone">
+   599→                  An agency of the Department of Science and Technology, Republic of the Philippines
+   600→                </p>
+   601→              </div>
+   602→            </div>
+   603→          </div>
+   604→        </section>
+   605→
+   606→        {error !== null ? (
+   607→          <div className="mt-6 rounded-2xl bg-[var(--bad-bg)] p-5">
+   608→            <p className="text-sm text-ink">{error}</p>
+   609→            <button
+   610→              onClick={() => void load(false)}
+   611→              className="mt-2 text-sm text-metric-blue underline underline-offset-2"
+   612→            >
+   613→              Try again
+   614→            </button>
+   615→          </div>
+   616→        ) : jobs === null ? (
+   617→          <div className="mt-6 space-y-3.5" aria-hidden="true">
+   618→            {[0, 1, 2].map((i) => (
+   619→              <div key={i} className="skel h-28" />
+   620→            ))}
+   621→          </div>
+   622→        ) : openJobs.length === 0 ? (
+   623→          <div className="dlg-card mt-6">
+   624→            <EmptyState
+   625→              icon={Inbox}
+   626→              title="No open positions right now"
+   627→              description="Check back soon or explore the full board for upcoming announcements."
+   628→            />
+   629→            <div className="pb-8 text-center">
+   630→              <button
+   631→                onClick={() => navigate("vacant-positions")}
+   632→                className="inline-flex min-h-[44px] items-center gap-2 text-sm text-metric-blue underline underline-offset-2 hover:text-ink"
+   633→              >
+   634→                Go to the full positions board
+   635→                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+   636→              </button>
+   637→            </div>
+   638→          </div>
+   639→        ) : (
+   640→          // Board height is derived, not a magic viewport constant: on tall
+   641→          // viewports (root pinned at h-dvh) the grid flex-fills whatever is
+   642→          // left between the real header and footer, so the page itself never
+   643→          // scrolls and the open posting stays pinned in view — the reference
+   644→          // board's "sticky description" behavior. The 400px floor is the
+   645→          // safety net: on short laptops the root flows naturally instead of
+   646→          // pinning, and flex may never shrink the board below a usable pane.
+   647→          <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:flex-1 lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
+   648→            {/* Left · the register — scrolls internally ONLY in pinned mode;
+   649→                in flow mode it is a plain block so the wheel over the cards
+   650→                scrolls the page (an overflow container here would swallow
+   651→                it). 8px of ring room on every side (pl/py) with matching
+   652→                negative margins keeps the cards, the column alignment, and
+   653→                the pinned-mode scrollbar exactly where they were. */}
+   654→            {showList && (
+   655→              <div
+   656→                aria-label="Job opportunities list"
+   657→                className="scroll-thin min-h-0 space-y-3.5 lg:-ml-2 lg:-my-2 lg:py-2 lg:pl-2 lg:pr-1.5 pinned:overflow-y-auto"
+   658→              >
+   659→                {openJobs.map((job) => (
+   660→                  <JobListCard
+   661→                    key={job.id}
+   662→                    job={job}
+   663→                    selected={selectedId === job.id}
+   664→                    expanded={expandedId === job.id}
+   665→                    saved={saved.includes(job.id)}
+   666→                    onSelect={() => select(job.id)}
+   667→                    onToggle={() => setExpandedId(expandedId === job.id ? null : job.id)}
+   668→                    onSave={() => saveAndToast(job)}
+   669→                  />
+   670→                ))}
+   671→              </div>
+   672→            )}
+   673→
+   674→            {/* Right · the posting — sticky-column pattern. The outer grid
+   675→                item is the ref anchor; in flow mode it contributes ZERO to
+   676→                the row size (h-0 + min-h-full) so the LIST sizes the row,
+   677→                and the inner wrapper is position:sticky, capped to the
+   678→                viewport under the sticky header, and scrolls internally —
+   679→                it stays in view while the list scrolls with the page. In
+   680→                pinned mode the root never scrolls: the outer item stretches
+   681→                to the flexed row, the inner fills it (h-full) and scrolls
+   682→                internally exactly as before. On mobile both are plain
+   683→                blocks (single-pane swap, page scroll). */}
+   684→            {showDetail && (
+   685→              <div ref={paneRef} className="min-h-0 flow:h-0 flow:min-h-full">
+   686→                <div className="scroll-thin flow:sticky flow:top-[88px] flow:max-h-[calc(100dvh-112px)] flow:overflow-y-auto flow:pr-2 pinned:h-full pinned:overflow-y-auto pinned:pr-2">
+   687→                  {selectedJob ? (
+   688→                    <div className="dlg-card p-6 sm:p-8">
+   689→                      <JobDetail
+   690→                        job={selectedJob}
+   691→                        saved={saved.includes(selectedJob.id)}
+   692→                        onApply={() => requestApply(selectedJob)}
+   693→                        onSave={() => saveAndToast(selectedJob)}
+   694→                        onBack={() => setSelectedId(null)}
+   695→                      />
+   696→                    </div>
+   697→                  ) : (
+   698→                    <div className="dlg-card">
+   699→                      <EmptyState
+   700→                        icon={Briefcase}
+   701→                        title="Select a position"
+   702→                        description="Choose a role from the list to read the full posting."
+   703→                      />
+   704→                    </div>
+   705→                  )}
+   706→                </div>
+   707→              </div>
+   708→            )}
+   709→          </div>
+   710→        )}
+   711→      </main>
+   712→
+   713→      <Footer />
+   714→      {/* Shared apply dialog (confirm / MQR / done), mounted once. */}
+   715→      {dialogs}
+   716→    </div>
+   717→  );
+   718→}
+   719→
