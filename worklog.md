@@ -552,3 +552,23 @@ Work Log:
 
 Stage Summary:
 - ALL 10 QA review findings are implemented and verified — no gaps found; no code changes required this task
+
+---
+Task ID: 48
+Agent: main (Z.ai Code)
+Task: User directive — rebrand the main color from black (Charcoal) to the blue used by the old RMIS (github.com/mi7sudev/RMISv3.8); clone → inspect → apply → delete clone
+
+Work Log:
+- Cloned RMISv3.8 to /tmp (211M, shallow); its "Warm Obsidian" globals.css declares: "RMIS electric blue #1591DC is THE primary — filled CTA fill, focus rings, selection, progress fill; hover darkens to #0E7ABF", --primary-foreground #ffffff, ring/sidebar all #1591DC
+- Surveyed our codebase: charcoal-as-control lived in --primary/--sidebar-primary tokens, .dlg-cta (~30 call sites via CSS), .chip-ink, .monogram, 8 tsx selected-state chips (bg-charcoal text-[#ebf0f8]), nav-rail avatar+indicator (inline hex), and 3 bg-ink active/count fills; existing "blue" was Bevel Metric Blue #415eee (ring/focus/links/charts)
+- globals.css rebrand: --primary/--primary-foreground/--sidebar-primary(-foreground) → #1591DC/#ffffff; --ring/--sidebar-ring/--chart-1/--viz-1/--tangerine-tag/--color-tangerine/--color-metric-blue → #1591DC (one brand blue system-wide); .dlg-cta → #1591DC fill + white ink + #0E7ABF hover/active; :focus-visible, .focus-ring, .dlg-input:focus (+shadow rgba(21,145,220,.15)), .chip-ink, .grad-ember ramp, .monogram (22a0e4→1591dc→0e7abf ramp, white ink), .monogram-warm (0e7abf→0a5e90) updated; header comment documents the rebrand + source
+- tsx call sites → token-driven bg-primary/text-primary-foreground: apply-dialogs (MQR chip + success circle), review-workspace (Present pill), jobs-view (active pagination + filter count), settings (contact filters), profile-view (desktop step circles + mobile sliding strip block/text/icons), review-queue (stage tabs), notifications-panel + mobile-nav (badge/avatar), nav-rail (indicator + avatar → var(--primary)), button.tsx hover:bg-[#0e7abf]; analytics VIZ_1/STAGE_BAR → #1591dc; pds-upload-card + documents-section dragover radial washes → rgba(21,145,220,…)
+- Kept intentionally: Ink #222326 display type/text, charcoal dialog scrims bg-[#1f2025]/38, ink tooltips, Cloud Card surfaces, hero sky, status colors
+- Deleted /tmp/RMISv3.8 after extraction, as instructed
+- Verification (agent-browser): 1600×1100 pinned frontpage — .dlg-cta computes rgb(21,145,220), hover rgb(14,122,191)=#0E7ABF, tokens --primary/--ring/--color-metric-blue all #1591dc, pinned scrollH==viewH intact; signin CTA blue; workspace — 7 var(--primary) elements, avatar chip blue, monogram blue ramp, notification badge blue; review-queue list mode active stage chip rgb(21,145,220); analytics gradient stops #1591dc; 1280×720 flow (footer below fold, no h-scroll) and 390×844 mobile (natural flow, no h-scroll) unaffected; zero page errors; dev.log clean; lint clean
+- Committed rebrand (e5b6d08) + chore commit dropping accidentally-tracked tool-results scratch files (dd8b86b)
+
+Stage Summary:
+- Brand primary is now the legacy RMIS electric blue #1591DC with #0E7ABF hover, replacing Charcoal #1f2025 controls across tokens, CSS utilities, and all selected/active/count/identity states
+- Single brand blue: former Metric Blue #415eee retired; ring/focus/charts/links all speak #1591DC
+- Charcoal/Ink retained only as neutrals (type, scrims, tooltips); all prior layout/behavior work (pinned/flow modes, sticky pane) untouched and re-verified
