@@ -2,14 +2,15 @@
 
 // ============================================================================
 // RMIS — Applicant rail info button + modal (spec §13 sidebar): a small
-// circular (!) affordance in the nav rail, placed directly ABOVE the Profile
-// button (APPLICANT role only). Clicking it opens the "How hiring works"
-// infographic as a modal dialog. The steps mirror the REAL recruitment
-// pipeline (src/lib/status.ts): Applied → Under Review → Shortlisted, after
-// which the process continues offline — HR emails schedule the interview,
-// skills exam and appointment face-to-face (MOM 2026-09-03 flow).
-// Collapsed rail: the circle recenters, tooltip flips to the right — same
-// affordance, icon-only (consistent with the other rail items).
+// circular (!) affordance PINNED TO THE BOTTOM of the nav rail, directly
+// ABOVE the active-user profile card (avatar + name + role — APPLICANT role
+// only). Clicking it opens the "How hiring works" infographic as a modal
+// dialog. The steps mirror the REAL recruitment pipeline (src/lib/status.ts):
+// Applied → Under Review → Shortlisted, after which the process continues
+// offline — HR emails schedule the interview, skills exam and appointment
+// face-to-face (MOM 2026-09-03 flow). Collapsed rail: the circle recenters,
+// tooltip flips to the right — same affordance, icon-only (consistent with
+// the other rail items).
 // ============================================================================
 
 import {
@@ -72,7 +73,7 @@ export function RailJourneyInfo({ collapsed = false }: { collapsed?: boolean }) 
       aria-label="How hiring works"
       title="How hiring works"
       className={`flex min-h-[44px] w-full items-center rounded-full text-[var(--rail-text)] transition-colors hover:bg-[var(--rail-hover-bg)] hover:text-ink ${
-        collapsed ? "justify-center px-0" : "px-3.5"
+        collapsed ? "justify-center px-0" : "px-2"
       }`}
     >
       <span

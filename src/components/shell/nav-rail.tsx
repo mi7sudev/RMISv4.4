@@ -8,7 +8,8 @@
 // Recruitment" (persisted in localStorage "rmis.rail-expanded"). When
 // collapsed to the w-16 icon-only rail there is NO expand button — clicking
 // anywhere on the rail (brand plate or empty chrome) expands it instead.
-// Bottom: user dropdown with sign out.
+// Bottom: applicants get the "How hiring works" info circle, then the user
+// dropdown with sign out.
 // ============================================================================
 
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -236,13 +237,6 @@ export function NavRail({ view }: { view: string }) {
                 <div className="mx-auto mb-2 h-px w-6 bg-[var(--rail-border)]" aria-hidden="true" />
               )}
               <ul className="space-y-1">
-                {/* Applicant info affordance — circular (!) directly above the
-                    Profile button; opens the hiring-journey infographic. */}
-                {g.group === "Account" && user.role === "APPLICANT" && (
-                  <li>
-                    <RailJourneyInfo collapsed={!expanded} />
-                  </li>
-                )}
                 {g.items.map((item) => {
                   const active = item.view === activeKey;
                   const button = (
@@ -296,8 +290,16 @@ export function NavRail({ view }: { view: string }) {
           ))}
         </nav>
 
-        {/* Bottom: user dropdown (the collapse toggle lives in the brand row) */}
+        {/* Bottom: user dropdown (the collapse toggle lives in the brand row).
+            APPLICANT rail: the circular (!) hiring-journey affordance sits
+            directly above the active-user profile card, pinned to the very
+            bottom of the sidebar. */}
         <div className="shrink-0 p-2.5" style={{ borderTop: "1px solid var(--rail-border)" }}>
+          {user.role === "APPLICANT" && (
+            <div className="mb-1">
+              <RailJourneyInfo collapsed={!expanded} />
+            </div>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
