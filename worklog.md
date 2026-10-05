@@ -704,3 +704,28 @@ Work Log:
 Stage Summary:
 - The hiring-journey infographic now follows the applicant across every surface: desktop rail (dark, icon-inset) and mobile drawer (white, avatar-aligned), with the same circle → divider → profile-card bottom stack and the same 4-step modal.
 - The frontpage footer can no longer be overlapped: the sticky posting pane respects both the viewport and its grid container; the reference-board sticky-description behavior is unchanged on tall viewports.
+
+---
+Task ID: 52
+Agent: Z.ai Code (main)
+Task: User report — the frontpage job description is forced scrollable by a fixed maximum height even on wide/tall screens with plenty of room; the height should adapt to the available viewport dynamically, never cut off by the footer. Same adaptive treatment requested for the left job-card list.
+
+Work Log:
+- Root cause: the landing ran a two-mode system (globals.css custom variants `pinned` = lg + ≥1040px tall: root h-dvh app-pinning, panes scroll internally within "leftover" flex space after hero+footer; `flow` = shorter viewports: sticky pane capped at min(100dvh-112px, container)). Both modes derived the pane's height from something OTHER than its content: pinned mode sacrificed description space to keep the hero and footer on screen (908px description vs ~628px leftover on a 1200px screen), and flow mode let a short list (3 cards ≈ 467px) size the row that capped the pane. Result: internal scrolling at every viewport height — exactly the user's complaint.
+- Rebuilt as ONE viewport-adaptive model (no height media queries, no app pinning):
+  - Root back to `flex min-h-screen flex-col`; footer stays at the real bottom (mt-auto pins it on short pages, natural flow pushes it on tall ones).
+  - Each board column (list + posting) is now directly `lg:sticky lg:top-[88px] lg:self-start` with `lg:max-h-[calc(100dvh-112px)] lg:overflow-y-auto`: natural height = full content, capped at the live viewport (dynamic dvh, no fixed pixel constant). Because self-start items contribute their capped natural height to grid row sizing, a short list no longer squeezes the posting — row = max(list, posting), each ≤ viewport cap.
+  - paneRef moved onto the posting scroller itself (the old outer-wrapper ref made the select-scroll-reset a no-op).
+  - Kept the 400px board floor and the list's 8px ring-room padding + negative-margin trick.
+  - Removed the `pinned`/`flow` @custom-variant definitions from globals.css (only consumer was the landing).
+- Verification (agent-browser, all measured):
+  - 1280×800 (short): pane capped 688, internal scroll (content 908), list natural 483; list sticks at exactly viewport 88 mid/max scroll; at max scroll footer fully visible (680..800) with pane bottom 640 — never overlapped; pane top releasing above the fold is standard reference-board behavior.
+  - 1280×1200 (tall): cap 1088 ≥ content 908 → pane renders the COMPLETE posting (908px, zero internal scroll — the fixed complaint); footer below pane (1467 vs 1427); at max scroll (387) list + full description + footer all visible simultaneously.
+  - 1280×1600 (huge): page height = viewport (no scrolling anywhere), detail unscrollable, footer pinned exactly at viewport bottom via mt-auto.
+  - Mobile 390×844: columns plain flow (sticky/cap are lg-only), single-pane swap intact, footer fully visible at bottom.
+  - jobs-view checked: plain in-flow layout + simple sticky asides, no fixed caps — not affected.
+  - Console: no errors (only the pre-existing LCP seal-image warning). lint clean.
+- Evidence: upload/task52-short-bottom.png, task52-tall-full.png (full-page). Committed 29e9616.
+
+Stage Summary:
+- The frontpage board is now fully viewport-adaptive: the posting pane and the job list each use all available vertical space, show their complete content when the screen has room, and only cap + scroll internally (sticky under the header, above the footer at all times) when they don't. The pinned/flow duality and its h-dvh pinning are gone.
