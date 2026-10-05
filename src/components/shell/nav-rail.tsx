@@ -292,14 +292,14 @@ export function NavRail({ view }: { view: string }) {
 
         {/* Bottom: user dropdown (the collapse toggle lives in the brand row).
             APPLICANT rail: the circular (!) hiring-journey affordance sits
-            directly above the active-user profile card, pinned to the very
-            bottom of the sidebar. */}
+            directly above the bottom divider — i.e. ABOVE the spacer line,
+            with the active-user profile card still pinned under it. */}
+        {user.role === "APPLICANT" && (
+          <div className="shrink-0 px-2.5 pb-1.5">
+            <RailJourneyInfo collapsed={!expanded} />
+          </div>
+        )}
         <div className="shrink-0 p-2.5" style={{ borderTop: "1px solid var(--rail-border)" }}>
-          {user.role === "APPLICANT" && (
-            <div className="mb-1">
-              <RailJourneyInfo collapsed={!expanded} />
-            </div>
-          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
