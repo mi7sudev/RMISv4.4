@@ -12,12 +12,13 @@
 // (display title, verified company row + "View all jobs", icon meta rows,
 // posted age, brand-blue Quick apply + ghost Save, description,
 // Responsibilities / Qualifications / Compensation sections). The selected
-// card carries the brand-blue ring (RMIS Electric Blue #1591dc). Both columns
-// are viewport-adaptive: each grows to its full content height when the screen
-// has room (complete description, no internal scrolling) and caps at the live
-// viewport — scrolling internally while sticky under the header — when it
-// doesn't. Neither column is ever cut off by or hidden behind the footer.
-// Mobile swaps panes (list → detail with back).
+// card carries the brand-blue ring (RMIS Electric Blue #1591dc). The posting
+// pane is viewport-adaptive: it grows to its full content height when the
+// screen has room (complete description, no internal scrolling) and caps at
+// the live viewport — scrolling internally while sticky under the header —
+// when it doesn't, never cut off by or hidden behind the footer. The job
+// list is a plain block that scrolls with the page. Mobile swaps panes
+// (list → detail with back).
 // Data from GET /api/jobs (30s silent poll + refetch on focus); visitors
 // without a session are routed to sign-in by the shared apply gate; saves
 // persist in localStorage. Apply actions are cancelled-only on the landing.
@@ -640,29 +641,27 @@ export default function PublicLanding() {
             </div>
           </div>
         ) : (
-          // Viewport-adaptive two-pane board. Each column sizes to its own
-          // content and contributes that height to the row (a short list no
-          // longer squeezes the posting), and every column is simultaneously
-          // capped at the LIVE viewport height (100dvh − 88px sticky offset −
-          // 24px breathing room — no fixed pixel constant), so:
+          // Viewport-adaptive two-pane board. The posting pane sizes to its
+          // own content and contributes that height to the row (a short list
+          // no longer squeezes it), capped at the LIVE viewport height
+          // (100dvh − 88px sticky offset − 24px breathing room — no fixed
+          // pixel constant), so:
           //   • tall screens — the complete description renders in full with
           //     no internal scrolling; the footer only ever sits BELOW it;
-          //   • short screens — the column caps at the available space and
+          //   • short screens — the pane caps at the available space and
           //     scrolls internally while sticky under the header (the
           //     reference board's "sticky description"), and the grid-row
           //     clamp keeps it above the footer at every scroll position.
-          // The 400px floor keeps the board usable when both columns are
-          // short.
+          // The job list is deliberately NOT sticky — a plain block that
+          // scrolls with the page (user clarification). The 400px floor
+          // keeps the board usable when both columns are short.
           <div className="mt-6 grid gap-8 sm:mt-8 lg:min-h-[400px] lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)]">
-            {/* Left · the register — a sticky viewport-capped scroller, the
-                same adaptive treatment as the posting pane. 8px of ring room
-                on every side (pl/py) with matching negative margins keeps
-                the cards, the column alignment, and the scrollbar exactly
-                where they were. */}
+            {/* Left · the register — plain block, natural height, scrolls
+                with the page (NOT sticky, per user clarification). */}
             {showList && (
               <div
                 aria-label="Job opportunities list"
-                className="scroll-thin space-y-3.5 lg:sticky lg:top-[88px] lg:self-start lg:max-h-[calc(100dvh-112px)] lg:overflow-y-auto lg:-ml-2 lg:-my-2 lg:py-2 lg:pl-2 lg:pr-1.5"
+                className="scroll-thin space-y-3.5"
               >
                 {openJobs.map((job) => (
                   <JobListCard
@@ -685,9 +684,9 @@ export default function PublicLanding() {
                 capped at the live viewport: complete content with no inner
                 scroll when the screen has room; capped + internally
                 scrollable when it doesn't. Sticky keeps it in view while the
-                page scrolls; the grid-row clamp keeps it above the footer.
-                On mobile it is a plain block (single-pane swap, page
-                scroll). */}
+                list scrolls with the page; the grid-row clamp keeps it above
+                the footer. On mobile it is a plain block (single-pane swap,
+                page scroll). */}
             {showDetail && (
               <div
                 ref={paneRef}
