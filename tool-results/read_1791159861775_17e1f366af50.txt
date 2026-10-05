@@ -1,0 +1,994 @@
+     1→     1→// ============================================================================
+     2→     2→// email.ts — provider-agnostic EMAIL sender for RMIS notifications.
+     3→     3→//
+     4→     4→// Mirrors the audit-trail design of the notification surfaces:
+     5→     5→//
+     6→     6→//   1. "mock" (default, dev) — FREE forever. No external service: every send
+     7→     7→//      is logged to the `email_logs` table so the whole flow (shortlist
+     8→     8→//      notice included) is testable end-to-end and auditable in the admin
+     9→     9→//      Email panel.
+    10→    10→//   2. "resend" — production-grade HTTP API. Free tier (100 emails/day),
+    11→    11→//      no SDK needed — plain fetch. Set RESEND_API_KEY + (optional)
+    12→    12→//      EMAIL_FROM. Perfect fit: shortlist notices are low-volume, so the
+    13→    13→//      free tier realistically costs ₱0 for this office.
+    14→    14→//   3. "middleware" — the office's OWN email gateway (mirdc_middleware, an
+    15→    15→//      Express+nodemailer service on the MIRDC VM). Sends through the
+    16→    16→//      office mailbox systems@mirdc.dost.gov.ph over office SMTP. Set
+    17→    17→//      EMAIL_MIDDLEWARE_URL (+ EMAIL_MIDDLEWARE_API_KEY). ₱0 cost, no
+    18→    18→//      external vendor, works on the intranet.
+    19→    19→//
+    20→    20→// CONFIG (env vars):
+    21→    21→//   EMAIL_PROVIDER=mock|resend|middleware
+    22→    22→//   # resend:
+    23→    23→//   RESEND_API_KEY=<key from resend.com>
+    24→    24→//   EMAIL_FROM="DOST-MIRDC Recruitment <recruitment@mirdc.gov.ph>"
+    25→    25→//   # middleware:
+    26→    26→//   EMAIL_MIDDLEWARE_URL=http://<vm-host>:3232
+    27→    27→//   EMAIL_MIDDLEWARE_API_KEY=<shared middleware token>
+    28→    28→//   EMAIL_MIDDLEWARE_SYSTEM="DOST-MIRDC Recruitment"  (From display name)
+    29→    29→//
+    30→    30→// Design rules:
+    31→    31→//   - sendEmail() NEVER throws — callers fire it after their own success
+    32→    32→//     path and a provider outage must never break a status update.
+    33→    33→//     Results are always persisted to `email_logs`.
+    34→    34→//   - Templates: the SHORTLIST notice is the flagship (rich HTML + text);
+    35→    35→//     every other status change gets a simple, honest plain-text notice.
+    36→    36→// ============================================================================
+    37→    37→
+    38→    38→import { db } from "@/lib/db";
+    39→    39→import { env } from "@/lib/env";
+    40→    40→
+    41→    41→// ---------------------------------------------------------------------------
+    42→    42→// Provider resolution
+    43→    43→// ---------------------------------------------------------------------------
+    44→    44→
+    45→    45→export type EmailProviderId = "mock" | "resend" | "middleware";
+    46→    46→
+    47→    47→export type EmailProviderInfo = {
+    48→    48→  id: EmailProviderId;
+    49→    49→  label: string;
+    50→    50→  /** true when the provider's required env vars are present */
+    51→    51→  configured: boolean;
+    52→    52→  /** cost description for the admin panel */
+    53→    53→  cost: string;
+    54→    54→  /** one-line setup instructions */
+    55→    55→  setup: string;
+    56→    56→};
+    57→    57→
+    58→    58→export function getEmailProviderId(): EmailProviderId {
+    59→    59→  // Provider + credentials are validated at startup by src/lib/env.ts.
+    60→    60→  if (env.EMAIL_PROVIDER === "resend" && env.RESEND_API_KEY) return "resend";
+    61→    61→  if (env.EMAIL_PROVIDER === "middleware" && env.EMAIL_MIDDLEWARE_URL) return "middleware";
+    62→    62→  return "mock";
+    63→    63→}
+    64→    64→
+    65→    65→export function getEmailProviderInfo(): EmailProviderInfo {
+    66→    66→  switch (getEmailProviderId()) {
+    67→    67→    case "resend":
+    68→    68→      return {
+    69→    69→        id: "resend",
+    70→    70→        label: "Resend (HTTP API)",
+    71→    71→        configured: !!env.RESEND_API_KEY,
+    72→    72→        cost: "Free tier — 100 emails/day, 3,000/month (₱0 at RMIS volume)",
+    73→    73→        setup:
+    74→    74→          "Sign up at resend.com, verify your sending domain, set RESEND_API_KEY and EMAIL_FROM.",
+    75→    75→      };
+    76→    76→    case "middleware":
+    77→    77→      return {
+    78→    78→        id: "middleware",
+    79→    79→        label: "MIRDC Mail Middleware (office VM)",
+    80→    80→        configured: !!env.EMAIL_MIDDLEWARE_URL && !!env.EMAIL_MIDDLEWARE_API_KEY,
+    81→    81→        cost: "Internal — ₱0 (office mailbox systems@mirdc.dost.gov.ph)",
+    82→    82→        setup:
+    83→    83→          "Set EMAIL_MIDDLEWARE_URL to the mirdc_middleware VM (e.g. http://10.10.x.x:3232) + EMAIL_MIDDLEWARE_API_KEY.",
+    84→    84→      };
+    85→    85→    default:
+    86→    86→      return {
+    87→    87→        id: "mock",
+    88→    88→        label: "Mock (development)",
+    89→    89→        configured: true,
+    90→    90→        cost: "Free — emails are logged, not sent",
+    91→    91→        setup:
+    92→    92→          "Dev default. Set EMAIL_PROVIDER=resend (+ key) or EMAIL_PROVIDER=middleware (+ URL) to send real email.",
+    93→    93→      };
+    94→    94→  }
+    95→    95→}
+    96→    96→
+    97→    97→const DEFAULT_FROM =
+    98→    98→  env.EMAIL_FROM || "DOST-MIRDC Recruitment <onboarding@resend.dev>";
+    99→    99→
+   100→   100→// ---------------------------------------------------------------------------
+   101→   101→// Sending
+   102→   102→// ---------------------------------------------------------------------------
+   103→   103→
+   104→   104→export type SendEmailInput = {
+   105→   105→  to: string | null | undefined;
+   106→   106→  subject: string;
+   107→   107→  /** plain-text body — always required (email clients + deliverability) */
+   108→   108→  text: string;
+   109→   109→  /** optional HTML body (inline styles only — no external assets) */
+   110→   110→  html?: string;
+   111→   111→  /** optional linkage for the audit trail, e.g. { type: "application", id: 12 } */
+   112→   112→  related?: { type: string; id: number };
+   113→   113→  /**
+   114→   114→   * Optional file attachments (base64 content). Only the ACTIVE provider
+   115→   115→   * receives the bytes — email_logs persists metadata (name + size) only,
+   116→   116→   * never the file content (PII / DB-size discipline).
+   117→   117→   */
+   118→   118→  attachments?: EmailAttachment[];
+   119→   119→};
+   120→   120→
+   121→   121→/** A single email attachment. `content` is base64-encoded file bytes. */
+   122→   122→export type EmailAttachment = {
+   123→   123→  filename: string;
+   124→   124→  content: string;
+   125→   125→  contentType?: string;
+   126→   126→};
+   127→   127→
+   128→   128→export type SendEmailResult = {
+   129→   129→  attempted: boolean;
+   130→   130→  status: "sent" | "failed" | "mock" | "skipped";
+   131→   131→  provider: EmailProviderId;
+   132→   132→  providerRef?: string;
+   133→   133→  error?: string;
+   134→   134→  to?: string;
+   135→   135→};
+   136→   136→
+   137→   137→const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+   138→   138→
+   139→   139→/** Fire an email through the active provider. Never throws. */
+   140→   140→export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+   141→   141→  const provider = getEmailProviderId();
+   142→   142→  const to = (input.to ?? "").trim();
+   143→   143→
+   144→   144→  // Unreachable/absent address — record the skip so admins can see why an
+   145→   145→  // applicant got no email.
+   146→   146→  if (!to || !EMAIL_RE.test(to)) {
+   147→   147→    await logEmail({
+   148→   148→      to: to || "(none)",
+   149→   149→      subject: input.subject,
+   150→   150→      bodyText: input.text,
+   151→   151→      bodyHtml: input.html ?? null,
+   152→   152→      provider,
+   153→   153→      status: "skipped",
+   154→   154→      error: "No valid email address on record",
+   155→   155→      relatedType: input.related?.type,
+   156→   156→      relatedId: input.related?.id,
+   157→   157→      attachmentsMeta: attachmentsMeta(input.attachments),
+   158→   158→    }).catch(() => {});
+   159→   159→    return { attempted: false, status: "skipped", provider };
+   160→   160→  }
+   161→   161→
+   162→   162→  let result: { ok: boolean; ref?: string; error?: string; status: "sent" | "failed" | "mock" };
+   163→   163→  try {
+   164→   164→    switch (provider) {
+   165→   165→      case "resend":
+   166→   166→        result = await sendViaResend(
+   167→   167→          to,
+   168→   168→          input.subject,
+   169→   169→          input.text,
+   170→   170→          input.html,
+   171→   171→          input.attachments
+   172→   172→        );
+   173→   173→        break;
+   174→   174→      case "middleware":
+   175→   175→        result = await sendViaMiddleware(
+   176→   176→          to,
+   177→   177→          input.subject,
+   178→   178→          input.text,
+   179→   179→          input.html,
+   180→   180→          input.attachments
+   181→   181→        );
+   182→   182→        break;
+   183→   183→      default:
+   184→   184→        // mock: nothing is delivered — attachment metadata is still logged
+   185→   185→        // below so the audit trail shows what WOULD have been sent.
+   186→   186→        result = { ok: true, status: "mock", ref: "mock" };
+   187→   187→    }
+   188→   188→  } catch (e) {
+   189→   189→    result = {
+   190→   190→      ok: false,
+   191→   191→      status: "failed",
+   192→   192→      error: e instanceof Error ? e.message : String(e),
+   193→   193→    };
+   194→   194→  }
+   195→   195→
+   196→   196→  await logEmail({
+   197→   197→    to,
+   198→   198→    subject: input.subject,
+   199→   199→    bodyText: input.text,
+   200→   200→    bodyHtml: input.html ?? null,
+   201→   201→    provider,
+   202→   202→    status: result.status,
+   203→   203→    providerRef: result.ref,
+   204→   204→    error: result.error,
+   205→   205→    relatedType: input.related?.type,
+   206→   206→    relatedId: input.related?.id,
+   207→   207→    attachmentsMeta: attachmentsMeta(input.attachments),
+   208→   208→  }).catch(() => {});
+   209→   209→
+   210→   210→  return {
+   211→   211→    attempted: true,
+   212→   212→    status: result.status,
+   213→   213→    provider,
+   214→   214→    providerRef: result.ref,
+   215→   215→    error: result.error,
+   216→   216→    to,
+   217→   217→  };
+   218→   218→}
+   219→   219→
+   220→   220→/** JSON metadata persisted to email_logs.attachments — name + size only. */
+   221→   221→function attachmentsMeta(attachments?: EmailAttachment[]): string | null {
+   222→   222→  if (!attachments || attachments.length === 0) return null;
+   223→   223→  try {
+   224→   224→    return JSON.stringify(
+   225→   225→      attachments.map((a) => ({
+   226→   226→        name: a.filename,
+   227→   227→        bytes: Math.floor((a.content.length * 3) / 4),
+   228→   228→      }))
+   229→   229→    );
+   230→   230→  } catch {
+   231→   231→    return null;
+   232→   232→  }
+   233→   233→}
+   234→   234→
+   235→   235→async function logEmail(row: {
+   236→   236→  to: string;
+   237→   237→  subject: string;
+   238→   238→  bodyText: string;
+   239→   239→  bodyHtml: string | null;
+   240→   240→  provider: EmailProviderId;
+   241→   241→  status: string;
+   242→   242→  providerRef?: string;
+   243→   243→  error?: string;
+   244→   244→  relatedType?: string;
+   245→   245→  relatedId?: number;
+   246→   246→  attachmentsMeta?: string | null;
+   247→   247→}) {
+   248→   248→  await db.emailLog.create({
+   249→   249→    data: {
+   250→   250→      to: row.to,
+   251→   251→      subject: row.subject,
+   252→   252→      bodyText: row.bodyText,
+   253→   253→      bodyHtml: row.bodyHtml,
+   254→   254→      provider: row.provider,
+   255→   255→      status: row.status,
+   256→   256→      providerRef: row.providerRef,
+   257→   257→      error: row.error,
+   258→   258→      relatedType: row.relatedType,
+   259→   259→      relatedId: row.relatedId,
+   260→   260→      attachments: row.attachmentsMeta ?? null,
+   261→   261→    },
+   262→   262→  });
+   263→   263→}
+   264→   264→
+   265→   265→// --- Driver: Resend (HTTP API — no SDK) ------------------------------------
+   266→   266→
+   267→   267→async function sendViaResend(
+   268→   268→  to: string,
+   269→   269→  subject: string,
+   270→   270→  text: string,
+   271→   271→  html?: string,
+   272→   272→  attachments?: EmailAttachment[]
+   273→   273→): Promise<{ ok: boolean; ref?: string; error?: string; status: "sent" | "failed" }> {
+   274→   274→  const key = process.env.RESEND_API_KEY;
+   275→   275→  if (!key) return { ok: false, status: "failed", error: "RESEND_API_KEY not set" };
+   276→   276→
+   277→   277→  const res = await fetch("https://api.resend.com/emails", {
+   278→   278→    method: "POST",
+   279→   279→    headers: {
+   280→   280→      "Content-Type": "application/json",
+   281→   281→      Authorization: `Bearer ${key}`,
+   282→   282→    },
+   283→   283→    body: JSON.stringify({
+   284→   284→      from: DEFAULT_FROM,
+   285→   285→      to: [to],
+   286→   286→      subject,
+   287→   287→      text,
+   288→   288→      ...(html ? { html } : {}),
+   289→   289→      ...(attachments && attachments.length > 0
+   290→   290→        ? {
+   291→   291→            attachments: attachments.map((a) => ({
+   292→   292→              filename: a.filename,
+   293→   293→              content: a.content,
+   294→   294→              ...(a.contentType ? { content_type: a.contentType } : {}),
+   295→   295→            })),
+   296→   296→          }
+   297→   297→        : {}),
+   298→   298→    }),
+   299→   299→  });
+   300→   300→  if (!res.ok) {
+   301→   301→    return {
+   302→   302→      ok: false,
+   303→   303→      status: "failed",
+   304→   304→      error: `resend ${res.status}: ${await safeBody(res)}`,
+   305→   305→    };
+   306→   306→  }
+   307→   307→  const data = (await res.json().catch(() => ({}))) as { id?: string };
+   308→   308→  return { ok: true, status: "sent", ref: data?.id };
+   309→   309→}
+   310→   310→
+   311→   311→async function safeBody(res: Response): Promise<string> {
+   312→   312→  try {
+   313→   313→    return (await res.text()).slice(0, 200);
+   314→   314→  } catch {
+   315→   315→    return "";
+   316→   316→  }
+   317→   317→}
+   318→   318→
+   319→   319→// --- Driver: MIRDC Mail Middleware (office VM, mirdc_middleware) ------------
+   320→   320→// POST {EMAIL_MIDDLEWARE_URL}/sendMail — Express+nodemailer service run by
+   321→   321→// the office. The From header is ALWAYS the office mailbox
+   322→   322→// systems@mirdc.dost.gov.ph (display name = EMAIL_MIDDLEWARE_SYSTEM, default
+   323→   323→// "DOST-MIRDC Recruitment"); the middleware's own default Reply-To applies.
+   324→   324→// The updated middleware also accepts a plain-text part and base64
+   325→   325→// attachments; an OLDER middleware simply ignores those fields — emails
+   326→   326→// still deliver (HTML-only), so this driver is safe against both versions.
+   327→   327→
+   328→   328→async function sendViaMiddleware(
+   329→   329→  to: string,
+   330→   330→  subject: string,
+   331→   331→  text: string,
+   332→   332→  html?: string,
+   333→   333→  attachments?: EmailAttachment[]
+   334→   334→): Promise<{ ok: boolean; ref?: string; error?: string; status: "sent" | "failed" }> {
+   335→   335→  const base = env.EMAIL_MIDDLEWARE_URL;
+   336→   336→  if (!base) return { ok: false, status: "failed", error: "EMAIL_MIDDLEWARE_URL not set" };
+   337→   337→
+   338→   338→  // The middleware delivers an HTML body only — always give it one. When a
+   339→   339→  // template didn't build HTML, wrap the plain text minimally so the
+   340→   340→  // message is never an empty body.
+   341→   341→  const message = html ?? textToSimpleHtml(text);
+   342→   342→
+   343→   343→  const res = await fetch(`${base}/sendMail`, {
+   344→   344→    method: "POST",
+   345→   345→    headers: { "Content-Type": "application/json" },
+   346→   346→    // Never hang an API route on a stalled VM — the middleware normally
+   347→   347→    // answers in well under a second.
+   348→   348→    signal: AbortSignal.timeout(15_000),
+   349→   349→    body: JSON.stringify({
+   350→   350→      // Shared middleware token (validated only when the VM opts into
+   351→   351→      // MIDDLEWARE_API_KEY strict mode; harmless otherwise).
+   352→   352→      api: env.EMAIL_MIDDLEWARE_API_KEY,
+   353→   353→      // From display name — becomes "…" <systems@mirdc.dost.gov.ph>.
+   354→   354→      system: env.EMAIL_MIDDLEWARE_SYSTEM || "DOST-MIRDC Recruitment",
+   355→   355→      to,
+   356→   356→      subject,
+   357→   357→      message,
+   358→   358→      // Additive fields — newer middleware adds the text part / attachments;
+   359→   359→      // older middleware ignores them.
+   360→   360→      text,
+   361→   361→      ...(attachments && attachments.length > 0
+   362→   362→        ? {
+   363→   363→            attachments: attachments.map((a) => ({
+   364→   364→              filename: a.filename,
+   365→   365→              content: a.content,
+   366→   366→              encoding: "base64",
+   367→   367→              ...(a.contentType ? { contentType: a.contentType } : {}),
+   368→   368→            })),
+   369→   369→          }
+   370→   370→        : {}),
+   371→   371→    }),
+   372→   372→  });
+   373→   373→
+   374→   374→  if (!res.ok) {
+   375→   375→    return {
+   376→   376→      ok: false,
+   377→   377→      status: "failed",
+   378→   378→      error: `middleware ${res.status}: ${await safeBody(res)}`,
+   379→   379→    };
+   380→   380→  }
+   381→   381→  const data = (await res.json().catch(() => ({}))) as { messageId?: string | null };
+   382→   382→  return { ok: true, status: "sent", ref: data?.messageId || "middleware" };
+   383→   383→}
+   384→   384→
+   385→   385→/** Minimal escaped-HTML wrapper for plain-text bodies (middleware has no text-only mode). */
+   386→   386→function textToSimpleHtml(text: string): string {
+   387→   387→  const paras = text
+   388→   388→    .split(/\n{2,}/)
+   389→   389→    .map(
+   390→   390→      (p) =>
+   391→   391→        `<p style="margin:0 0 12px;">${esc(p).replace(/\n/g, "<br/>")}</p>`
+   392→   392→    )
+   393→   393→    .join("");
+   394→   394→  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#1a1a1a;">${paras}</div>`;
+   395→   395→}
+   396→   396→
+   397→   397→// ---------------------------------------------------------------------------
+   398→   398→// Templates
+   399→   399→// ---------------------------------------------------------------------------
+   400→   400→
+   401→   401→/** Shared shell for HTML emails — inline styles only, renders anywhere. */
+   402→   402→function htmlShell(title: string, bodyHtml: string): string {
+   403→   403→  return `<!doctype html>
+   404→   404→<html><body style="margin:0;padding:0;background:#f4f4f2;font-family:Arial,Helvetica,sans-serif;">
+   405→   405→  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f2;padding:24px 12px;">
+   406→   406→    <tr><td align="center">
+   407→   407→      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e4e4e0;">
+   408→   408→        <tr><td style="background:#000000;padding:20px 28px;">
+   409→   409→          <span style="color:#1591DC;font-size:13px;font-weight:bold;letter-spacing:2px;">DOST-MIRDC</span>
+   410→   410→          <span style="color:#ffffff;font-size:13px;margin-left:10px;">Recruitment Management &amp; Information System</span>
+   411→   411→        </td></tr>
+   412→   412→        <tr><td style="padding:28px;">
+   413→   413→          <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;color:#000000;">${title}</h1>
+   414→   414→          ${bodyHtml}
+   415→   415→        </td></tr>
+   416→   416→        <tr><td style="padding:16px 28px;border-top:1px solid #e4e4e0;">
+   417→   417→          <p style="margin:0;font-size:11px;line-height:1.6;color:#6b6b69;">
+   418→   418→            This is an automated message from the DOST-Metals Industry Research and Development Center
+   419→   419→            Recruitment Management &amp; Information System. Please do not reply directly to this email.
+   420→   420→            Sign in to RMIS to track your application.
+   421→   421→          </p>
+   422→   422→        </td></tr>
+   423→   423→      </table>
+   424→   424→    </td></tr>
+   425→   425→  </table>
+   426→   426→</body></html>`;
+   427→   427→}
+   428→   428→
+   429→   429→function esc(s: string): string {
+   430→   430→  return s
+   431→   431→    .replace(/&/g, "&amp;")
+   432→   432→    .replace(/</g, "&lt;")
+   433→   433→    .replace(/>/g, "&gt;")
+   434→   434→    .replace(/"/g, "&quot;");
+   435→   435→}
+   436→   436→
+   437→   437→/**
+   438→   438→ * THE shortlist email — the moment an evaluator shortlists an application,
+   439→   439→ * the applicant receives this. It makes the new offline hand-off explicit:
+   440→   440→ * succeeding steps happen face-to-face and HR will contact them.
+   441→   441→ */
+   442→   442→export function emailShortlisted(firstName: string | null, positionTitle: string): {
+   443→   443→  subject: string;
+   444→   444→  text: string;
+   445→   445→  html: string;
+   446→   446→} {
+   447→   447→  const name = firstName ? firstName : "Applicant";
+   448→   448→  const subject = `You have been shortlisted — ${positionTitle} (DOST-MIRDC)`;
+   449→   449→  const text = [
+   450→   450→    `Hi ${name},`,
+   451→   451→    ``,
+   452→   452→    `Good news! You have been SHORTLISTED for the position of ${positionTitle} at DOST-MIRDC.`,
+   453→   453→    ``,
+   454→   454→    `What happens next — face-to-face:`,
+   455→   455→    `Succeeding steps of the recruitment process will be conducted in person. Our HR team will contact you through your mobile number and this email address to schedule your visit.`,
+   456→   456→    ``,
+   457→   457→    `When you come, please bring ORIGINAL copies of your credentials:`,
+   458→   458→    `- Educational records (diploma, Transcript of Records)`,
+   459→   459→    `- Training certificates`,
+   460→   460→    `- Civil Service eligibility / professional license (if applicable)`,
+   461→   461→    `- Certificates of employment and other supporting documents`,
+   462→   462→    ``,
+   463→   463→    `You can track your application status by signing in to RMIS.`,
+   464→   464→    ``,
+   465→   465→    `— DOST-MIRDC Human Resources (automated notice, do not reply)`,
+   466→   466→  ].join("\n");
+   467→   467→
+   468→   468→  const li = (t: string) =>
+   469→   469→    `<li style="margin:0 0 6px;color:#000000;font-size:14px;line-height:1.6;">${t}</li>`;
+   470→   470→  const html = htmlShell(
+   471→   471→    `Congratulations, ${esc(name)} — you&#39;ve been shortlisted!`,
+   472→   472→    `
+   473→   473→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   474→   474→      Your application for the position of
+   475→   475→      <strong style="color:#1591DC;">${esc(positionTitle)}</strong>
+   476→   476→      at DOST-MIRDC has been <strong>SHORTLISTED</strong> after our initial
+   477→   477→      review of your credentials.
+   478→   478→    </p>
+   479→   479→    <div style="margin:0 0 18px;border-left:3px solid #1591DC;background:#f0f7fc;padding:12px 16px;">
+   480→   480→      <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   481→   481→        <strong>What happens next is face-to-face.</strong> Our HR team will
+   482→   482→        contact you through your mobile number and this email address to
+   483→   483→        schedule your visit.
+   484→   484→      </p>
+   485→   485→    </div>
+   486→   486→    <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#000000;">
+   487→   487→      When you come, please bring ORIGINAL copies of:
+   488→   488→    </p>
+   489→   489→    <ul style="margin:0 0 18px;padding-left:22px;">
+   490→   490→      ${li("Educational records (diploma, Transcript of Records)")}
+   491→   491→      ${li("Training certificates")}
+   492→   492→      ${li("Civil Service eligibility / professional license (if applicable)")}
+   493→   493→      ${li("Certificates of employment and other supporting documents")}
+   494→   494→    </ul>
+   495→   495→    <a href="#" style="display:inline-block;background:#1591DC;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 22px;">
+   496→   496→      Sign in to RMIS to track your application
+   497→   497→    </a>`
+   498→   498→  );
+   499→   499→
+   500→   500→  return { subject, text, html };
+   501→   501→}
+   502→   502→
+   503→   503→/**
+   504→   504→ * THE under-review email — the moment an evaluator takes an application up for
+   505→   505→ * review (the explicit "Review" action), the applicant receives this notice.
+   506→   506→ * Honest scope: credentials are being evaluated, no decision has been made,
+   507→   507→ * no action is required from the applicant.
+   508→   508→ */
+   509→   509→export function emailUnderReview(firstName: string | null, positionTitle: string): {
+   510→   510→  subject: string;
+   511→   511→  text: string;
+   512→   512→  html: string;
+   513→   513→} {
+   514→   514→  const name = firstName ? firstName : "Applicant";
+   515→   515→  const subject = `Your application is under review — ${positionTitle} (DOST-MIRDC)`;
+   516→   516→  const text = [
+   517→   517→    `Hi ${name},`,
+   518→   518→    ``,
+   519→   519→    `Update on your application for the position of ${positionTitle} at DOST-MIRDC:`,
+   520→   520→    ``,
+   521→   521→    `Your application is now UNDER REVIEW. Our recruitment team is currently`,
+   522→   522→    `evaluating your credentials, background and documents.`,
+   523→   523→    ``,
+   524→   524→    `What this means for you:`,
+   525→   525→    `- No action is needed from you right now.`,
+   526→   526→    `- We will notify you of the outcome of the review.`,
+   527→   527→    `- If you are shortlisted, you will receive a separate email with the`,
+   528→   528→    `  face-to-face next steps (HR will contact you to schedule your visit).`,
+   529→   529→    ``,
+   530→   530→    `You can track your application status by signing in to RMIS.`,
+   531→   531→    ``,
+   532→   532→    `— DOST-MIRDC Human Resources (automated notice, do not reply)`,
+   533→   533→  ].join("\n");
+   534→   534→
+   535→   535→  const li = (t: string) =>
+   536→   536→    `<li style="margin:0 0 6px;color:#000000;font-size:14px;line-height:1.6;">${t}</li>`;
+   537→   537→  const html = htmlShell(
+   538→   538→    `Your application is under review`,
+   539→   539→    `
+   540→   540→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   541→   541→      Hi ${esc(name)}, your application for the position of
+   542→   542→      <strong style="color:#1591DC;">${esc(positionTitle)}</strong>
+   543→   543→      at DOST-MIRDC is now <strong>UNDER REVIEW</strong>.
+   544→   544→    </p>
+   545→   545→    <div style="margin:0 0 18px;border-left:3px solid #1591DC;background:#f0f7fc;padding:12px 16px;">
+   546→   546→      <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   547→   547→        Our recruitment team is currently evaluating your credentials,
+   548→   548→        background and documents. You will be notified of the outcome.
+   549→   549→      </p>
+   550→   550→    </div>
+   551→   551→    <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#000000;">
+   552→   552→      What this means for you:
+   553→   553→    </p>
+   554→   554→    <ul style="margin:0 0 18px;padding-left:22px;">
+   555→   555→      ${li("No action is needed from you right now.")}
+   556→   556→      ${li("If you are shortlisted, you will receive a separate email with the face-to-face next steps.")}
+   557→   557→      ${li("HR will contact you directly to schedule any in-person visit.")}
+   558→   558→    </ul>
+   559→   559→    <a href="#" style="display:inline-block;background:#1591DC;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 22px;">
+   560→   560→      Sign in to RMIS to track your application
+   561→   561→    </a>`
+   562→   562→  );
+   563→   563→
+   564→   564→  return { subject, text, html };
+   565→   565→}
+   566→   566→
+   567→   567→/** Generic status-change notice for every other evaluator/admin decision. */
+   568→   568→export function emailStatusChanged(
+   569→   569→  firstName: string | null,
+   570→   570→  positionTitle: string,
+   571→   571→  status: string,
+   572→   572→  reason?: string | null
+   573→   573→): { subject: string; text: string; html: string } {
+   574→   574→  const name = firstName ? firstName : "Applicant";
+   575→   575→  const label = status.replace(/_/g, " ").toUpperCase();
+   576→   576→  const subject = `Application update — ${positionTitle} (DOST-MIRDC)`;
+   577→   577→  const text = [
+   578→   578→    `Hi ${name},`,
+   579→   579→    ``,
+   580→   580→    `The status of your application for ${positionTitle} at DOST-MIRDC is now: ${label}.`,
+   581→   581→    reason ? `` : null,
+   582→   582→    reason ? `Note from the recruitment team: ${reason}` : null,
+   583→   583→    ``,
+   584→   584→    `Sign in to RMIS to view the full details of your application.`,
+   585→   585→    ``,
+   586→   586→    `— DOST-MIRDC Human Resources (automated notice, do not reply)`,
+   587→   587→  ]
+   588→   588→    .filter((l) => l !== null)
+   589→   589→    .join("\n");
+   590→   590→
+   591→   591→  const html = htmlShell(
+   592→   592→    `Application update`,
+   593→   593→    `
+   594→   594→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   595→   595→      Hi ${esc(name)}, the status of your application for
+   596→   596→      <strong>${esc(positionTitle)}</strong> is now:
+   597→   597→    </p>
+   598→   598→    <p style="margin:0 0 14px;">
+   599→   599→      <span style="display:inline-block;background:#1591DC;color:#ffffff;font-size:14px;font-weight:bold;padding:8px 18px;letter-spacing:1px;">${esc(label)}</span>
+   600→   600→    </p>
+   601→   601→    ${
+   602→   602→      reason
+   603→   603→        ? `<p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;"><strong>Note:</strong> ${esc(reason)}</p>`
+   604→   604→        : ""
+   605→   605→    }
+   606→   606→    <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   607→   607→      Sign in to RMIS to view the full details of your application.
+   608→   608→    </p>`
+   609→   609→  );
+   610→   610→
+   611→   611→  return { subject, text, html };
+   612→   612→}
+   613→   613→
+   614→   614→// ---------------------------------------------------------------------------
+   615→   615→// Flow-level helpers (used by API routes) — swallow everything by contract.
+   616→   616→// ---------------------------------------------------------------------------
+   617→   617→
+   618→   618→export async function emailApplicationShortlisted(opts: {
+   619→   619→  email: string | null | undefined;
+   620→   620→  firstName: string | null;
+   621→   621→  positionTitle: string;
+   622→   622→  applicationId: number;
+   623→   623→}): Promise<SendEmailResult> {
+   624→   624→  const t = emailShortlisted(opts.firstName, opts.positionTitle);
+   625→   625→  return sendEmail({
+   626→   626→    to: opts.email,
+   627→   627→    subject: t.subject,
+   628→   628→    text: t.text,
+   629→   629→    html: t.html,
+   630→   630→    related: { type: "application", id: opts.applicationId },
+   631→   631→  });
+   632→   632→}
+   633→   633→
+   634→   634→export async function emailApplicationStatusChanged(opts: {
+   635→   635→  email: string | null | undefined;
+   636→   636→  firstName: string | null;
+   637→   637→  positionTitle: string;
+   638→   638→  status: string;
+   639→   639→  reason?: string | null;
+   640→   640→  applicationId: number;
+   641→   641→}): Promise<SendEmailResult> {
+   642→   642→  const key = opts.status.trim().replace(/\s+/g, "_").toUpperCase();
+   643→   643→  // The shortlist moment gets the flagship template; the explicit review
+   644→   644→  // start gets the dedicated under-review notice; everything else is a plain
+   645→   645→  // status notice.
+   646→   646→  if (key === "SHORTLISTED") {
+   647→   647→    return emailApplicationShortlisted({
+   648→   648→      email: opts.email,
+   649→   649→      firstName: opts.firstName,
+   650→   650→      positionTitle: opts.positionTitle,
+   651→   651→      applicationId: opts.applicationId,
+   652→   652→    });
+   653→   653→  }
+   654→   654→  if (key === "UNDER_REVIEW") {
+   655→   655→    const t = emailUnderReview(opts.firstName, opts.positionTitle);
+   656→   656→    return sendEmail({
+   657→   657→      to: opts.email,
+   658→   658→      subject: t.subject,
+   659→   659→      text: t.text,
+   660→   660→      html: t.html,
+   661→   661→      related: { type: "application", id: opts.applicationId },
+   662→   662→    });
+   663→   663→  }
+   664→   664→  const t = emailStatusChanged(opts.firstName, opts.positionTitle, opts.status, opts.reason);
+   665→   665→  return sendEmail({
+   666→   666→    to: opts.email,
+   667→   667→    subject: t.subject,
+   668→   668→    text: t.text,
+   669→   669→    html: t.html,
+   670→   670→    related: { type: "application", id: opts.applicationId },
+   671→   671→  });
+   672→   672→}
+   673→   673→
+   674→   674→// ---------------------------------------------------------------------------
+   675→   675→// MOM (2026-09-03) recruitment-flow notices — steps 4 & 5.
+   676→   676→// The system's involvement ENDS at notification: the regret letter goes to
+   677→   677→// declined/not-shortlisted applicants; interview invitations and skills-exam
+   678→   678→// notices go to shortlisted applicants. Everything after the send is
+   679→   679→// face-to-face and offline — no in-system scheduling or scoring exists.
+   680→   680→// Subject prefixes double as dedup keys for bulk sends (see regrets route).
+   681→   681→// ---------------------------------------------------------------------------
+   682→   682→
+   683→   683→export type InterviewDetails = {
+   684→   684→  /** e.g. "Tuesday, 15 September 2026" — null when HR leaves it blank */
+   685→   685→  date: string | null;
+   686→   686→  /** e.g. "10:00 AM" — null when HR leaves it blank */
+   687→   687→  time: string | null;
+   688→   688→  venue: string | null;
+   689→   689→  /** optional HR contact line, e.g. "Ms. Ervie / (02) 8123-4567" */
+   690→   690→  contact?: string | null;
+   691→   691→  /** optional free-text notes shown to the applicant */
+   692→   692→  notes?: string | null;
+   693→   693→};
+   694→   694→
+   695→   695→/** STEP 4 — the automated regret letter (declined or not shortlisted). */
+   696→   696→export function emailRegretLetter(firstName: string | null, positionTitle: string): {
+   697→   697→  subject: string;
+   698→   698→  text: string;
+   699→   699→  html: string;
+   700→   700→} {
+   701→   701→  const name = firstName ? firstName : "Applicant";
+   702→   702→  const subject = `Application regret — ${positionTitle} (DOST-MIRDC)`;
+   703→   703→  const text = [
+   704→   704→    `Hi ${name},`,
+   705→   705→    ``,
+   706→   706→    `Thank you for applying for the position of ${positionTitle} at DOST-MIRDC`,
+   707→   707→    `and for the time and effort you put into your application.`,
+   708→   708→    ``,
+   709→   709→    `After a careful review of all applications received, we regret to inform`,
+   710→   710→    `you that your application was not shortlisted for this position.`,
+   711→   711→    ``,
+   712→   712→    `This decision does not diminish your qualifications — competition for`,
+   713→   713→    `government positions is often very strong. We encourage you to apply for`,
+   714→   714→    `future vacancies that match your credentials.`,
+   715→   715→    ``,
+   716→   716→    `Sign in to RMIS to view your application record.`,
+   717→   717→    ``,
+   718→   718→    `— DOST-MIRDC Human Resources (automated notice, do not reply)`,
+   719→   719→  ].join("\n");
+   720→   720→
+   721→   721→  const html = htmlShell(
+   722→   722→    `Thank you for your application`,
+   723→   723→    `
+   724→   724→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   725→   725→      Hi ${esc(name)}, thank you for applying for the position of
+   726→   726→      <strong>${esc(positionTitle)}</strong> at DOST-MIRDC and for the time
+   727→   727→      and effort you put into your application.
+   728→   728→    </p>
+   729→   729→    <div style="margin:0 0 18px;border-left:3px solid #B45309;background:#faf5ef;padding:12px 16px;">
+   730→   730→      <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   731→   731→        After a careful review of all applications received, we regret to
+   732→   732→        inform you that your application was <strong>not shortlisted</strong>
+   733→   733→        for this position.
+   734→   734→      </p>
+   735→   735→    </div>
+   736→   736→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   737→   737→      This decision does not diminish your qualifications — competition for
+   738→   738→      government positions is often very strong. We encourage you to apply for
+   739→   739→      future vacancies that match your credentials.
+   740→   740→    </p>
+   741→   741→    <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   742→   742→      Sign in to RMIS to view your application record.
+   743→   743→    </p>`
+   744→   744→  );
+   745→   745→
+   746→   746→  return { subject, text, html };
+   747→   747→}
+   748→   748→
+   749→   749→/** STEP 5a — interview invitation (shortlisted applicants). */
+   750→   750→export function emailInterviewInvitation(
+   751→   751→  firstName: string | null,
+   752→   752→  positionTitle: string,
+   753→   753→  details: InterviewDetails
+   754→   754→): { subject: string; text: string; html: string } {
+   755→   755→  const name = firstName ? firstName : "Applicant";
+   756→   756→  const subject = `Interview invitation — ${positionTitle} (DOST-MIRDC)`;
+   757→   757→  const contactLine = details.contact ? `For questions or rescheduling, contact: ${details.contact}.` : null;
+   758→   758→  const text = [
+   759→   759→    `Hi ${name},`,
+   760→   760→    ``,
+   761→   761→    `Congratulations — you have been SHORTLISTED for the position of`,
+   762→   762→    `${positionTitle} at DOST-MIRDC. We are pleased to invite you to an interview:`,
+   763→   763→    ``,
+   764→   764→    `  Date:  ${details.date}`,
+   765→   765→    `  Time:  ${details.time}`,
+   766→   766→    `  Venue: ${details.venue}`,
+   767→   767→    ``,
+   768→   768→    `Please bring a valid government-issued ID. You may also be asked to`,
+   769→   769→    `present the ORIGINAL copies of your credentials.`,
+   770→   770→    contactLine ? `` : null,
+   771→   771→    contactLine ? contactLine : null,
+   772→   772→    details.notes ? `` : null,
+   773→   773→    details.notes ? `Note: ${details.notes}` : null,
+   774→   774→    ``,
+   775→   775→    `Sign in to RMIS to view your application record.`,
+   776→   776→    ``,
+   777→   777→    `— DOST-MIRDC Human Resources (automated notice, do not reply)`,
+   778→   778→  ]
+   779→   779→    .filter((l) => l !== null)
+   780→   780→    .join("\n");
+   781→   781→
+   782→   782→  const row = (label: string, value: string) =>
+   783→   783→    `<tr>` +
+   784→   784→    `<td style="padding:4px 14px 4px 0;font-size:14px;color:#6b6b69;white-space:nowrap;vertical-align:top;">${label}</td>` +
+   785→   785→    `<td style="padding:4px 0;font-size:14px;font-weight:bold;color:#000000;">${esc(value)}</td>` +
+   786→   786→    `</tr>`;
+   787→   787→  const html = htmlShell(
+   788→   788→    `You're invited to an interview`,
+   789→   789→    `
+   790→   790→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   791→   791→      Hi ${esc(name)} — congratulations! You have been
+   792→   792→      <strong style="color:#1591DC;">SHORTLISTED</strong> for the position of
+   793→   793→      <strong>${esc(positionTitle)}</strong> at DOST-MIRDC. We are pleased to
+   794→   794→      invite you to an interview:
+   795→   795→    </p>
+   796→   796→    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;background:#f0f7fc;border-left:3px solid #1591DC;">
+   797→   797→      ${row("Date:", details.date ?? "TBA")}
+   798→   798→      ${row("Time:", details.time ?? "TBA")}
+   799→   799→      ${row("Venue:", details.venue ?? "TBA")}
+   800→   800→    </table>
+   801→   801→    <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#000000;">
+   802→   802→      Please bring a <strong>valid government-issued ID</strong>. You may also
+   803→   803→      be asked to present the <strong>ORIGINAL copies</strong> of your
+   804→   804→      credentials.
+   805→   805→    </p>
+   806→   806→    ${contactLine ? `<p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#000000;">${esc(contactLine)}</p>` : ""}
+   807→   807→    ${details.notes ? `<p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#000000;"><strong>Note:</strong> ${esc(details.notes)}</p>` : ""}
+   808→   808→    <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   809→   809→      Sign in to RMIS to view your application record.
+   810→   810→    </p>`
+   811→   811→  );
+   812→   812→
+   813→   813→  return { subject, text, html };
+   814→   814→}
+   815→   815→
+   816→   816→/** STEP 5b — skills-examination notice (shortlisted applicants). */
+   817→   817→export function emailSkillsExamNotice(
+   818→   818→  firstName: string | null,
+   819→   819→  positionTitle: string,
+   820→   820→  details: InterviewDetails & { examType?: string | null }
+   821→   821→): { subject: string; text: string; html: string } {
+   822→   822→  const name = firstName ? firstName : "Applicant";
+   823→   823→  const examLabel = details.examType?.trim() || "Skills examination";
+   824→   824→  const subject = `Skills examination notice — ${positionTitle} (DOST-MIRDC)`;
+   825→   825→  const contactLine = details.contact ? `For questions, contact: ${details.contact}.` : null;
+   826→   826→  const text = [
+   827→   827→    `Hi ${name},`,
+   828→   828→    ``,
+   829→   829→    `As part of the selection process for the position of ${positionTitle}`,
+   830→   830→    `at DOST-MIRDC, you are scheduled to take a ${examLabel}:`,
+   831→   831→    ``,
+   832→   832→    `  Date:  ${details.date}`,
+   833→   833→    `  Time:  ${details.time}`,
+   834→   834→    `  Venue: ${details.venue}`,
+   835→   835→    ``,
+   836→   836→    `Please bring a valid government-issued ID and a pen. Kindly arrive at`,
+   837→   837→    `least 15 minutes before your schedule.`,
+   838→   838→    contactLine ? `` : null,
+   839→   839→    contactLine ? contactLine : null,
+   840→   840→    details.notes ? `` : null,
+   841→   841→    details.notes ? `Note: ${details.notes}` : null,
+   842→   842→    ``,
+   843→   843→    `Sign in to RMIS to view your application record.`,
+   844→   844→    ``,
+   845→   845→    `— DOST-MIRDC Human Resources (automated notice, do not reply)`,
+   846→   846→  ]
+   847→   847→    .filter((l) => l !== null)
+   848→   848→    .join("\n");
+   849→   849→
+   850→   850→  const row = (label: string, value: string) =>
+   851→   851→    `<tr>` +
+   852→   852→    `<td style="padding:4px 14px 4px 0;font-size:14px;color:#6b6b69;white-space:nowrap;vertical-align:top;">${label}</td>` +
+   853→   853→    `<td style="padding:4px 0;font-size:14px;font-weight:bold;color:#000000;">${esc(value)}</td>` +
+   854→   854→    `</tr>`;
+   855→   855→  const html = htmlShell(
+   856→   856→    `Skills examination notice`,
+   857→   857→    `
+   858→   858→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   859→   859→      Hi ${esc(name)} — as part of the selection process for the position of
+   860→   860→      <strong>${esc(positionTitle)}</strong> at DOST-MIRDC, you are scheduled
+   861→   861→      to take a <strong>${esc(examLabel)}</strong>:
+   862→   862→    </p>
+   863→   863→    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;background:#f0f7fc;border-left:3px solid #1591DC;">
+   864→   864→      ${row("Date:", details.date ?? "TBA")}
+   865→   865→      ${row("Time:", details.time ?? "TBA")}
+   866→   866→      ${row("Venue:", details.venue ?? "TBA")}
+   867→   867→    </table>
+   868→   868→    <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#000000;">
+   869→   869→      Please bring a <strong>valid government-issued ID and a pen</strong>.
+   870→   870→      Kindly arrive at least 15 minutes before your schedule.
+   871→   871→    </p>
+   872→   872→    ${contactLine ? `<p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#000000;">${esc(contactLine)}</p>` : ""}
+   873→   873→    ${details.notes ? `<p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#000000;"><strong>Note:</strong> ${esc(details.notes)}</p>` : ""}
+   874→   874→    <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   875→   875→      Sign in to RMIS to view your application record.
+   876→   876→    </p>`
+   877→   877→  );
+   878→   878→
+   879→   879→  return { subject, text, html };
+   880→   880→}
+   881→   881→
+   882→   882→// -- Flow-level senders (same swallow-everything contract as above) ---------
+   883→   883→
+   884→   884→/** STEP 4½ — DIRECT EMAIL: free-form follow-up composed by HR/evaluator. */
+   885→   885→export function emailDirectMessage(
+   886→   886→  firstName: string | null,
+   887→   887→  positionTitle: string,
+   888→   888→  message: string
+   889→   889→): { subject: string; text: string; html: string } {
+   890→   890→  const name = firstName ? firstName : "Applicant";
+   891→   891→  const subject = `Update on your application — ${positionTitle} (DOST-MIRDC)`;
+   892→   892→  const text = [
+   893→   893→    `Hi ${name},`,
+   894→   894→    ``,
+   895→   895→    `Regarding your application for ${positionTitle} at DOST-MIRDC:`,
+   896→   896→    ``,
+   897→   897→    message,
+   898→   898→    ``,
+   899→   899→    `— DOST-MIRDC Human Resources`,
+   900→   900→  ].join("\n");
+   901→   901→
+   902→   902→  const html = htmlShell(
+   903→   903→    `A message from the recruitment team`,
+   904→   904→    `
+   905→   905→    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#000000;">
+   906→   906→      Hi ${esc(name)} — regarding your application for
+   907→   907→      <strong style="color:#1591DC;">${esc(positionTitle)}</strong> at
+   908→   908→      DOST-MIRDC:
+   909→   909→    </p>
+   910→   910→    <div style="margin:0 0 18px;border-left:3px solid #1591DC;background:#f0f7fc;padding:12px 16px;">
+   911→   911→      <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">${esc(
+   912→   912→        message
+   913→   913→      ).replace(/\n/g, "<br>")}</p>
+   914→   914→    </div>
+   915→   915→    <p style="margin:0;font-size:14px;line-height:1.7;color:#000000;">
+   916→   916→      — DOST-MIRDC Human Resources
+   917→   917→    </p>`
+   918→   918→  );
+   919→   919→
+   920→   920→  return { subject, text, html };
+   921→   921→}
+   922→   922→
+   923→   923→export async function emailApplicationDirectMessage(opts: {
+   924→   924→  email: string | null | undefined;
+   925→   925→  firstName: string | null;
+   926→   926→  positionTitle: string;
+   927→   927→  applicationId: number;
+   928→   928→  /** HR-written subject; falls back to the standard template subject. */
+   929→   929→  subject?: string;
+   930→   930→  message: string;
+   931→   931→  /** Optional attachments (already validated + base64-encoded by the route). */
+   932→   932→  attachments?: EmailAttachment[];
+   933→   933→}): Promise<SendEmailResult> {
+   934→   934→  const t = emailDirectMessage(opts.firstName, opts.positionTitle, opts.message);
+   935→   935→  return sendEmail({
+   936→   936→    to: opts.email,
+   937→   937→    subject: opts.subject?.trim() ? opts.subject.trim() : t.subject,
+   938→   938→    text: opts.subject?.trim() ? `${opts.subject.trim()}\n\n${t.text}` : t.text,
+   939→   939→    html: t.html,
+   940→   940→    related: { type: "application-direct", id: opts.applicationId },
+   941→   941→    attachments: opts.attachments,
+   942→   942→  });
+   943→   943→}
+   944→   944→
+   945→   945→export async function emailApplicationRegret(opts: {
+   946→   946→  email: string | null | undefined;
+   947→   947→  firstName: string | null;
+   948→   948→  positionTitle: string;
+   949→   949→  applicationId: number;
+   950→   950→}): Promise<SendEmailResult> {
+   951→   951→  const t = emailRegretLetter(opts.firstName, opts.positionTitle);
+   952→   952→  return sendEmail({
+   953→   953→    to: opts.email,
+   954→   954→    subject: t.subject,
+   955→   955→    text: t.text,
+   956→   956→    html: t.html,
+   957→   957→    related: { type: "application", id: opts.applicationId },
+   958→   958→  });
+   959→   959→}
+   960→   960→
+   961→   961→export async function emailApplicationInterviewInvite(opts: {
+   962→   962→  email: string | null | undefined;
+   963→   963→  firstName: string | null;
+   964→   964→  positionTitle: string;
+   965→   965→  applicationId: number;
+   966→   966→  details: InterviewDetails;
+   967→   967→}): Promise<SendEmailResult> {
+   968→   968→  const t = emailInterviewInvitation(opts.firstName, opts.positionTitle, opts.details);
+   969→   969→  return sendEmail({
+   970→   970→    to: opts.email,
+   971→   971→    subject: t.subject,
+   972→   972→    text: t.text,
+   973→   973→    html: t.html,
+   974→   974→    related: { type: "application", id: opts.applicationId },
+   975→   975→  });
+   976→   976→}
+   977→   977→
+   978→   978→export async function emailApplicationSkillsExam(opts: {
+   979→   979→  email: string | null | undefined;
+   980→   980→  firstName: string | null;
+   981→   981→  positionTitle: string;
+   982→   982→  applicationId: number;
+   983→   983→  details: InterviewDetails & { examType?: string | null };
+   984→   984→}): Promise<SendEmailResult> {
+   985→   985→  const t = emailSkillsExamNotice(opts.firstName, opts.positionTitle, opts.details);
+   986→   986→  return sendEmail({
+   987→   987→    to: opts.email,
+   988→   988→    subject: t.subject,
+   989→   989→    text: t.text,
+   990→   990→    html: t.html,
+   991→   991→    related: { type: "application", id: opts.applicationId },
+   992→   992→  });
+   993→   993→}
+   994→   994→

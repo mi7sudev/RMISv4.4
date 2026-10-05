@@ -572,3 +572,28 @@ Stage Summary:
 - Brand primary is now the legacy RMIS electric blue #1591DC with #0E7ABF hover, replacing Charcoal #1f2025 controls across tokens, CSS utilities, and all selected/active/count/identity states
 - Single brand blue: former Metric Blue #415eee retired; ring/focus/charts/links all speak #1591DC
 - Charcoal/Ink retained only as neutrals (type, scrims, tooltips); all prior layout/behavior work (pinned/flow modes, sticky pane) untouched and re-verified
+
+---
+Task ID: 48
+Agent: Z.ai Code (main)
+Task: Apply the production-ready email sender from the uploaded RMISv4.1 deploy tar (rmis-deploy-2026-09-29 (2).tar.gz) to our system — the mirdc_middleware EMAIL_PROVIDER=middleware setup that is verified working in production.
+
+Work Log:
+- Extracted the tar to /home/z/rmis-deploy-inspect (deleted after study, per the clone-then-delete policy).
+- Studied the working stack: src/lib/email.ts (middleware driver), src/lib/env.ts (EMAIL_* validation), deploy/mirdc_middleware/index.js (the office VM Express+nodemailer service — POST /sendMail contract: body {api, system, to, subject, message(html), text, attachments[{filename,content(base64),encoding,contentType}]}, optional MIDDLEWARE_API_KEY strict auth, 200 → {message, defaultReplyTo, messageId, accepted, rejected}).
+- Gap analysis vs our system: our notify.ts only had mock/resend/legacy-gateway (wrong endpoint /api/rmis/send + X-RMIS-Key header — not the real contract); direct-email route validated attachments but passed metadata only (bytes never left the server); admin email route "configured" flag was resend-only.
+- src/lib/notify.ts: added the middleware driver with the EXACT production contract (POST {EMAIL_MIDDLEWARE_URL}/sendMail, body api/system/to/subject/message/text/attachments, AbortSignal.timeout(15s), messageId as providerRef, textToSimpleHtml fallback for text-only bodies); attachments type extended with optional base64 content + contentType; email_logs persistence explicitly strips to metadata {name,bytes}; added getEmailProviderId/getEmailProviderInfo.
+- evaluator/applications/[id]/email route: uploaded files now read to base64 with MIME resolution (file.type → MIME_BY_EXTENSION) and passed as content — attachments actually deliver now.
+- admin/email route: GET returns provider id/label/configured from getEmailProviderInfo (middleware-aware).
+- settings.tsx MessagingPanel: testSend now refreshes the ledger in finally — failed sends appear immediately (row status "failed").
+- .env: added production email block (EMAIL_PROVIDER=middleware, EMAIL_MIDDLEWARE_URL=http://10.10.120.43:3232, EMAIL_MIDDLEWARE_API_KEY=78e69d…, EMAIL_MIDDLEWARE_SYSTEM=DOST-MIRDC Recruitment); INTRANET_ENFORCEMENT stays off for the sandbox (restore to on at deploy; production .env values from the user documented in .env comments).
+- Verification (local mock middleware on 127.0.0.1:3232 mimicking /sendMail, capturing payloads): admin test send → status sent + real messageId; captured payload byte-matches the production contract (api token, system name, html message, text part). Direct-email multipart with a PDF → middleware received filename/content(base64, decodes correctly)/encoding/contentType; DB row kept metadata only. Provider info API: {provider:"middleware", providerLabel:"MIRDC Mail Middleware (office VM)", configured:true}.
+- Live-failure honesty check against the real unreachable VM URL: POST 502 in 10.5s, caught (never threw), ledger row middleware/failed/"fetch failed", UI toast + (after fix) immediate list refresh.
+- Browser E2E (agent-browser): login testadmin → #/settings?tab=email shows ACTIVE PROVIDER "Middleware" + "Configured" pill + stats; test send paths verified; zero console/page errors (only pre-existing LCP image warning).
+- Cleanup: mock middleware killed + deleted, tar extraction deleted, temp cookies/files removed. Dev server restarted on the real .env (production middleware URL).
+- bun run lint clean; committed 61df8fd.
+
+Stage Summary:
+- The production email sender is now live in our system: EMAIL_PROVIDER=middleware drives every notice (shortlist, under review, status change, regret, interview, skills exam, direct HR email with real attachments, forgot-password, admin test send) through the office mirdc_middleware VM (systems@mirdc.dost.gov.ph From header).
+- Sandbox cannot reach 10.10.120.43 — sends there log "failed" (expected, honest). On the intranet server it delivers, byte-for-byte per the verified contract.
+- For production deploy: .env needs only the RMISv4.1 values the user provided (already documented in .env comments); INTRANET_ENFORCEMENT must be on; UPLOAD_DIR/DATABASE_URL per server paths.
