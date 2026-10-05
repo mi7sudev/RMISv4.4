@@ -608,11 +608,13 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
       else if (status === "mock") toast.info(`Test ${kind} logged in mock mode`, { description: "Configure a provider to deliver for real." });
       else if (status === "skipped") toast.warning("Recipient skipped", { description: "Check the address or mobile number format." });
       else toast.error(`Delivery failed. Check the logs`);
-      await load(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Send failed");
     } finally {
       setBusy(false);
+      // Refresh the ledger even after a failed attempt — the row is logged
+      // (status "failed") and the admin should see it without leaving the tab.
+      await load(true);
     }
   };
 

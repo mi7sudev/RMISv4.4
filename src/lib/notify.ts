@@ -1,7 +1,9 @@
 // ============================================================================
-// RMIS — Notification subsystem (spec §9). Providers: "gateway" (the
-// mirdc_middleware email service, production default), "resend", or "mock"
-// (sandbox default); every attempt is persisted to email_logs / sms_logs.
+// RMIS — Notification subsystem (spec §9). Providers: "middleware" (the
+// mirdc_middleware email service on the office VM — the PRODUCTION-VERIFIED
+// sender, ported from the RMISv4.1 deployment), "resend", "gateway" (legacy
+// middleware contract, kept for backward compatibility), or "mock" (dev
+// default); every attempt is persisted to email_logs / sms_logs.
 // HARD CONTRACT: sendEmail / sendSms NEVER throw — callers fire post-success.
 // Templates per spec §9.3; PH mobile normalization per §9.4.
 // ============================================================================
@@ -15,19 +17,132 @@ export type EmailInput = {
   bodyHtml?: string;
   relatedType?: string;
   relatedId?: number;
-  attachments?: { name: string; bytes: number }[];
+  /**
+   * Metadata is always persisted to email_logs (PII / DB-size discipline).
+   * When `content` (base64 file bytes) is present, the ACTIVE provider also
+   * receives the attachment — mock mode logs the metadata only.
+   */
+  attachments?: { name: string; bytes: number; content?: string; contentType?: string }[];
 };
 
 export type SendResult = { status: "sent" | "failed" | "mock" | "skipped"; error?: string; provider: string; providerRef?: string };
 
-const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || "mock";
+const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || "mock").trim().toLowerCase();
 const SMS_PROVIDER = process.env.SMS_PROVIDER || "mock";
+const EMAIL_MIDDLEWARE_URL = (process.env.EMAIL_MIDDLEWARE_URL || "").trim().replace(/\/+$/, "");
+const EMAIL_MIDDLEWARE_API_KEY = (process.env.EMAIL_MIDDLEWARE_API_KEY || "").trim();
+const EMAIL_MIDDLEWARE_SYSTEM = (process.env.EMAIL_MIDDLEWARE_SYSTEM || "").trim();
+
+// ---------------------------------------------------------------------------
+// Provider introspection — used by the admin Email panel to show the ACTIVE
+// provider and whether its credentials are present (mirrors the verified
+// RMISv4.1 email.ts surface, adapted to this codebase's shapes).
+// ---------------------------------------------------------------------------
+
+export function getEmailProviderId(): "middleware" | "resend" | "gateway" | "mock" {
+  if (EMAIL_PROVIDER === "resend" && process.env.RESEND_API_KEY) return "resend";
+  if (EMAIL_PROVIDER === "middleware" && EMAIL_MIDDLEWARE_URL) return "middleware";
+  if (EMAIL_PROVIDER === "gateway" && process.env.EMAIL_GATEWAY_URL) return "gateway";
+  return "mock";
+}
+
+export function getEmailProviderInfo(): {
+  id: "middleware" | "resend" | "gateway" | "mock";
+  label: string;
+  configured: boolean;
+  cost: string;
+  setup: string;
+} {
+  switch (getEmailProviderId()) {
+    case "resend":
+      return {
+        id: "resend",
+        label: "Resend (HTTP API)",
+        configured: !!process.env.RESEND_API_KEY,
+        cost: "Free tier — 100 emails/day, 3,000/month",
+        setup: "Set RESEND_API_KEY (+ optional EMAIL_FROM) in .env.",
+      };
+    case "gateway":
+      return {
+        id: "gateway",
+        label: "Legacy gateway (EMAIL_GATEWAY_URL)",
+        configured: !!process.env.EMAIL_GATEWAY_URL,
+        cost: "Internal",
+        setup: "Legacy contract — prefer EMAIL_PROVIDER=middleware.",
+      };
+    case "middleware":
+      return {
+        id: "middleware",
+        label: "MIRDC Mail Middleware (office VM)",
+        configured: !!EMAIL_MIDDLEWARE_URL && !!EMAIL_MIDDLEWARE_API_KEY,
+        cost: "Internal — ₱0 (office mailbox systems@mirdc.dost.gov.ph)",
+        setup: "Set EMAIL_MIDDLEWARE_URL + EMAIL_MIDDLEWARE_API_KEY (+ EMAIL_MIDDLEWARE_SYSTEM) in .env.",
+      };
+    default:
+      return {
+        id: "mock",
+        label: "Mock (development)",
+        configured: true,
+        cost: "Free — emails are logged, not sent",
+        setup: "Set EMAIL_PROVIDER=middleware (+ URL/key) or EMAIL_PROVIDER=resend (+ key) to deliver real email.",
+      };
+  }
+}
 
 export async function sendEmail(input: EmailInput): Promise<SendResult> {
   let result: SendResult;
   try {
     if (!input.to || !input.to.includes("@")) {
       result = { status: "skipped", error: "No valid recipient address", provider: EMAIL_PROVIDER };
+    } else if (EMAIL_PROVIDER === "middleware" && EMAIL_MIDDLEWARE_URL) {
+      // ── MIRDC Mail Middleware (PRODUCTION-VERIFIED, ported from RMISv4.1) ──
+      // POST {EMAIL_MIDDLEWARE_URL}/sendMail — Express+nodemailer service on
+      // the office VM. The From header is ALWAYS the office mailbox
+      // systems@mirdc.dost.gov.ph (display name = EMAIL_MIDDLEWARE_SYSTEM,
+      // default "DOST-MIRDC Recruitment"). Body carries the shared token as
+      // `api` (validated by the VM only when it opts into MIDDLEWARE_API_KEY
+      // strict mode), an HTML `message`, the plain-text part, and optional
+      // base64 attachments. Older middleware ignores text/attachments — this
+      // driver is safe against both versions.
+      try {
+        const message = input.bodyHtml ?? textToSimpleHtml(input.bodyText);
+        const res = await fetch(`${EMAIL_MIDDLEWARE_URL}/sendMail`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // Never hang an API route on a stalled VM — the middleware normally
+          // answers in well under a second.
+          signal: AbortSignal.timeout(15_000),
+          body: JSON.stringify({
+            api: EMAIL_MIDDLEWARE_API_KEY,
+            system: EMAIL_MIDDLEWARE_SYSTEM || "DOST-MIRDC Recruitment",
+            to: input.to,
+            subject: input.subject,
+            message,
+            text: input.bodyText,
+            ...(input.attachments && input.attachments.some((a) => a.content)
+              ? {
+                  attachments: input.attachments
+                    .filter((a) => a.content)
+                    .map((a) => ({
+                      filename: a.name,
+                      content: a.content,
+                      encoding: "base64",
+                      ...(a.contentType ? { contentType: a.contentType } : {}),
+                    })),
+                }
+              : {}),
+          }),
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          result = { status: "failed", error: `Middleware ${res.status}: ${text.slice(0, 200)}`, provider: "middleware" };
+        } else {
+          const json = (await res.json().catch(() => ({}))) as { messageId?: string | null };
+          result = { status: "sent", provider: "middleware", providerRef: json.messageId || "middleware" };
+        }
+      } catch (e) {
+        result = { status: "failed", error: e instanceof Error ? e.message : "middleware error", provider: "middleware" };
+      }
     } else if (EMAIL_PROVIDER === "resend" && process.env.RESEND_API_KEY) {
       // Real provider path (Resend HTTP API).
       try {
@@ -104,7 +219,10 @@ export async function sendEmail(input: EmailInput): Promise<SendResult> {
         error: result.error ?? null,
         relatedType: input.relatedType ?? null,
         relatedId: input.relatedId ?? null,
-        attachments: input.attachments ? JSON.stringify(input.attachments) : null,
+        // Metadata (name + size) ONLY — base64 bytes never touch the DB.
+        attachments: input.attachments
+          ? JSON.stringify(input.attachments.map(({ name, bytes }) => ({ name, bytes })))
+          : null,
       },
     });
   } catch {
@@ -175,6 +293,23 @@ export function normalizePhMobile(raw: string): { local: string; e164: string } 
 }
 
 // ── Templates (spec §9.3) ───────────────────────────────────────────────────
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Minimal escaped-HTML wrapper for plain-text bodies (middleware has no text-only mode). */
+function textToSimpleHtml(text: string): string {
+  const paras = text
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 12px;">${escHtml(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#1a1a1a;">${paras}</div>`;
+}
 
 function emailShell(title: string, bodyHtml: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;">

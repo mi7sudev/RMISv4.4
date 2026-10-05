@@ -18,6 +18,19 @@ import { sendEmail, emailDirect } from "@/lib/notify";
 const ALLOWED_EXTENSIONS = new Set([
   "pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "png", "jpg", "jpeg", "webp",
 ]);
+const MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  csv: "text/csv",
+  txt: "text/plain",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
 const MAX_FILES = 3;
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB per file
 const MAX_TOTAL_BYTES = 10 * 1024 * 1024; // 10 MB total
@@ -99,7 +112,7 @@ export const POST = handleApi(async (req: Request, ctx: { params: Promise<{ id: 
 
   let subject: string | undefined;
   let message: string;
-  let attachments: { name: string; bytes: number }[] = [];
+  let attachments: { name: string; bytes: number; content?: string; contentType?: string }[] = [];
 
   const contentType = req.headers.get("content-type") || "";
   if (contentType.includes("multipart/form-data")) {
@@ -127,7 +140,15 @@ export const POST = handleApi(async (req: Request, ctx: { params: Promise<{ id: 
       if (totalBytes > MAX_TOTAL_BYTES) {
         throw new ApiError("Attachments exceed the 10 MB total limit.", 400);
       }
-      attachments.push({ name, bytes: file.size });
+      // Encode the file for the ACTIVE email provider (base64). Metadata
+      // (name + bytes) is what gets persisted to email_logs; the bytes go
+      // to the middleware/resend only — never to the database.
+      const mime =
+        file.type && file.type !== "application/octet-stream"
+          ? file.type
+          : MIME_BY_EXTENSION[ext];
+      const bytes = Buffer.from(await file.arrayBuffer());
+      attachments.push({ name, bytes: file.size, content: bytes.toString("base64"), contentType: mime });
     }
 
     const parsed = directEmailSchema.parse({

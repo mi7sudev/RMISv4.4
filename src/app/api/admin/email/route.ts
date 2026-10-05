@@ -1,9 +1,9 @@
 // ============================================================================
 // RMIS — /api/admin/email (spec §6.6 / §9; QA 2026-02: evaluators get the
 // Email Notices view too, read-only)
-// GET:  provider info (mock|resend + configured flag), stats { total, sent,
-//       failed, skipped, mock, last24h }, last 25 email logs. EVALUATOR or
-//       ADMIN.
+// GET:  provider info (mock|middleware|resend|gateway + configured flag),
+//       stats { total, sent, failed, skipped, mock, last24h }, last 25 email
+//       logs. EVALUATOR or ADMIN.
 // POST: test send { to, subject? ≤200, message? ≤2000 } via sendEmail
 //       (never throws; auto-logged). Failure → 502. ADMIN only.
 // ============================================================================
@@ -12,7 +12,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { handleApi, ok, err } from "@/lib/api";
 import { requireAdminFromReq, requireEvaluatorFromReq } from "@/lib/auth";
-import { sendEmail } from "@/lib/notify";
+import { sendEmail, getEmailProviderInfo } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,7 @@ const testSchema = z.object({
 export const GET = handleApi(async (req: Request) => {
   await requireEvaluatorFromReq(req);
 
+  const providerInfo = getEmailProviderInfo();
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
   const [total, sent, failed, skipped, mock, last24h, logs] = await Promise.all([
     db.emailLog.count(),
@@ -37,8 +38,9 @@ export const GET = handleApi(async (req: Request) => {
   ]);
 
   return ok({
-    provider: process.env.EMAIL_PROVIDER || "mock",
-    configured: !!process.env.RESEND_API_KEY,
+    provider: providerInfo.id,
+    providerLabel: providerInfo.label,
+    configured: providerInfo.configured,
     stats: { total, sent, failed, skipped, mock, last24h },
     logs,
   });
