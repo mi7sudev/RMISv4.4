@@ -107,7 +107,7 @@ export function NotificationCenter() {
         >
           <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
           {total > 0 && (
-            <span className="num absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[10px] font-medium text-[#ebf0f8]">
+            <span className="num absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
               {total > 99 ? "99+" : total}
             </span>
           )}

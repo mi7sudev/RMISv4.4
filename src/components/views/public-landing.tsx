@@ -10,9 +10,9 @@
 // job cards (title · company · place · salary · clamped snippet · posted
 // age · chevron quick-view + bookmark); RIGHT: the full posting pane
 // (display title, verified company row + "View all jobs", icon meta rows,
-// posted age, charcoal Quick apply + ghost Save, description,
+// posted age, brand-blue Quick apply + ghost Save, description,
 // Responsibilities / Qualifications / Compensation sections). The selected
-// card carries the Metric Blue ring (#415eee). Mobile swaps panes
+// card carries the brand-blue ring (RMIS Electric Blue #1591dc). Mobile swaps panes
 // (list → detail with back).
 // Data from GET /api/jobs (30s silent poll + refetch on focus); visitors
 // without a session are routed to sign-in by the shared apply gate; saves

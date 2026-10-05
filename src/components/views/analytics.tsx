@@ -73,15 +73,15 @@ type AuditRow = {
 
 type Drill = "All" | StageKey;
 
-// ── Data-viz tokens (Bevel viz series — globals.css --viz-1..5) & chrome ────
+// ── Data-viz tokens (viz series — globals.css --viz-1..5; lead = brand) ─────
 
 const GRID = "#e6ebf3";
 const TICK = { fontSize: 11, fill: "#5d6067" };
-const VIZ_1 = "#415eee"; // Metric Blue
+const VIZ_1 = "#1591dc"; // RMIS Electric Blue
 
 /** Funnel bar fill per stage — Bevel metric accents (blue/gold/green/coral). */
 const STAGE_BAR: Record<StageKey, string> = {
-  "Applied": "#415eee", // Metric Blue
+  "Applied": "#1591dc", // RMIS Electric Blue
   "Under Review": "#ffca00", // Signal Gold
   "Shortlisted": "#31ce01", // Recovery Green
   "Rejected": "#ffab94", // Coral Signal

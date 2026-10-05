@@ -303,7 +303,7 @@ export default function PdsUploadCard({
                 className={cn(
                   "focus-ring flex min-h-[132px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-divider bg-white p-6 text-center transition-all duration-200 hover:bg-fog disabled:opacity-60",
                   dragOver &&
-                    "border-metric-blue bg-fog ring-2 ring-metric-blue/30 bg-[radial-gradient(460px_200px_at_50%_10%,rgba(65,94,238,0.09),transparent_70%)]"
+                    "border-metric-blue bg-fog ring-2 ring-metric-blue/30 bg-[radial-gradient(460px_200px_at_50%_10%,rgba(21,145,220,0.10),transparent_70%)]"
                 )}
               >
                 <IconChip icon={CloudUpload} tone="plum" size={44} />

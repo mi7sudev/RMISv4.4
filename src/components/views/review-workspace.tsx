@@ -12,7 +12,7 @@
 // every handler, fetch, and confirmation dialog is unchanged.
 // Bevel pass: shared page header with round back affordance, white dossier
 // panel with cloud/60 snapshot tiles + capsule tabs, cloud decision-rail
-// cards with white/70 interior tiles, metric-blue links, charcoal decision
+// cards with white/70 interior tiles, brand-blue links, blue decision
 // capsules. Zero logic changes.
 // Wave-3 premium pass: warm monogram dossier header, gradient ink→ember
 // active-tab underline, tone chips on verdict actions, mini emerald/rose
@@ -307,7 +307,7 @@ function ExperienceCards({ rows }: { rows: SnapRow[] }) {
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-ink">{str(r.positionTitle) || "-"}</p>
             {r.isPresentWork === true && (
-              <span className="dlg-pill shrink-0 rounded-full bg-charcoal px-2 py-0.5 text-xs font-medium text-[#ebf0f8]">Present</span>
+              <span className="dlg-pill shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">Present</span>
             )}
           </div>
           <p className="mt-1 text-xs text-stone">{str(r.employerName) || "-"}</p>

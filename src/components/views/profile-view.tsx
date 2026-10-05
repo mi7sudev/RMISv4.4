@@ -416,7 +416,7 @@ export default function ProfileView() {
                       className={cn(
                         "grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition-colors duration-200 xl:h-8 xl:w-8 xl:text-[12px]",
                         reached
-                          ? "border-transparent bg-charcoal text-[#ebf0f8]"
+                          ? "border-transparent bg-primary text-primary-foreground"
                           : "border-divider bg-white text-stone group-hover:border-metric-blue/40 group-hover:text-ink"
                       )}
                     >
@@ -446,7 +446,7 @@ export default function ProfileView() {
       </nav>
 
       {/* MOBILE (< lg) — sticky segmented strip + caption + prev/next.
-          The active cell is a sliding charcoal block (motion layoutId) —
+          The active cell is a sliding brand-blue block (motion layoutId) —
           one filled element, no double borders. The strip is a DIRECT
           child of the tall view root, NOT a grid item: a sticky element
           can never travel past its containing block, and a grid item's
@@ -467,7 +467,7 @@ export default function ProfileView() {
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "relative isolate flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                  isActive ? "text-[#ebf0f8]" : "text-ink hover:bg-fog"
+                  isActive ? "text-primary-foreground" : "text-ink hover:bg-fog"
                 )}
               >
                 {/* Sliding block — rendered INSIDE the active cell so
@@ -477,30 +477,30 @@ export default function ProfileView() {
                   <motion.span
                     aria-hidden="true"
                     layoutId="profile-mobile-seg"
-                    className="absolute inset-0 -z-10 bg-charcoal"
+                    className="absolute inset-0 -z-10 bg-primary"
                     transition={{ type: "spring", stiffness: 500, damping: 42 }}
                   />
                 )}
                 <span
                   className={cn(
                     "num text-[10px] font-semibold leading-none",
-                    isActive ? "text-[#ebf0f8]/85" : "text-stone"
+                    isActive ? "text-primary-foreground/85" : "text-stone"
                   )}
                 >
                   {s.num}
                 </span>
                 {filled ? (
                   <CheckCircle2
-                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#ebf0f8]" : "text-[var(--ok)]")}
+                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-[var(--ok)]")}
                     strokeWidth={2}
                     aria-hidden="true"
                   />
                 ) : (
                   /* Not filled yet — soft ring, same size/weight as the green
                      check so both states read at a glance (light ring on the
-                     charcoal active cell, where red would clash). */
+                     blue active cell, where red would clash). */
                   <Circle
-                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#ebf0f8]/90" : "text-[var(--bad)]")}
+                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary-foreground/90" : "text-[var(--bad)]")}
                     strokeWidth={2}
                     aria-hidden="true"
                   />

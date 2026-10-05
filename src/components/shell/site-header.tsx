@@ -11,7 +11,7 @@
 // control spacing. Brand text =
 // Ink 18px/25.2 weight 500 +0.16px tracking (text-brand-nav); secondary
 // links = Body Gray 16px/22.4 weight 500 (text-nav); the sign-in/dashboard
-// conversion control is the Charcoal Download Pill (dlg-cta, 128px radius).
+// conversion control is the RMIS Electric Blue pill (dlg-cta, 128px radius).
 // All navigation behavior is preserved exactly.
 // ============================================================================
 

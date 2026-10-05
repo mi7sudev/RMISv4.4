@@ -245,7 +245,7 @@ export default function ReviewQueue() {
               <button
                 key={s}
                 type="button"
-                className={`inline-flex min-h-[36px] items-center gap-2 rounded-full px-3.5 text-xs font-medium transition-colors ${active ? "bg-ink text-[#ebf0f8]" : "dlg-ghost"}`}
+                className={`inline-flex min-h-[36px] items-center gap-2 rounded-full px-3.5 text-xs font-medium transition-colors ${active ? "bg-primary text-primary-foreground" : "dlg-ghost"}`}
                 onClick={() => setListStage(s)}
                 aria-pressed={active}
               >

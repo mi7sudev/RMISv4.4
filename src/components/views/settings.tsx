@@ -802,7 +802,7 @@ function ContactPanel() {
             aria-pressed={filter === f}
             onClick={() => setFilter(f)}
             className={`inline-flex min-h-[36px] items-center rounded-full px-4 text-xs font-medium transition-colors ${
-              filter === f ? "bg-charcoal text-[#ebf0f8]" : "bg-fog text-stone hover:text-ink"
+              filter === f ? "bg-primary text-primary-foreground" : "bg-fog text-stone hover:text-ink"
             }`}
           >
             {f === "ALL" ? "All" : f === "OPEN" ? "Open" : "Resolved"}

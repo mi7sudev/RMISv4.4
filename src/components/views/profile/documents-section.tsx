@@ -246,7 +246,7 @@ export default function DocumentsSection({
             className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-dashed px-5 py-3 text-sm font-medium transition-colors ${
               categoryError
                 ? "border-[var(--bad)]/40 bg-white text-[var(--bad)]"
-                : "border-divider bg-white text-ink hover:bg-[radial-gradient(420px_160px_at_50%_0%,rgba(65,94,238,0.055),transparent_70%)]"
+                : "border-divider bg-white text-ink hover:bg-[radial-gradient(420px_160px_at_50%_0%,rgba(21,145,220,0.06),transparent_70%)]"
             } disabled:opacity-50`}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}

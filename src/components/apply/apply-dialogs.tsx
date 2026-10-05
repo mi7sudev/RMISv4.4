@@ -94,7 +94,7 @@ function MqrFailure({ mqr, onGoProfile }: { mqr: MqrResults; onGoProfile: () => 
       <ul className="space-y-2">
         {dims.map(([label, verdict]) => (
           <li key={label} className="flex items-start gap-3 rounded-lg bg-cloud/60 p-3">
-            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${verdict === MQR_MEETS ? "bg-charcoal text-[#ebf0f8]" : "bg-[var(--bad-bg)] text-[var(--bad)]"}`}>
+            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${verdict === MQR_MEETS ? "bg-primary text-primary-foreground" : "bg-[var(--bad-bg)] text-[var(--bad)]"}`}>
               {verdict === MQR_MEETS ? "✓" : "✕"}
             </span>
             <div className="min-w-0">
@@ -223,7 +223,7 @@ export function ApplyDialogs({
         {/* Done */}
         {step === "done" && (
           <div className="p-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-charcoal text-xl text-[#ebf0f8]">✓</div>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl text-primary-foreground">✓</div>
             <h3 className="mt-4 text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Application submitted</h3>
             <p className="mt-2 text-sm text-body-gray">
               We received your application for {jobTitle}. You will receive an SMS confirmation shortly.

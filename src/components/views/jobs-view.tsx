@@ -917,7 +917,7 @@ export default function JobsView() {
                   aria-current={p === current ? "page" : undefined}
                   className={
                     p === current
-                      ? "grid h-11 min-w-11 place-items-center rounded-full bg-charcoal px-3 text-sm font-medium text-[#ebf0f8]"
+                      ? "grid h-11 min-w-11 place-items-center rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground"
                       : "grid h-11 min-w-11 place-items-center rounded-full px-3 text-sm text-body-gray transition-colors hover:bg-cloud hover:text-ink"
                   }
                 >
@@ -991,7 +991,7 @@ export default function JobsView() {
                     <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                     Filters
                     {activeFilterCount > 0 && (
-                      <span className="grid h-5 min-w-5 place-items-center rounded-full bg-charcoal px-1.5 text-[11px] font-medium text-[#ebf0f8]">
+                      <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground">
                         {activeFilterCount}
                       </span>
                     )}

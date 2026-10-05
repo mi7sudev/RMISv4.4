@@ -249,13 +249,13 @@ export function NavRail({ view }: { view: string }) {
                           : "text-[var(--rail-text)] hover:bg-[var(--rail-hover-bg)] hover:text-ink"
                       }`}
                     >
-                      {/* Metric Blue active indicator — small Bevel accent */}
+                      {/* Brand-blue active indicator — small legacy-RMIS accent */}
                       <span
                         aria-hidden="true"
                         className={`absolute -left-2.5 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-opacity duration-200 ${
                           active ? "opacity-100" : "opacity-0"
                         }`}
-                        style={{ background: "#415eee" }}
+                        style={{ background: "var(--primary)" }}
                       />
                       <item.icon
                         className={`h-[18px] w-[18px] shrink-0 transition-colors ${
@@ -299,8 +299,8 @@ export function NavRail({ view }: { view: string }) {
                 aria-label="Account menu"
               >
                 <span
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-[#ebf0f8]"
-                  style={{ background: "#1f2025" }}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-primary-foreground"
+                  style={{ background: "var(--primary)" }}
                 >
                   {initialsOf(user)}
                 </span>

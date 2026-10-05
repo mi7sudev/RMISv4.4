@@ -19,23 +19,35 @@
    RMIS × "BEVEL" — Bright cloudlight edition (PROPOSED-RMIS-DESIGN.md).
    A white editorial canvas: Paper White page, Cloud Card pale-blue surfaces,
    near-black Ink display type (600 weight, tight -0.03em tracking), Body Gray
-   supporting copy, Charcoal capsule controls, generous rounded geometry
-   (24-32px cards, 128px capsule buttons, 9999px pills, 32px navigation).
-   Metric accents (Metric Blue / Recovery Green / Signal Gold / Sleep Lilac /
-   Coral Signal) are rationed to data visuals and small indicators — never
-   page backgrounds or filled public controls. Business logic untouched.
-   PALETTE (PROPOSED-RMIS-DESIGN.md): Paper White #ffffff, Cloud Card #ebf0f8,
-   Ink #222326, Charcoal #1f2025, Body Gray #666a72, Metric Blue #415eee,
+   supporting copy, generous rounded geometry (24-32px cards, 128px capsule
+   buttons, 9999px pills, 32px navigation).
+   Metric accents (Recovery Green / Signal Gold / Sleep Lilac / Coral Signal)
+   are rationed to data visuals and small indicators — never page backgrounds
+   or filled public controls. Business logic untouched.
+
+   REBRAND (user directive): the brand primary is the LEGACY RMIS ELECTRIC
+   BLUE #1591DC (source: RMISv3.8 “Warm Obsidian” design system — its design
+   notes: “RMIS electric blue #1591DC is THE primary — filled CTA fill, focus
+   rings, selection, progress fill; hover darkens to #0E7ABF”). White ink
+   sits on the blue fill (legacy --primary-foreground: #ffffff). Charcoal
+   #1f2025 is demoted from primary control fill to neutral overlays/scrims;
+   Ink #222326 remains display type. The former Bevel Metric Blue #415eee is
+   retired — every “metric-blue/tangerine” token now carries #1591DC so the
+   system speaks with ONE brand blue.
+
+   PALETTE: Paper White #ffffff, Cloud Card #ebf0f8, Ink #222326,
+   Charcoal #1f2025 (neutral only), Body Gray #666a72,
+   RMIS Electric Blue #1591DC (primary · hover #0E7ABF),
    Recovery Green #31ce01, Signal Gold #ffca00, Sleep Lilac #b9a6ff,
-   Coral Signal #ffab94. Legacy token names are kept for their call sites —
-   the values are Bevel now (e.g. --tangerine-tag → Metric Blue).
+   Coral Signal #ffab94. Legacy token names are kept for their call sites
+   (e.g. --tangerine-tag, --color-metric-blue → RMIS Electric Blue).
    RADII: soft cloud geometry — cards 24-32px, imagery/dialogs 16-24px,
    buttons 128px (capsule), pills/badges 9999px, navigation 32px.
    ========================================================================== */
 
 :root {
-  /* Dialog palette (preserved names, Bevel values) */
-  --tangerine-tag: #415eee; /* Metric Blue (name kept for call sites) */
+  /* Dialog palette (preserved names, values are the rebrand) */
+  --tangerine-tag: #1591dc; /* RMIS Electric Blue (name kept for call sites) */
   --midnight-ink: #222326; /* Ink */
   --graphite: #4a4d57;
   --deep-slate: #2a2b31;
@@ -69,8 +81,8 @@
   --neutral: #5d6067;
   --neutral-bg: #f1f3f7;
 
-  /* Data-viz series — the Bevel metric accents */
-  --viz-1: #415eee; /* Metric Blue */
+  /* Data-viz series — lead series carries the brand blue */
+  --viz-1: #1591dc; /* RMIS Electric Blue */
   --viz-2: #31ce01; /* Recovery Green */
   --viz-3: #ffca00; /* Signal Gold */
   --viz-4: #b9a6ff; /* Sleep Lilac */
@@ -83,8 +95,8 @@
   --card-foreground: #222326;
   --popover: #ffffff;
   --popover-foreground: #222326;
-  --primary: #1f2025; /* Charcoal — primary controls are Bevel conversion pills */
-  --primary-foreground: #ebf0f8; /* Cloud Card ink on Charcoal */
+  --primary: #1591dc; /* RMIS Electric Blue — the legacy brand primary (CTA fill) */
+  --primary-foreground: #ffffff; /* white ink on the blue fill (legacy RMIS) */
   --secondary: #f5f8fc;
   --secondary-foreground: #222326;
   --muted: #f5f8fc;
@@ -95,20 +107,20 @@
   --destructive-foreground: #ffffff;
   --border: #e6ebf3;
   --input: #d7dfec;
-  --ring: #415eee; /* Metric Blue focus */
-  --chart-1: #415eee;
+  --ring: #1591dc; /* RMIS Electric Blue focus */
+  --chart-1: #1591dc;
   --chart-2: #31ce01;
   --chart-3: #ffca00;
   --chart-4: #b9a6ff;
   --chart-5: #ffab94;
   --sidebar: #ffffff;
   --sidebar-foreground: #222326;
-  --sidebar-primary: #1f2025;
-  --sidebar-primary-foreground: #ebf0f8;
+  --sidebar-primary: #1591dc;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #ebf0f8;
   --sidebar-accent-foreground: #222326;
   --sidebar-border: #e8edf5;
-  --sidebar-ring: #415eee;
+  --sidebar-ring: #1591dc;
   --radius: 1rem;
 }
 
@@ -174,7 +186,7 @@
   --color-card: var(--card);
 
   /* Brand colors as Tailwind utilities (legacy names kept for call sites) */
-  --color-tangerine: #415eee; /* Metric Blue (name kept for call sites) */
+  --color-tangerine: #1591dc; /* RMIS Electric Blue (name kept for call sites) */
   --color-ink: #222326;
   --color-graphite: #4a4d57;
   --color-slate-dark: #2a2b31;
@@ -192,7 +204,7 @@
   --color-cloud: #ebf0f8;
   --color-charcoal: #1f2025;
   --color-body-gray: #747679; /* Spec Body Gray — 4.56:1 on Paper White (AA). Small text on Cloud surfaces uses stone. */
-  --color-metric-blue: #415eee;
+  --color-metric-blue: #1591dc; /* token renamed by legacy value — one brand blue */
   --color-recovery-green: #31ce01;
   --color-signal-gold: #ffca00;
   --color-sleep-lilac: #b9a6ff;
@@ -272,14 +284,14 @@
   }
   /* Paper White canvas — no ambient mesh. Bevel keeps the shell monochrome;
      atmosphere belongs to hero visuals (Hero Sky gradient), not the page. */
-  /* Enterprise a11y: visible keyboard focus everywhere (Metric Blue) */
+  /* Enterprise a11y: visible keyboard focus everywhere (RMIS Electric Blue) */
   :focus-visible {
-    outline: 2px solid #415eee;
+    outline: 2px solid #1591dc;
     outline-offset: 2px;
     border-radius: 4px;
   }
   .dlg-cta:focus-visible {
-    outline-color: #415eee;
+    outline-color: #1591dc;
   }
 }
 
@@ -331,7 +343,7 @@
   color: transparent;
 }
 .grad-ember {
-  background: linear-gradient(120deg, #2f3fbe, #415eee 55%, #8b97f5);
+  background: linear-gradient(120deg, #0e7abf, #1591dc 55%, #7fc5ec);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -383,25 +395,26 @@
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
-/* Charcoal Download Pill (Bevel conversion control): Charcoal fill, Cloud
-   Card ink, 128px capsule radius, 500 weight. No gradient, no glow. */
+/* RMIS Electric Blue conversion pill (legacy RMIS primary): #1591DC fill,
+   white ink, 128px capsule radius, 500 weight. Hover darkens to the legacy
+   #0E7ABF step. No gradient, no glow. */
 .dlg-cta {
   position: relative;
-  background: #1f2025;
-  color: #ebf0f8;
+  background: #1591dc;
+  color: #ffffff;
   border-radius: 128px;
   font-weight: 500;
   box-shadow: var(--shadow-cta);
   transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 .dlg-cta:hover {
-  background: #2a2b31;
+  background: #0e7abf;
   transform: translateY(-1px);
   box-shadow: var(--shadow-cta-hover);
 }
 .dlg-cta:active {
   transform: translateY(0.5px);
-  background: #1f2025;
+  background: #1591dc;
 }
 .dlg-ghost {
   background: #ffffff;
@@ -430,8 +443,8 @@
   color: #666a72;
 }
 .dlg-input:focus {
-  border-color: #415eee;
-  box-shadow: 0 0 0 3px rgba(65, 94, 238, 0.13);
+  border-color: #1591dc;
+  box-shadow: 0 0 0 3px rgba(21, 145, 220, 0.15);
 }
 .dlg-underline-input {
   border-radius: 0;
@@ -469,8 +482,8 @@
   color: #3f4553;
 }
 .chip-ink {
-  background: #1f2025;
-  color: #ebf0f8;
+  background: #1591dc;
+  color: #ffffff;
 }
 .chip-gold {
   background: #fff4c2;
@@ -481,19 +494,21 @@
   color: #5b4bc4;
 }
 
-/* Monogram avatar — Charcoal identity mark with Cloud Card ink */
+/* Monogram avatar — RMIS Electric Blue identity mark with white ink.
+   The ramp dips to the legacy hover #0E7ABF so small white initials keep
+   readable contrast on the darker end. */
 .monogram {
   display: inline-grid;
   place-items: center;
   flex: none;
   border-radius: 9999px;
-  background: linear-gradient(145deg, #2a2b31 0%, #1f2025 100%);
-  color: #ebf0f8;
+  background: linear-gradient(145deg, #22a0e4 0%, #1591dc 55%, #0e7abf 100%);
+  color: #ffffff;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 .monogram-warm {
-  background: linear-gradient(145deg, #5e6cf0 0%, #415eee 100%);
+  background: linear-gradient(145deg, #0e7abf 0%, #0a5e90 100%);
   color: #ffffff;
 }
 
@@ -518,7 +533,7 @@
 
 /* Focus ring utility for custom interactive elements */
 .focus-ring:focus-visible {
-  outline: 2px solid #415eee;
+  outline: 2px solid #1591dc;
   outline-offset: 2px;
   border-radius: 8px;
 }

@@ -86,7 +86,7 @@ export function MobileNav({ view }: { view: string }) {
           {/* Account block */}
           <div className="shrink-0 space-y-3 border-t border-border p-4">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-[#ebf0f8]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                 {initialsOf(user)}
               </span>
               <div className="min-w-0">
