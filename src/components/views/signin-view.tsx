@@ -7,17 +7,17 @@
 // says this request arrived on the public applicant door — it renders
 // invisibly (interaction-only) and auto-clears humans; the token rides along
 // in the login payload. On the employee door the form is captcha-free.
-// Bevel pass: lg+ split screen with a LIGHT brand panel (Hero Sky gradient,
-// ink display heading, white trust tiles) on the left and an editorial form
-// directly on the white canvas on the right. Rendered inside PublicShell
+// Bevel pass: lg+ split screen with a LIGHT brand panel on the left and an
+// editorial form directly on the white canvas on the right. The panel is the
+// shared institutional AuthBrandPanel (seal lockup, gov.ph letterhead, agency
+// motto, fact ledger — see auth-brand-panel.tsx). Rendered inside PublicShell
 // (sticky header + footer), so the root flexes to fill the viewport between
 // them. All handlers, API calls, and copy are preserved exactly.
 // ============================================================================
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Activity, Check, FileSpreadsheet, ShieldCheck } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,9 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Turnstile } from "@/components/turnstile";
 import type { TurnstileHandle } from "@/components/turnstile";
-import { BrandLogo } from "@/components/brand-logo";
-import { IconChip } from "@/components/ui/shell";
-import type { ChipTone } from "@/components/ui/shell";
+import { AuthBrandPanel } from "@/components/auth-brand-panel";
 import { useSession } from "@/components/session-provider";
 import { apiFetch } from "@/lib/client";
 import { navigate, ROLE_HOME } from "@/lib/router";
@@ -40,59 +38,9 @@ import { cn } from "@/lib/utils";
 
 const DEMO_ACCOUNTS = ["testadmin", "testevaluator", "testapplicant"] as const;
 
-const TRUST_POINTS: ReadonlyArray<{ icon: LucideIcon; tone: ChipTone; text: string }> = [
-  { icon: FileSpreadsheet, tone: "amber", text: "PDS auto-fill" },
-  { icon: Activity, tone: "emerald", text: "Real-time status tracking" },
-  { icon: ShieldCheck, tone: "plum", text: "Data Privacy Act compliant" },
-];
-
-/** Light brand panel — lg+ only. Hero Sky gradient with ink display type;
- *  the watermark is decorative and pointer-events-none. */
-function AuthBrandPanel() {
-  return (
-    <aside className="relative hidden overflow-hidden hero-sky lg:flex lg:w-[42%] xl:w-[46%]">
-      {/* Ink watermark (decorative) */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[130px] -right-8 select-none font-display text-[400px] leading-none text-ink/[0.05]"
-      >
-        M
-      </span>
-
-      <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
-        <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white py-2 pl-2 pr-4 shadow-e1">
-          {/* Official unified brand mark — floats on the white capsule. */}
-          <BrandLogo logoSize={22} />
-          <span className="text-brand-nav font-medium text-ink">RMIS</span>
-        </div>
-
-        {/* QA 2026-02: spell out the acronym in full — the system name is
-            "Recruitment Management Information System", not "Recruitment portal". */}
-        <p className="eyebrow mt-5 text-stone">Recruitment Management Information System</p>
-
-        {/* Spec card-heading role: Ink 40px/40px, weight 600, -1.2px tracking */}
-        <h1 className="font-display mt-10 text-[40px] leading-none tracking-[-1.2px] text-ink">
-          Build a career that moves the nation forward.
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-stone">
-          The official hiring portal of the Metals Industry Research and Development Center.
-        </p>
-
-        <ul className="mt-10 space-y-3">
-          {TRUST_POINTS.map((point) => (
-            <li
-              key={point.text}
-              className="flex items-center gap-3.5 rounded-xl bg-white p-3.5 shadow-e1"
-            >
-              <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} />
-              <span className="text-xs font-medium text-ink">{point.text}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </aside>
-  );
-}
+// Brand panel (lg+): shared institutional AuthBrandPanel — seal lockup,
+// Republic/DOST/MIRDC letterhead, "Molding the future of metal industries."
+// motto, fact ledger, ghosted-seal watermark.
 
 type CaptchaConfig = { enabled: boolean; siteKey: string | null };
 
@@ -182,8 +130,10 @@ export default function SignInView() {
     <div className="flex w-full flex-1 flex-col lg:flex-row">
       <AuthBrandPanel />
 
-      {/* Form column — editorial form directly on the white canvas */}
-      <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
+      {/* Form column — editorial form directly on the white canvas; the
+          reduced lg+ vertical padding keeps the whole auth page (panel +
+          form + footer) inside a ~800px viewport without scrolling */}
+      <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12 lg:py-7">
         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div>
             {/* Card header — mobile/tablet only; the lg+ brand panel carries brand + heading */}

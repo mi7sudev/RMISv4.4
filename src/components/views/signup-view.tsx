@@ -10,78 +10,26 @@
 // is reset and we briefly wait for a fresh token before the auto-login — if
 // one doesn't arrive in time we fall back to the sign-in page (existing
 // path). On the employee door the form is captcha-free.
-// Bevel pass: same split-screen as sign-in — LIGHT brand panel (Hero Sky
-// gradient, ink display heading, white trust tiles) on lg+, editorial form
-// directly on the white canvas. Rendered inside PublicShell (sticky header
-// + footer), so the root flexes to fill the viewport between them. Every
-// field, validation, and behavior is preserved exactly.
+// Bevel pass: same split-screen as sign-in — the shared institutional
+// AuthBrandPanel on lg+ (seal lockup, gov.ph letterhead, agency motto, fact
+// ledger — see auth-brand-panel.tsx), editorial form directly on the white
+// canvas. Rendered inside PublicShell (sticky header + footer), so the root
+// flexes to fill the viewport between them. Every field, validation, and
+// behavior is preserved exactly.
 // ============================================================================
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Activity, Eye, EyeOff, FileSpreadsheet, ShieldCheck } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Turnstile } from "@/components/turnstile";
 import type { TurnstileHandle } from "@/components/turnstile";
-import { BrandLogo } from "@/components/brand-logo";
-import { IconChip } from "@/components/ui/shell";
-import type { ChipTone } from "@/components/ui/shell";
+import { AuthBrandPanel } from "@/components/auth-brand-panel";
 import { useSession } from "@/components/session-provider";
 import { apiFetch } from "@/lib/client";
 import { navigate } from "@/lib/router";
-
-const TRUST_POINTS: ReadonlyArray<{ icon: LucideIcon; tone: ChipTone; text: string }> = [
-  { icon: FileSpreadsheet, tone: "amber", text: "PDS auto-fill" },
-  { icon: Activity, tone: "emerald", text: "Real-time status tracking" },
-  { icon: ShieldCheck, tone: "plum", text: "Data Privacy Act compliant" },
-];
-
-/** Light brand panel — lg+ only. Hero Sky gradient with ink display type;
- *  the watermark is decorative and pointer-events-none. */
-function AuthBrandPanel() {
-  return (
-    <aside className="relative hidden overflow-hidden hero-sky lg:flex lg:w-[42%] xl:w-[46%]">
-      {/* Ink watermark (decorative) */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[130px] -right-8 select-none font-display text-[400px] leading-none text-ink/[0.05]"
-      >
-        M
-      </span>
-
-      <div className="relative z-10 flex w-full max-w-md flex-col justify-center px-12 py-16 xl:pl-20 xl:pr-16">
-        <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white py-2 pl-2 pr-4 shadow-e1">
-          {/* Official unified brand mark — floats on the white capsule. */}
-          <BrandLogo logoSize={22} />
-          <span className="text-brand-nav font-medium text-ink">RMIS</span>
-        </div>
-
-        {/* Spec card-heading role: Ink 40px/40px, weight 600, -1.2px tracking */}
-        <h1 className="font-display mt-10 text-[40px] leading-none tracking-[-1.2px] text-ink">
-          Build a career that moves the nation forward.
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-stone">
-          The official hiring portal of the Metals Industry Research and Development Center.
-        </p>
-
-        <ul className="mt-10 space-y-3">
-          {TRUST_POINTS.map((point) => (
-            <li
-              key={point.text}
-              className="flex items-center gap-3.5 rounded-xl bg-white p-3.5 shadow-e1"
-            >
-              <IconChip icon={point.icon} tone={point.tone} size={36} iconSize={16} />
-              <span className="text-xs font-medium text-ink">{point.text}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </aside>
-  );
-}
 
 /** Compact dark brand strip — removed: PublicShell's sticky header already
     carries the brand lockup on small screens (dedup pass). */
