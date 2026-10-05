@@ -807,3 +807,19 @@ Work Log:
 
 Stage Summary:
 - Auth brand panel rebuilt as an institutional document (letterhead, motto, fact ledger, seal watermark, address foot) instead of an AI-marketing hero; shared single source for sign-in and sign-up; page fits 1280×800 exactly. Commit 24642ab.
+
+---
+Task ID: 56
+Agent: Z.ai Code (main)
+Task: "update the Evaluator and admin Review Queue make it default to List view instead of kanban and on the list view make the Review Button visible instead of hovering ... a button not an arrow up for review and i also notice that on the analytics the progress bar or the percentage bar is not working both in admin and evaluator"
+
+Work Log:
+- review-queue.tsx (shared by evaluator AND admin — both nav routes map here): default mode useState "kanban" → "list"; file-header updated. Kanban stays available via the existing segmented toggle (verified both directions).
+- List rows: replaced the hover-revealed (opacity-0 group-hover) icon pair — ArrowUpRight + UserRound — with an always-visible labeled `dlg-ghost` button "Review" (rendered "View" for decided rows per the existing decided flag) plus the profile icon button; sr-only column header "Open"→"Actions". No hover gating remains on the actions cell.
+- Row-width fix: the wider labeled button pushed the table 35px past its scroll container (profile icon clipped to a sliver at 1280). Trimmed position column max-w 220→190, actions cell px-4→px-3, button px-3.5→px-3, gap-1.5→gap-1 → measured overflow 0.
+- Analytics funnel bug (user report "progress bar / percentage bar not working", reproduced: all four bars 0% with 3 live applications): denominator was `applied` = count CURRENTLY in the Applied stage — zero once every applicant advances, collapsing every pct to 0%. Fixed to divide each stage count by rows.length (whole intake pool); bars now render (Under Review 67% @232px, Shortlisted 33% @114%, genuine 0% for empty stages, sum 100%). Panel description updated to "Percentages are of all applications."
+- Verification (agent-browser): evaluator (testevaluator) + admin (testadmin) — #/review-queue opens in List by default; Review/View buttons opacity 1 without hover; click opens the ReviewWorkspace dialog (works; earlier agent-browser click failures were stale refs from the 15s poll re-render, confirmed fine via fresh refs/eval); Kanban toggle swaps to the board and back; #/analytics fills measured 0/67/33/0 on BOTH roles; mobile 390 — labeled buttons present, table scrolls horizontally (pre-existing min-w behavior); console clean; bun run lint clean.
+- Evidence: upload/task56-queue-admin.png, task56-queue-list.png, task56-queue-mobile.png, task56-kanban-still-works.png, task56-analytics-admin.png, task56-analytics-evaluator.png, task56-review-dialog.png.
+
+Stage Summary:
+- Review Queue now opens in List view with a permanent labeled Review/View button per row (no hover hunting, no arrow icon), and the analytics pipeline-conversion bars always render with correct whole-pool percentages — for evaluators and administrators alike. Commit cd789ee.
