@@ -1028,3 +1028,18 @@ Work Log:
 
 Stage Summary:
 - Documents section rows are now click-to-view with a Bevel-styled preview modal; pre-existing broken file URLs (profile picture, candidate-detail) silently repaired by the route fix. No schema or API contract changes.
+
+---
+Task ID: 10
+Agent: Z.ai Code (main)
+Task: Evaluator/admin review workspace — applicant uploaded documents missing from the dossier Documents tab
+
+Work Log:
+- Root cause (both ends): GET /api/evaluator/applications/[id] hard-coded `documents: []`, and review-workspace.tsx rendered a placeholder card ("verified in person at the next stage") in the Documents tab.
+- Extracted the preview modal from documents-section.tsx into shared src/components/ui/document-preview.tsx (DocumentPreviewModal + fileKind/previewKind/fileUrl/documentStatusChip helpers + PreviewDoc type); documents-section.tsx refactored to consume it (no behavior change).
+- Backend: evaluator applications detail API now queries db.document for the applicant (newest first; id/originalName/mimeType/size/filePath/category/status/createdAt).
+- review-workspace.tsx: Documents tab now lists real rows (kind chip, name button, category · KB · date, extraction StatusPill, Eye button), opens the shared preview modal (PDF inline / image / download fallback); bounded scroll like other tabs; Credentials rail gained a "Documents" count.
+- Verified as testadmin via agent-browser: review-queue → Review dialog → Documents tab lists the applicant's 2 uploads; row click opens the PDS PDF inline over the dialog; API check: app 8 → docs 2, apps 1–2 → docs 0 (correct); lint clean; dev.log clean.
+
+Stage Summary:
+- Evaluator/admin reviewers can now see and preview every applicant-uploaded document directly inside the review workspace dossier (modal in modal works via Radix portal ordering). Profile documents section refactored onto a shared preview component — single source of truth for document preview UX.

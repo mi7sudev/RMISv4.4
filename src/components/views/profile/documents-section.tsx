@@ -17,25 +17,8 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  Download,
-  ExternalLink,
-  Eye,
-  FileText,
-  FileUp,
-  Loader2,
-  Paperclip,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Eye, FileText, FileUp, Loader2, Paperclip, Trash2, type LucideIcon } from "lucide-react";
+import { DocumentPreviewModal, documentStatusChip, fileKind } from "@/components/ui/document-preview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +43,6 @@ import { apiFetch, formatDate, humanize } from "@/lib/client";
 import { DOCUMENT_CATEGORIES, EXTRACTABLE_CATEGORIES } from "@/lib/validation";
 import type { DocumentWire } from "@/lib/router";
 import { SaveHint, useSavedFlash } from "./save-hint";
-import type { StatusVariant } from "@/lib/status-ui";
 
 /**
  * Bevel section panel (shared workspace layout system): white surface, 24px,
@@ -102,62 +84,6 @@ function SectionPanel({
 const CATEGORY_NONE = "__select__";
 const EXTRACTABLE = EXTRACTABLE_CATEGORIES as readonly string[];
 
-/** File extension → short uppercase label for the slate mini chip (display-only). */
-function fileKind(name: string): string {
-  const ext = name.includes(".") ? (name.split(".").pop() ?? "") : "";
-  const labels: Record<string, string> = {
-    pdf: "PDF",
-    xlsx: "XLSX",
-    xls: "XLS",
-    xlsm: "XLSM",
-    doc: "DOC",
-    docx: "DOCX",
-    png: "IMG",
-    jpg: "IMG",
-    jpeg: "IMG",
-    gif: "IMG",
-    webp: "IMG",
-  };
-  const key = ext.toLowerCase();
-  if (labels[key]) return labels[key];
-  return ext ? ext.toUpperCase().slice(0, 4) : "FILE";
-}
-
-/** How the preview modal renders a document: inline PDF, inline image, or download fallback. */
-type PreviewKind = "pdf" | "image" | "none";
-
-function previewKind(doc: DocumentWire): PreviewKind {
-  const mime = (doc.mimeType || "").toLowerCase();
-  if (mime === "application/pdf") return "pdf";
-  if (mime.startsWith("image/")) return "image";
-  const ext = (doc.originalName.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "").toLowerCase();
-  if (ext === "pdf") return "pdf";
-  if (["png", "jpg", "jpeg", "gif", "webp", "bmp"].includes(ext)) return "image";
-  return "none";
-}
-
-/** Signed file URL — the route strips the leading "upload" segment itself. */
-function fileUrl(doc: DocumentWire): string {
-  return `/api/files/${doc.filePath}`;
-}
-
-/** Document extraction status → label + functional variant (§2 status system). */
-function statusChip(doc: DocumentWire): { label: string; variant: StatusVariant } | null {
-  if (!EXTRACTABLE.includes(doc.category)) return null;
-  switch (doc.status) {
-    case "EXTRACTED":
-      return { label: "Extracted", variant: "ok" };
-    case "PARTIALLY_EXTRACTED":
-      return { label: "Partial", variant: "warn" };
-    case "FAILED":
-      return { label: "Failed", variant: "bad" };
-    case "PROCESSING":
-      return { label: "Processing", variant: "neutral" };
-    default:
-      return { label: "Uploaded", variant: "neutral" };
-  }
-}
-
 export default function DocumentsSection({
   docs,
   onChanged,
@@ -172,16 +98,10 @@ export default function DocumentsSection({
   const [deleteTargets, setDeleteTargets] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [preview, setPreview] = useState<DocumentWire | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const [savedFlash, flashSaved] = useSavedFlash();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const openPreview = (doc: DocumentWire) => {
-    setPreviewLoading(true);
-    setPreview(doc);
-  };
-
-  const previewKindValue = preview ? previewKind(preview) : "none";
+  const openPreview = (doc: DocumentWire) => setPreview(doc);
 
   const uploadFiles = async (files: FileList) => {
     if (!category) {
@@ -433,104 +353,14 @@ export default function DocumentsSection({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Document preview modal — click a row to view it here */}
-      <Dialog
+      {/* Document preview modal — click a row to view it here (shared component) */}
+      <DocumentPreviewModal
+        doc={preview}
         open={preview !== null}
         onOpenChange={(o) => {
           if (!o) setPreview(null);
         }}
-      >
-        {preview && (
-          <DialogContent className="dlg-card-plain flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
-            <DialogHeader className="gap-0.5 border-b border-divider px-5 py-4 text-left sm:pr-14">
-              <div className="flex min-w-0 items-center gap-3">
-                <IconChip icon={FileText} tone="slate" size={36} iconSize={16} />
-                <div className="min-w-0 flex-1">
-                  <DialogTitle
-                    className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg"
-                    title={preview.originalName}
-                  >
-                    {preview.originalName}
-                  </DialogTitle>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                    <DialogDescription className="num text-xs text-body-gray">
-                      {humanize(preview.category)} · {Math.max(1, Math.round(preview.size / 1024))} KB · {formatDate(preview.createdAt)}
-                    </DialogDescription>
-                    {statusChip(preview) && (
-                      <StatusPill
-                        status={statusChip(preview)!.label}
-                        variant={statusChip(preview)!.variant}
-                        className="cursor-default"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-              {previewKindValue === "pdf" ? (
-                <div className="relative h-[62vh] overflow-hidden rounded-lg border border-divider bg-white">
-                  {previewLoading && (
-                    <div className="absolute inset-0 z-10 grid place-items-center bg-white/80">
-                      <Loader2 className="h-6 w-6 animate-spin text-stone" />
-                    </div>
-                  )}
-                  <iframe
-                    src={fileUrl(preview)}
-                    title={`Preview of ${preview.originalName}`}
-                    className="h-full w-full"
-                    onLoad={() => setPreviewLoading(false)}
-                  />
-                </div>
-              ) : previewKindValue === "image" ? (
-                <div className="relative grid min-h-[40vh] place-items-center overflow-hidden rounded-lg border border-divider bg-cloud/40 p-3">
-                  {previewLoading && (
-                    <div className="absolute inset-0 z-10 grid place-items-center bg-white/80">
-                      <Loader2 className="h-6 w-6 animate-spin text-stone" />
-                    </div>
-                  )}
-                  <img
-                    src={fileUrl(preview)}
-                    alt={`Preview of ${preview.originalName}`}
-                    className="max-h-[62vh] w-auto max-w-full rounded object-contain"
-                    onLoad={() => setPreviewLoading(false)}
-                    onError={() => setPreviewLoading(false)}
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-divider bg-cloud/40 px-6 py-10 text-center">
-                  <IconChip icon={FileText} tone="slate" size={48} iconSize={20} />
-                  <div>
-                    <p className="text-sm font-medium text-ink">
-                      No inline preview for {fileKind(preview.originalName)} files
-                    </p>
-                    <p className="mt-1 text-xs text-body-gray">Download the file to view it on your device.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="flex-row items-center justify-between gap-2 border-t border-divider px-5 py-4">
-              <a
-                href={fileUrl(preview)}
-                target="_blank"
-                rel="noreferrer"
-                className="dlg-ghost inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 text-sm"
-              >
-                <ExternalLink className="h-4 w-4" /> Open in new tab
-              </a>
-              <a
-                href={fileUrl(preview)}
-                download={preview.originalName}
-                className="focus-ring inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                <Download className="h-4 w-4" /> Download
-              </a>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
+      />
     </SectionPanel>
   );
 }

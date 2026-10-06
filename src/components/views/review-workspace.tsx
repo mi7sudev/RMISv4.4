@@ -50,7 +50,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone,
 } from "@/components/ui/shell";
-import { apiFetch, formatDate, formatDateTime, fullName, timeAgo } from "@/lib/client";
+import { apiFetch, formatDate, formatDateTime, fullName, humanize, timeAgo } from "@/lib/client";
+import { DocumentPreviewModal, documentStatusChip, fileKind, type PreviewDoc } from "@/components/ui/document-preview";
 import { getStatusMeta, stageForStatus, type Tone } from "@/lib/status";
 import { pillClass, variantForStatus, variantForVerdict, type StatusVariant } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
@@ -94,7 +95,7 @@ type ReviewPayload = {
     trainings: SnapRow[];
     eligibilities: SnapRow[];
     awards: SnapRow[];
-    documents: unknown[];
+    documents: PreviewDoc[];
   };
   requirements: RequirementsReport;
 };
@@ -464,6 +465,7 @@ function CredentialsRow({ payload }: { payload: ReviewPayload }) {
     ["Training", payload.snapshots.trainings.length],
     ["Eligibility", payload.snapshots.eligibilities.length],
     ["Awards", payload.snapshots.awards.length],
+    ["Documents", payload.snapshots.documents.length],
   ];
   return (
     <div className="dlg-card p-4">
@@ -1048,6 +1050,7 @@ export function ReviewWorkspace({
   const [regretOpen, setRegretOpen] = useState(false);
   const [regretBusy, setRegretBusy] = useState(false);
   const [tab, setTab] = useState("profile");
+  const [previewDoc, setPreviewDoc] = useState<PreviewDoc | null>(null);
 
   const load = useCallback(
     async (silent = false) => {
@@ -1281,13 +1284,56 @@ export function ReviewWorkspace({
           <TabsContent value="awards" className={sectionCls("pt-4")}>
             <AwardCards rows={payload.snapshots.awards} />
           </TabsContent>
-          <TabsContent value="documents" className="pt-4">
-            <div className="rounded-lg bg-white p-6 text-center">
-              <IconChip icon={FileText} tone="slate" size={40} className="mx-auto" />
-              <p className="mt-2 text-sm text-stone">Supporting documents are verified in person at the next stage.</p>
-            </div>
+          <TabsContent value="documents" className={sectionCls("pt-4")}>
+            {payload.snapshots.documents.length === 0 ? (
+              <EmptyNote>No documents uploaded.</EmptyNote>
+            ) : (
+              <div className="space-y-3">
+                {payload.snapshots.documents.map((doc) => {
+                  const chip = documentStatusChip(doc);
+                  return (
+                    <div key={doc.id ?? doc.filePath} className="flex items-center gap-3 rounded-lg bg-white p-4">
+                      <span className="chip chip-slate h-6 shrink-0 px-2 text-[10px] font-semibold tracking-wide" aria-hidden>
+                        {fileKind(doc.originalName)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc(doc)}
+                          className="focus-ring block w-full cursor-pointer truncate rounded text-left text-sm font-medium text-ink transition-colors hover:text-primary"
+                          title={doc.originalName}
+                        >
+                          {doc.originalName}
+                        </button>
+                        <p className="num mt-0.5 text-xs text-stone">
+                          {humanize(doc.category)} · {Math.max(1, Math.round(doc.size / 1024))} KB · {formatDate(doc.createdAt)}
+                        </p>
+                      </div>
+                      {chip && <StatusPill status={chip.label} variant={chip.variant} className="shrink-0" />}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDoc(doc)}
+                        aria-label={`View ${doc.originalName}`}
+                        className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-full text-stone transition-colors hover:bg-fog hover:text-ink"
+                      >
+                        <Eye className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
+
+        {/* Document preview modal (shared) — opened from the Documents tab rows. */}
+        <DocumentPreviewModal
+          doc={previewDoc}
+          open={previewDoc !== null}
+          onOpenChange={(o) => {
+            if (!o) setPreviewDoc(null);
+          }}
+        />
       </div>
 
       {/* ── RIGHT: decision rail — inside the modal it never exceeds the

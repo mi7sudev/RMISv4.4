@@ -79,6 +79,23 @@ export const GET = handleApi(async (req: Request, ctx: { params: Promise<{ id: s
   };
   const requirements = buildRequirementsReport(snapshot, position ?? {});
 
+  // Uploaded supporting documents (live document store, newest first) so the
+  // review workspace dossier Documents tab can show + preview them.
+  const documents = await db.document.findMany({
+    where: { applicantId: app.applicantId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      originalName: true,
+      mimeType: true,
+      size: true,
+      filePath: true,
+      category: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
   return ok({
     id: app.id,
     status: app.status,
@@ -99,7 +116,7 @@ export const GET = handleApi(async (req: Request, ctx: { params: Promise<{ id: s
       trainings: safeJsonParse<unknown[]>(app.snapshotTrainings, []),
       eligibilities: safeJsonParse<unknown[]>(app.snapshotEligibilities, []),
       awards: safeJsonParse<unknown[]>(app.snapshotAwards, []),
-      documents: [] as unknown[],
+      documents: documents.map((d) => ({ ...d, createdAt: d.createdAt.toISOString() })),
     },
     requirements,
     interviews: [] as unknown[],
