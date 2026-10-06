@@ -601,14 +601,14 @@
 /* Icon status discs — shape-coded markers for pipelines and timelines.
    Same glyph family as the status pills, so state reads from the glyph,
    not the hue (color is reinforcement, never the sole signal).
-   18px base: a middle ground between the original 15px (glyph too small,
-   read as misaligned) and 20px (oversized in status tables). */
+   20px base: bumped from 18px after user QA ("increase just a little") —
+   reads clearly next to 13-14px table text without overpowering pills. */
 .status-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 100px;
   flex: none;
   color: #ffffff;

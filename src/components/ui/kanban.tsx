@@ -29,7 +29,7 @@ export function StageDot({ stage, className }: { stage: StageKey | "Neutral"; cl
   return (
     <span
       aria-hidden="true"
-      className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_DOT_CLASS[stage], className)}
+      className={cn("h-2.5 w-2.5 shrink-0 rounded-full", STAGE_DOT_CLASS[stage], className)}
     />
   );
 }

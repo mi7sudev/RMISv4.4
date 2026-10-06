@@ -447,7 +447,7 @@ export default function Analytics() {
                       <li key={d.status} className="flex items-center gap-2.5 text-sm">
                         <span
                           aria-hidden
-                          className="h-2 w-2 shrink-0 rounded-full"
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
                           style={{ backgroundColor: statusSliceColor(d.status) }}
                         />
                         <span className="min-w-0 flex-1 truncate text-body-gray">{d.status}</span>
