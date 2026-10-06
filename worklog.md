@@ -895,3 +895,17 @@ Work Log:
 
 Stage Summary:
 - Apply Now section now visually matches the frontpage job cards; verified desktop + mobile, quick view, bookmark toggle (fills blue), no console errors
+
+---
+Task ID: 6
+Agent: Z.ai Code (main)
+Task: Make Apply Now card summary inert; replace Apply now with button-styled Read full description
+
+Work Log:
+- Card summary (title/division/place/pay/snippet) converted from a button to a static div; "21d ago" is now a plain span — the chevron dropdown is the single door to the quick view
+- Removed the "Apply now" button from the quick view; "Read full description" restyled as the primary dlg-cta blue button with arrow
+- Applied applicants still see the "Applied (track it on your Home)" pill; overdue jobs still show the Deadline passed hint (reading stays possible)
+- Updated onboarding tour copy to match the new flow; lint clean
+
+Stage Summary:
+- Verified in browser: card body/age not clickable (StaticText in a11y tree), chevron opens quick view, Read full description button deep-links to the posting page, no console errors

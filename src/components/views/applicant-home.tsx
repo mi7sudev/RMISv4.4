@@ -493,11 +493,12 @@ function QuickFact({ label, value, danger }: { label: string; value: string; dan
   );
 }
 
-/** The frontpage job card, ported for the applicant: title + division +
- *  place + pay + clamped snippet, bottom register (posted age · quick-view
- *  chevron · bookmark), in-place quick view. Applicant extras kept: the gold
- *  Applied pill rides beside the title, and the quick view's "Apply now" CTA
- *  deep-links into the job's full posting on the Positions board. */
+/** The frontpage job card, ported for the applicant — tuned: the summary is
+ *  deliberately inert, so the chevron is the single door to the quick view;
+ *  there the solid "Read full description" button deep-links into the job's
+ *  full posting (where the apply flow lives). Applicant extras kept: the
+ *  gold Applied pill beside the title and the applied notice in the quick
+ *  view. */
 function JobListCard({
   job,
   applied,
@@ -525,14 +526,9 @@ function JobListCard({
 
   return (
     <article className="dlg-card lift">
-      {/* Open target — title, division, vitals, snippet. Opens the full
-          posting, the same jump the frontpage card's select makes. */}
-      <button
-        type="button"
-        onClick={onOpen}
-        aria-label={`View ${humanize(title)}`}
-        className="focus-ring block w-full px-4 pt-4 text-left sm:px-5 sm:pt-5"
-      >
+      {/* Static summary — deliberately not clickable: the chevron below is
+          the single door to the quick view and its description jump. */}
+      <div className="px-4 pt-4 sm:px-5 sm:pt-5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h3 className="min-w-0 text-lg font-semibold leading-snug text-ink">{humanize(title)}</h3>
           {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
@@ -543,18 +539,11 @@ function JobListCard({
         {job.briefDescription && (
           <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
         )}
-      </button>
+      </div>
 
       {/* Bottom register — posted age left, quick-view + bookmark right */}
       <div className="flex items-center justify-between gap-2 px-2.5 pb-2 sm:px-3.5">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="focus-ring num rounded-full px-2 py-1.5 text-xs text-stone transition-colors hover:text-ink"
-          aria-label={`Open ${humanize(title)}`}
-        >
-          {timeAgo(postedAt(job))}
-        </button>
+        <span className="num px-2 py-1.5 text-xs text-stone">{timeAgo(postedAt(job))}</span>
         <div className="flex items-center">
           <button
             type="button"
@@ -613,35 +602,18 @@ function JobListCard({
                 <QuickFact label="Published" value={formatDate(job.publishDate)} />
                 <QuickFact label="Deadline" value={formatDate(deadline)} danger={overdue} />
               </dl>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                {applied ? (
-                  <StatusPill status="Applied (track it on your Home)" variant="info" />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onOpen}
-                    disabled={overdue}
-                    className="dlg-cta focus-ring inline-flex min-h-[44px] items-center gap-2 px-6 py-2.5 text-sm disabled:opacity-50"
-                  >
-                    Apply now <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                )}
-                {/* Read full description — deep-links into the complete
-                    posting on the Positions board. */}
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                {/* Read full description — the quick view's primary action;
+                    deep-links into the complete posting, where the apply
+                    flow lives. */}
                 <button
                   type="button"
                   onClick={onOpen}
-                  className="focus-ring group/link inline-flex min-h-[44px] items-center gap-3 text-sm font-medium text-metric-blue underline underline-offset-2 transition-colors hover:text-ink"
+                  className="dlg-cta focus-ring inline-flex min-h-[44px] items-center gap-2 px-6 py-2.5 text-sm"
                 >
-                  Read full description
-                  <span className="dlg-cta grid h-8 w-8 place-items-center">
-                    <ArrowRight
-                      className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-0.5"
-                      strokeWidth={2.5}
-                      aria-hidden="true"
-                    />
-                  </span>
+                  Read full description <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </button>
+                {applied && <StatusPill status="Applied (track it on your Home)" variant="info" />}
                 {overdue && !applied && (
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--bad)]">
                     <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" /> Deadline passed
@@ -959,7 +931,7 @@ export default function ApplicantHome() {
           {
             selector: '[data-tour="apply-now"]',
             title: "Apply Now",
-            body: "Browse every open vacancy here. Expand a posting to read the full description, then apply with one click; your profile carries over.",
+            body: "Browse every open vacancy here. Expand a posting with the dropdown to read the full description, then continue to the posting to apply; your profile carries over.",
           },
           {
             selector: '[data-tour="my-applications"]',
