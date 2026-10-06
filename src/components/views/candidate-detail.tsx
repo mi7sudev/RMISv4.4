@@ -522,7 +522,7 @@ export default function CandidateDetail() {
         {detail.applications.length === 0 ? (
           <EmptyState icon={BriefcaseBusiness} tone="plum" title="No applications on file" />
         ) : (
-          <div className="relative before:absolute before:bottom-4 before:left-[9.5px] before:top-4 before:w-px before:bg-[var(--border)] before:content-['']">
+          <div className="relative before:absolute before:bottom-4 before:left-[8.5px] before:top-4 before:w-px before:bg-[var(--border)] before:content-['']">
             {detail.applications.map((app) => (
               <button
                 key={app.id}

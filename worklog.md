@@ -958,3 +958,16 @@ Work Log:
 Stage Summary:
 - "Awaiting Decision" (outcome-neutral) is the pending timeline label, with matching caption.
 - StatusDot is now 20px system-wide with a 13px glyph — properly weighted and optically aligned against body text; dependent rail offset updated.
+
+---
+Task ID: 9
+Agent: Z.ai Code (main)
+Task: Dial back the system-wide StatusDot size — 20px read as oversized in tables/lists; user asked to decrease "just a little".
+
+Work Log:
+- globals.css: .status-dot 20px → 18px, glyph 66% → 64% (≈11.5px) — middle ground between the original 15px (too small) and 20px (too big); updated the comment.
+- candidate-detail.tsx: applications rail ::before left-[9.5px] → left-[8.5px] to re-center the 1px line on the 18px dots.
+- bun run lint clean. Browser-verified: funnel dot measured 18px/glyph 11.5px; candidate rail threading re-measured exact (dot center 321 == line center 321). The applicant journey timeline (jade CheckpointDot, approved reference design) is untouched.
+
+Stage Summary:
+- System status discs now 18px with 11.5px glyphs — legible but not bulky across funnel, pipelines, tables, and rails.
