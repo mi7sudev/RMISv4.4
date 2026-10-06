@@ -853,3 +853,16 @@ Work Log:
 
 Stage Summary:
 - Verified in browser: frontpage hero now shows headline + CTA + brand mark/MIRDC name only; job cards unaffected; no console errors
+
+---
+Task ID: 3
+Agent: Z.ai Code (main)
+Task: Move brand logo + MIRDC name below the "Job Opportunities" headline
+
+Work Log:
+- Restructured hero in src/components/views/public-landing.tsx: removed the two-column grid split
+- New stack order: h1 "Job Opportunities" -> brand lockup (BrandLogo 36px + MIRDC name, horizontal, mt-5) -> "Browse the full board" CTA (mt-7)
+- Updated section comment to describe the new single-column arrangement
+
+Stage Summary:
+- Verified in browser at 1280x800 and 390x844: brand mark + agency name render directly under the headline, CTA below, job cards untouched
