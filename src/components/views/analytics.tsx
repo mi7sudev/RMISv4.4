@@ -441,15 +441,11 @@ export default function Analytics() {
                     </div>
                   </div>
 
-                  {/* Legend — stage dot + label + count, mirrors funnel rows */}
+                  {/* Legend — glyph status disc + label + count, mirrors funnel rows */}
                   <ul className="space-y-2.5">
                     {donutData.map((d) => (
                       <li key={d.status} className="flex items-center gap-2.5 text-sm">
-                        <span
-                          aria-hidden
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: statusSliceColor(d.status) }}
-                        />
+                        <StatusDot variant={variantForStatus(d.status)} className="shrink-0" />
                         <span className="min-w-0 flex-1 truncate text-body-gray">{d.status}</span>
                         <span className="num font-medium text-ink">{d.count}</span>
                         <span className="num w-12 text-right text-xs text-body-gray">

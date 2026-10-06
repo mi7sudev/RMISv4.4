@@ -13,25 +13,21 @@ import * as React from "react";
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StageKey } from "@/lib/status";
+import { STAGE_VARIANT, type StatusVariant } from "@/lib/status-ui";
+import { StatusDot } from "@/components/ui/shell";
 
 // ── Stage dots (kanban board palette) ───────────────────────────────────────
 
-/** Tiny colored dot class per pipeline stage — also reused by stage filter tabs. */
-export const STAGE_DOT_CLASS: Record<StageKey | "Neutral", string> = {
-  "Applied": "bg-viz-1",
-  "Under Review": "bg-[#c47f17]",
-  "Shortlisted": "bg-viz-2",
-  "Rejected": "bg-[#d0454f]",
-  "Neutral": "bg-[#b9bfc9]",
+/** Stage → functional status variant. The disc always carries its shape-coded
+ *  glyph (bare color-only dots read as ambiguous — QA 2026-02), and shares the
+ *  exact hue+glyph mapping of the analytics funnel and pipeline headers. */
+const STAGE_VARIANT_WITH_NEUTRAL: Record<StageKey | "Neutral", StatusVariant> = {
+  ...STAGE_VARIANT,
+  "Neutral": "neutral",
 };
 
 export function StageDot({ stage, className }: { stage: StageKey | "Neutral"; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn("h-2.5 w-2.5 shrink-0 rounded-full", STAGE_DOT_CLASS[stage], className)}
-    />
-  );
+  return <StatusDot variant={STAGE_VARIANT_WITH_NEUTRAL[stage]} className={className} />;
 }
 
 // ── Pastel initial avatar ───────────────────────────────────────────────────
