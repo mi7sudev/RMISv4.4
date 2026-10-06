@@ -571,8 +571,8 @@ export default function PublicLanding() {
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
         {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer,
-            arranged as a split: display headline + copy + single charcoal
-            capsule CTA left; official brand mark + authority line right as
+            arranged as a split: display headline + single charcoal
+            capsule CTA left; official brand mark right as
             the quiet institutional proof strip (real marks only). */}
         <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10 lg:[@media(max-height:860px)]:py-8">
           <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -581,9 +581,6 @@ export default function PublicLanding() {
                 an unclickable button. */}
             <div className="min-w-0">
               <h1 className="text-display-hero">Job Opportunities</h1>
-              <p className="text-body mt-3 max-w-xl text-body-gray">
-                Current vacancies at DOST-MIRDC. Pick a role to read the full posting.
-              </p>
               <div className="mt-6">
                 <button
                   onClick={() => navigate("vacant-positions")}
@@ -594,16 +591,13 @@ export default function PublicLanding() {
                 </button>
               </div>
             </div>
-            {/* Institutional proof — the same emblems and authority line the
+            {/* Institutional proof — the same emblems the
                 footer carries, moved into the hero as the trust anchor. */}
             <div className="flex items-center gap-4 lg:flex-col lg:items-end lg:gap-3 lg:text-right">
               <BrandLogo logoSize={36} tone="light" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold leading-snug text-ink">
                   Metals Industry Research and Development Center
-                </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-stone">
-                  An agency of the Department of Science and Technology, Republic of the Philippines
                 </p>
               </div>
             </div>

@@ -839,3 +839,17 @@ Stage Summary:
 - App verified end-to-end via agent-browser: public landing renders job listings; sign-in works (testadmin/password123); admin Command Center, Recruitment, Analytics views render with live DB data; mobile 390x844 layout verified; dev.log clean (all APIs 200)
 - Health check: /api/health -> {status: healthy, database: ok}
 - Seeded accounts: testadmin / testevaluator / testapplicant / maria.santos — password123
+
+---
+Task ID: 2
+Agent: Z.ai Code (main)
+Task: Remove hero subtitle and agency line from public landing page
+
+Work Log:
+- Located both strings in src/components/views/public-landing.tsx (hero section)
+- Removed "Current vacancies at DOST-MIRDC. Pick a role to read the full posting." paragraph; CTA button spacing (mt-6) preserved
+- Removed "An agency of the Department of Science and Technology, Republic of the Philippines" line; kept BrandLogo + MIRDC name
+- Updated adjacent section comments to stay accurate
+
+Stage Summary:
+- Verified in browser: frontpage hero now shows headline + CTA + brand mark/MIRDC name only; job cards unaffected; no console errors
