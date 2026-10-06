@@ -13,7 +13,7 @@ import {
   AlertTriangle, Building2, ClipboardList, Clock, FileText,
   MapPin, Pencil, RefreshCw, SquareKanban, Trash2, type LucideIcon,
 } from "lucide-react";
-import { IconChip, Monogram, PageHeader, StatusPill, type ChipTone } from "@/components/ui/shell";
+import { IconChip, Monogram, PageHeader, StatusDot, StatusPill, type ChipTone } from "@/components/ui/shell";
 import {
   KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge,
 } from "@/components/ui/kanban";
@@ -26,7 +26,7 @@ import {
 import { apiFetch, appliedAgo, deadlineState, formatCurrency, formatDate, fullName, humanize } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, getStatusMeta, type StageKey } from "@/lib/status";
 import { navigate, useHashRoute, type JobWire, type ApplicantMini } from "@/lib/router";
-import { dotClass, variantForJobStatus, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { STAGE_VARIANT, variantForJobStatus, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { JobFormDialog, ghostBtn, ghostBadBtn, ctaBtn, iconBtn } from "@/components/views/recruitment";
 
@@ -44,14 +44,6 @@ type QueueRow = {
 
 const TABS = ["overview", "pipeline", "candidates"] as const;
 type TabKey = (typeof TABS)[number];
-
-/** Functional color variant (matches the analytics funnel bars + overview dots). */
-const STAGE_VARIANT: Record<StageKey, StatusVariant> = {
-  "Applied": "info",
-  "Under Review": "warn",
-  "Shortlisted": "ok",
-  "Rejected": "bad",
-};
 
 /** First-letter monogram text ("?" when empty). */
 function monogramOf(name: string): string {
@@ -340,7 +332,7 @@ export default function JobWorkspace() {
                   {PIPELINE_STAGES.map((stage) => (
                     <div key={stage} className="flex items-center justify-between gap-3 py-1.5">
                       <span className="flex items-center gap-2.5 text-xs text-body-gray">
-                        <span className={`stage-dot ${dotClass(STAGE_VARIANT[stage])}`} aria-hidden />
+                        <StatusDot variant={STAGE_VARIANT[stage]} />
                         {stage}
                       </span>
                       <span className="num text-sm font-medium text-ink">{pipeline[stage].length}</span>

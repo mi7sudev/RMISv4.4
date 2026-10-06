@@ -7,7 +7,7 @@
 
 export type StatusVariant = "ok" | "warn" | "bad" | "info" | "neutral";
 
-import { getStatusMeta, type Tone } from "@/lib/status";
+import { getStatusMeta, type Tone, type StageKey } from "@/lib/status";
 
 const TONE_TO_VARIANT: Record<Tone, StatusVariant> = {
   success: "ok",
@@ -16,6 +16,16 @@ const TONE_TO_VARIANT: Record<Tone, StatusVariant> = {
   info: "info",
   primary: "info",
   neutral: "neutral",
+};
+
+/** Pipeline stage → functional variant. Shared by the job workspace pipeline,
+ *  the analytics funnel and the candidate mini-pipeline so the three always
+ *  agree on hue AND glyph. */
+export const STAGE_VARIANT: Record<StageKey, StatusVariant> = {
+  "Applied": "info",
+  "Under Review": "warn",
+  "Shortlisted": "ok",
+  "Rejected": "bad",
 };
 
 /** Canonical variant for ANY stored application/job status spelling. */
@@ -50,9 +60,4 @@ export function variantForJobStatus(status: string | null | undefined): StatusVa
 /** CSS class for the status-pill primitive in globals.css. */
 export function pillClass(variant: StatusVariant): string {
   return `status-pill status-${variant}`;
-}
-
-/** CSS class for stage-dot primitive. */
-export function dotClass(variant: StatusVariant): string {
-  return `stage-dot dot-${variant}`;
 }

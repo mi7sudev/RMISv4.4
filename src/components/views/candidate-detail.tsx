@@ -17,9 +17,9 @@ import {
   AlertTriangle, ArrowUpRight, BriefcaseBusiness, ClipboardList,
   FileText, ExternalLink, FolderOpen, GraduationCap, Mail, UserRound, type LucideIcon,
 } from "lucide-react";
-import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone } from "@/components/ui/shell";
+import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusDot, type ChipTone } from "@/components/ui/shell";
 import { apiFetch, formatDate, formatDateTime, fullName } from "@/lib/client";
-import { dotClass, pillClass, variantForCompletion, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { pillClass, variantForCompletion, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import { StatusPill } from "@/components/views/review-workspace";
@@ -522,7 +522,7 @@ export default function CandidateDetail() {
         {detail.applications.length === 0 ? (
           <EmptyState icon={BriefcaseBusiness} tone="plum" title="No applications on file" />
         ) : (
-          <div className="relative before:absolute before:bottom-4 before:left-[3.5px] before:top-4 before:w-px before:bg-[var(--border)] before:content-['']">
+          <div className="relative before:absolute before:bottom-4 before:left-[7px] before:top-4 before:w-px before:bg-[var(--border)] before:content-['']">
             {detail.applications.map((app) => (
               <button
                 key={app.id}
@@ -531,7 +531,7 @@ export default function CandidateDetail() {
                 onClick={() => navigate("evaluator-review", { id: String(app.id) })}
                 aria-label={`Open review workspace for ${app.positionTitle || app.jobTitle}`}
               >
-                <span className={cn("stage-dot relative shrink-0", dotClass(variantForStatus(app.status)))} aria-hidden />
+                <StatusDot variant={variantForStatus(app.status)} className="relative shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">{app.positionTitle || app.jobTitle}</p>
                   <p className="num mt-0.5 text-xs text-stone">Applied {formatDate(app.dateApplied)}</p>

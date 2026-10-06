@@ -909,3 +909,20 @@ Work Log:
 
 Stage Summary:
 - Verified in browser: card body/age not clickable (StaticText in a11y tree), chevron opens quick view, Read full description button deep-links to the posting page, no console errors
+
+---
+Task ID: 7
+Agent: Z.ai Code (main)
+Task: Accessible statuses — replace color-only dots with icon + text indicators (reference: icon-in-disc + tinted pill pattern)
+
+Work Log:
+- globals.css: .status-pill::before upgraded from bare 6px dot to 12px knockout glyph via SVG mask (ok=check, warn=clock, bad=alert, info=info, neutral=minus) — every status pill app-wide now has icon + text
+- globals.css: added .status-dot icon-disc primitive (15px colored disc, white glyph, scales via svg 62%)
+- shell.tsx: new StatusDot component (variant -> lucide glyph map: Check/Clock/AlertCircle/Info/Minus), aria-hidden decorative
+- status-ui.ts: shared STAGE_VARIANT map (single source for stage->variant) replacing per-view duplicates
+- Replaced bare stage-dots in: applicant-home JourneyTimeline checkpoints (13px discs in white rings), job-workspace pipeline rows, analytics funnel rows, candidate-detail applications timeline (line offset 3.5->7px), candidates mini-pipeline
+- Fixed alpha-mask knockout (white strokes are opaque; knockout now via internal SVG <mask> element)
+- Verified: Turbopack served stale CSS after edits -> rm -rf .next + dev server restart; final visual checks on applicant home, job workspace pipeline, analytics funnel, candidate detail timeline, users list, mobile 390x844; console clean; lint clean
+
+Stage Summary:
+- No status in the app relies on color alone: pills = icon+text, timeline/pipeline markers = shape-coded discs. Matches the reference pattern (icon-in-disc + tinted pill)

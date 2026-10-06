@@ -547,7 +547,10 @@
   }
 }
 
-/* Status pill variants (dot + tinted bg) — true Bevel capsules */
+/* Status pill variants (icon + tinted bg) — true Bevel capsules.
+   Accessibility: state never rides on hue alone — every pill carries a
+   shape-coded glyph (ok=check · warn=clock · bad=alert · info=info ·
+   neutral=minus) knocked out of a currentColor disc via mask. */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -562,46 +565,61 @@
 }
 .status-pill::before {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 100px;
-  background: currentColor;
+  width: 12px;
+  height: 12px;
   flex: none;
-  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.55);
+  background: currentColor;
+  -webkit-mask: var(--pill-icon) center / contain no-repeat;
+  mask: var(--pill-icon) center / contain no-repeat;
 }
 .status-pill.status-ok {
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='m7.4 12.3 3 3 6.2-6.8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
   background: var(--ok-bg);
   color: var(--ok);
 }
 .status-pill.status-warn {
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M12 7v5.2l3.1 1.9' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
   background: var(--warn-bg);
   color: var(--warn);
 }
 .status-pill.status-bad {
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M12 6.6v5.6' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='16.4' r='1.4' fill='black'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
   background: var(--bad-bg);
   color: var(--bad);
 }
 .status-pill.status-info {
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M12 16.2v-5' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='7.8' r='1.4' fill='black'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
   background: var(--info-bg);
   color: var(--info);
 }
 .status-pill.status-neutral {
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M8 12h8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
   background: var(--neutral-bg);
   color: var(--neutral);
 }
 
-/* Stage dots for pipelines / timelines */
-.stage-dot {
-  width: 8px;
-  height: 8px;
+/* Icon status discs — shape-coded markers for pipelines and timelines.
+   Same glyph family as the status pills, so state reads from the glyph,
+   not the hue (color is reinforcement, never the sole signal). */
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
   border-radius: 100px;
   flex: none;
+  color: #ffffff;
 }
-.stage-dot.dot-ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(31, 122, 61, 0.14); }
-.stage-dot.dot-warn { background: var(--warn); box-shadow: 0 0 0 3px rgba(154, 107, 0, 0.14); }
-.stage-dot.dot-bad { background: var(--bad); box-shadow: 0 0 0 3px rgba(192, 84, 70, 0.14); }
-.stage-dot.dot-info { background: var(--info); box-shadow: 0 0 0 3px rgba(74, 77, 87, 0.14); }
-.stage-dot.dot-neutral { background: #d5dce8; box-shadow: 0 0 0 3px rgba(31, 32, 37, 0.06); }
+.status-dot svg {
+  width: 62%;
+  height: 62%;
+}
+.status-dot.dot-ok { background: var(--ok); }
+.status-dot.dot-warn { background: var(--warn); }
+.status-dot.dot-bad { background: var(--bad); }
+.status-dot.dot-info { background: var(--info); }
+.status-dot.dot-neutral { background: #b9c2d0; }
 
 /* Long-list scrollbars (subtle) */
 .scroll-thin {

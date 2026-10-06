@@ -18,7 +18,7 @@ import {
   RefreshCw, ShieldCheck, TrendingUp, UsersRound, type LucideIcon,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusDot, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -26,7 +26,7 @@ import {
 import { apiFetch, formatDate, fullName, humanize, timeAgo } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, getStatusMeta, type StageKey } from "@/lib/status";
 import { navigate } from "@/lib/router";
-import { dotClass, pillClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { STAGE_VARIANT, pillClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { ghostBtn } from "@/components/views/recruitment";
 import { useSession } from "@/components/session-provider";
@@ -85,14 +85,6 @@ const STAGE_BAR: Record<StageKey, string> = {
   "Under Review": "#ffca00", // Signal Gold
   "Shortlisted": "#31ce01", // Recovery Green
   "Rejected": "#ffab94", // Coral Signal
-};
-
-/** Stage-dot variant per stage (mirrors STAGE_BAR). */
-const STAGE_VARIANT: Record<StageKey, StatusVariant> = {
-  "Applied": "info",
-  "Under Review": "warn",
-  "Shortlisted": "ok",
-  "Rejected": "bad",
 };
 
 /** Donut slice fill for a stored status spelling (stage tokens + fallback). */
@@ -349,7 +341,7 @@ export default function Analytics() {
                     aria-pressed={active}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={`stage-dot ${dotClass(STAGE_VARIANT[f.stage])}`} aria-hidden />
+                      <StatusDot variant={STAGE_VARIANT[f.stage]} />
                       <span className="flex-1 text-sm text-ink">{f.stage}</span>
                       <span className="num text-sm font-medium text-ink">{f.count}</span>
                     </div>

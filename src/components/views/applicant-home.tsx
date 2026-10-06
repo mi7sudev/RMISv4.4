@@ -8,7 +8,7 @@
 //           quick-view toggle, in-place quick view with six QuickFacts).
 //   RIGHT · Your Applications — sticky rail with its own overflow scroll;
 //           journey cards (No. kicker · status pill · chevron · 3-checkpoint
-//           .stage-dot timeline · next-step hint). The rail stacks FIRST on
+//           .status-dot timeline · next-step hint). The rail stacks FIRST on
 //           mobile.
 // Clicking a journey card opens the full Application detail modal (§7.7)
 // with Cancel Application while the journey is still at "Submitted".
@@ -45,10 +45,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, PageHeader, StatusDot, StatusPill } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
 import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
 import { currentStageLabel, stageForStatus } from "@/lib/status";
+import type { StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/session-provider";
 import OnboardingTour from "@/components/onboarding-tour";
@@ -105,18 +106,12 @@ function jobPlace(job: JobWire): string {
 
 type CheckpointState = "done" | "current" | "pending" | "failed";
 
-/** Status-colored checkpoint dot resting in a small white ring with a soft
- *  glow (glow ships in the .stage-dot primitives). The current stage gets a
- *  pulsing halo — motion-safe only. */
+/** Timeline checkpoint — white ring around an icon status disc. The glyph
+ *  (check / clock / alert / minus) carries the state so it never rides on
+ *  hue alone; the current stage keeps a pulsing halo — motion-safe only. */
 function CheckpointDot({ state }: { state: CheckpointState }) {
-  const dot =
-    state === "done"
-      ? "dot-ok"
-      : state === "current"
-        ? "dot-warn"
-        : state === "failed"
-          ? "dot-bad"
-          : "dot-neutral";
+  const variant: StatusVariant =
+    state === "done" ? "ok" : state === "current" ? "warn" : state === "failed" ? "bad" : "neutral";
   return (
     <span
       className={cn(
@@ -124,7 +119,7 @@ function CheckpointDot({ state }: { state: CheckpointState }) {
         state === "current" && "motion-safe:animate-pulse"
       )}
     >
-      <span className={cn("stage-dot", dot)} />
+      <StatusDot variant={variant} className="h-[13px] w-[13px]" />
     </span>
   );
 }

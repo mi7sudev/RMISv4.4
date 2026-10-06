@@ -11,7 +11,7 @@
 // ============================================================================
 
 import * as React from "react";
-import { ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Clock, Info, Minus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pillClass, type StatusVariant } from "@/lib/status-ui";
@@ -110,6 +110,35 @@ export function StatusPill({
   return (
     <span className={cn(pillClass(v), className)}>
       {status ?? ""}
+    </span>
+  );
+}
+
+// ── StatusDot ───────────────────────────────────────────────────────────────
+
+/** White glyph inside each status disc — the shape carries the state so the
+ *  hue is reinforcement, never the sole signal. */
+const STATUS_DOT_GLYPH: Record<StatusVariant, LucideIcon> = {
+  ok: Check,
+  warn: Clock,
+  bad: AlertCircle,
+  info: Info,
+  neutral: Minus,
+};
+
+/** Icon status disc — a filled marker with a shape-coded glyph. Replaces the
+ *  bare color-only stage dots in pipelines, funnels and timelines. */
+export function StatusDot({
+  variant,
+  className,
+}: {
+  variant: StatusVariant;
+  className?: string;
+}) {
+  const Glyph = STATUS_DOT_GLYPH[variant];
+  return (
+    <span aria-hidden="true" className={cn("status-dot", `dot-${variant}`, className)}>
+      <Glyph strokeWidth={3.5} />
     </span>
   );
 }
