@@ -3,14 +3,16 @@
 // ============================================================================
 // RMIS — Evaluator review queue (spec §7.8). List (default) and Kanban modes
 // over /api/evaluator/queue. 15 s silent poll + focus refresh + manual refresh.
-// "Qualified only" lens, stage tabs (list), bulk regret letters with confirm.
-// Card / row review actions open the ReviewWorkspace in a Dialog. List rows
-// carry an always-visible labeled Review button (user direction — no
-// hover-reveal arrow). Bevel pass: shared page-header anatomy + cloud stat
-// cards, capsule segmented toggles, white hairline table-card, quiet round row
-// actions. 4-column kanban keeps the shared reference-board primitives (dot+
-// label+count columns, pastel avatars, match badge, credential tags).
-// Handlers byte-identical.
+// Stage tabs (list), bulk regret letters with confirm. (User direction
+// 2026-10: the "Qualified only" lens was removed — the queue always shows
+// every application.) Card / row review actions open the ReviewWorkspace in a
+// Dialog. List rows carry an always-visible labeled Review button in the
+// primary blue capsule (user direction — no hover-reveal arrow; blue fill for
+// UI consistency with the stage tabs). Bevel pass: shared page-header anatomy
+// + cloud stat cards, capsule segmented toggles, white hairline table-card,
+// quiet round row actions. 4-column kanban keeps the shared reference-board
+// primitives (dot+label+count columns, pastel avatars, match badge, credential
+// tags). Handlers byte-identical.
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -19,7 +21,6 @@ import {
   AlertTriangle, ArrowUpRight, Building2, Clock, Inbox, LayoutGrid, List, MailX, MapPin, UserRound,
   RefreshCw,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -100,7 +101,6 @@ export default function ReviewQueue() {
   const isAdmin = user?.role === "ADMIN";
   const [queue, setQueue] = useState<QueueRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [qualifiedOnly, setQualifiedOnly] = useState(false);
   // QA 2026-02 (user direction): List is the default working surface — the
   // kanban board stays available as the secondary spatial overview.
   const [mode, setMode] = useState<"kanban" | "list">("list");
@@ -140,24 +140,20 @@ export default function ReviewQueue() {
   }, [load]);
 
   const applications = useMemo(() => queue ?? [], [queue]);
-  const filtered = useMemo(
-    () => (qualifiedOnly ? applications.filter((r) => r.match?.verdict === "ALL_MET") : applications),
-    [applications, qualifiedOnly]
-  );
   const listRows = useMemo(
-    () => (listStage === "All" ? filtered : filtered.filter((r) => stageForStatus(r.status) === listStage)),
-    [filtered, listStage]
+    () => (listStage === "All" ? applications : applications.filter((r) => stageForStatus(r.status) === listStage)),
+    [applications, listStage]
   );
   const rejectedIds = useMemo(
-    () => filtered.filter((r) => stageForStatus(r.status) === "Rejected").map((r) => r.id),
-    [filtered]
+    () => applications.filter((r) => stageForStatus(r.status) === "Rejected").map((r) => r.id),
+    [applications]
   );
 
   const kanbanColumns = useMemo(() => {
     const map: Record<StageKey, QueueRow[]> = { "Applied": [], "Under Review": [], "Shortlisted": [], "Rejected": [] };
-    for (const r of filtered) map[stageForStatus(r.status)].push(r);
+    for (const r of applications) map[stageForStatus(r.status)].push(r);
     return map;
-  }, [filtered]);
+  }, [applications]);
 
   const sendRegrets = async () => {
     setRegretBusy(true);
@@ -197,12 +193,8 @@ export default function ReviewQueue() {
         actions={
           <>
             <span className="status-pill status-neutral num">
-              {filtered.length} application{filtered.length === 1 ? "" : "s"}
+              {applications.length} application{applications.length === 1 ? "" : "s"}
             </span>
-            <label className="dlg-ghost focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 px-3.5 text-sm text-stone">
-              <Switch checked={qualifiedOnly} onCheckedChange={setQualifiedOnly} aria-label="Qualified only" />
-              Qualified only
-            </label>
             <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
               <button
                 type="button"
@@ -243,7 +235,7 @@ export default function ReviewQueue() {
       {mode === "list" && (
         <div className="flex flex-wrap items-center gap-2">
           {(["All", ...PIPELINE_STAGES] as const).map((s) => {
-            const count = s === "All" ? filtered.length : filtered.filter((r) => stageForStatus(r.status) === s).length;
+            const count = s === "All" ? applications.length : applications.filter((r) => stageForStatus(r.status) === s).length;
             const active = listStage === s;
             return (
               <button
@@ -414,11 +406,12 @@ export default function ReviewQueue() {
                           <td className="px-3 py-3 text-right">
                             {/* QA 2026-02 (user direction): the review action is
                                 a labeled, always-visible button — no hover-reveal
-                                arrow. "View" marks already-decided rows. */}
+                                arrow. "View" marks already-decided rows. Primary
+                                blue capsule for consistency with the stage tabs. */}
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 type="button"
-                                className="dlg-ghost inline-flex min-h-[36px] items-center gap-1 px-3 text-xs font-medium"
+                                className="focus-ring inline-flex min-h-[36px] items-center gap-1 rounded-full bg-primary px-3.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                                 aria-label={decided ? `View decision for ${name}` : `Review application from ${name}`}
                                 title={decided ? "View decision" : "Review"}
                                 onClick={() => setSelectedId(row.id)}

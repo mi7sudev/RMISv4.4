@@ -1043,3 +1043,18 @@ Work Log:
 
 Stage Summary:
 - Evaluator/admin reviewers can now see and preview every applicant-uploaded document directly inside the review workspace dossier (modal in modal works via Radix portal ordering). Profile documents section refactored onto a shared preview component — single source of truth for document preview UX.
+
+---
+Task ID: 11
+Agent: Z.ai Code (main)
+Task: Review Queue (evaluator + admin) — remove "Qualified only" toggle; make list-view Review/View buttons primary blue
+
+Work Log:
+- review-queue.tsx: removed the "Qualified only" Switch from the page header, the qualifiedOnly state, and the filtered memo — stage tabs / kanban / regret-bulk now filter straight off the full applications list (queue always shows every application).
+- Removed the now-unused Switch import; header count uses applications.length.
+- List-view table Review/View button restyled from white dlg-ghost to the primary blue capsule (rounded-full bg-primary text-primary-foreground, hover:opacity-90) — matches the active stage tab / system CTA language.
+- Updated header comments; regret-dialog copy untouched (still accurate).
+- Verified as testadmin via agent-browser: toggle gone from header (applications pill + Kanban/List + Refresh remain); table actions column shows blue "View"/"Review" capsules; lint clean; dev.log all 200s (console error snippets were stale HMR entries from the earlier session).
+
+Stage Summary:
+- Review Queue header simplified per user direction; review CTA now uses the system-wide primary blue capsule. Component shared by evaluator and admin — both roles get the changes with no role-specific branching.
