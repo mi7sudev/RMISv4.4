@@ -19,7 +19,22 @@ const PERSONAL_FIELDS = [
   "birthDate", "birthPlace", "gender", "civilStatus", "citizenship",
   "mobileNumber", "emailAddress",
   "houseNumber", "street", "subdivision", "barangay", "city", "province", "zipCode",
+  // §7-15 physical attributes + government IDs (2026 edition names these
+  // UMID/PAG-IBIG/PHILHEALTH/TIN; 2017 adds SSS/GSIS).
+  "height", "weight", "bloodType",
+  "gsis", "pagibig", "philhealth", "sss", "tin",
 ] as const;
+
+// Extracted keys that map to differently-named Applicant columns.
+const PERSONAL_FIELD_ALIASES: Record<string, (v: string, updates: Record<string, string>) => void> = {
+  // "AGENCY EMPLOYEE NO." → User-facing employee number column.
+  agencyEmployeeNo: (v, updates) => { updates.employeeNumber = v; },
+  // The 2026 UMID/PhilSys card maps onto the Government-Issued ID block.
+  umidNumber: (v, updates) => {
+    updates.govtIdIssuedNumber = v;
+    if (!updates.govtIssuedId) updates.govtIssuedId = "UMID";
+  },
+};
 
 type RawRow = Record<string, unknown>;
 type ConfidentEntry = { value: unknown; confidence: string };
@@ -110,24 +125,32 @@ export const POST = handleApi(async (req: Request) => {
   const applied = { personal: 0, education: 0, work: 0, training: 0, eligibility: 0, awards: 0 };
   let replaced = 0;
 
-  // ── Personal info = OVERRIDE (18-field allowlist) ─────────────────────────
+  // ── Personal info = OVERRIDE (allowlist + aliases) ────────────────────────
   const personal = (extraction.personalInfo ?? {}) as RawRow;
   const updates: Record<string, string> = {};
-  for (const field of PERSONAL_FIELDS) {
-    const entry = readCV(personal[field]);
+  const consider = (field: string, entry: ConfidentEntry | null) => {
     const value = textOf(entry);
-    if (!entry || entry.confidence === "none" || !value) continue;
+    if (!entry || entry.confidence === "none" || !value) return;
     if (field === "birthDate") {
       const normalized = normDateText(value);
-      if (!normalized) continue;
+      if (!normalized) return;
       updates[field] = normalized;
     } else if (field === "mobileNumber") {
       const digits = value.replace(/\D/g, "");
-      if (!digits) continue;
+      if (!digits) return;
       updates[field] = digits;
     } else {
       updates[field] = value;
     }
+  };
+  for (const field of PERSONAL_FIELDS) {
+    consider(field, readCV(personal[field]));
+  }
+  for (const [field, alias] of Object.entries(PERSONAL_FIELD_ALIASES)) {
+    const entry = readCV(personal[field]);
+    const value = textOf(entry);
+    if (!entry || entry.confidence === "none" || !value) continue;
+    alias(value, updates);
   }
   if (Object.keys(updates).length > 0) {
     const current = applicant as unknown as RawRow;

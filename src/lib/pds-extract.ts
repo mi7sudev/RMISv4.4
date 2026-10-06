@@ -19,6 +19,7 @@
 import * as XLSX from "xlsx";
 import fs from "fs";
 import path from "path";
+import { finalizeExtraction, type QualityReport } from "./pds-validate";
 
 export type ConfidentValue = { value: string | number | boolean | null; confidence: "high" | "medium" | "low" | "none" };
 export type ExtractionSection = Record<string, ConfidentValue>;
@@ -29,7 +30,13 @@ export type ExtractionResult = {
   trainings?: ExtractionSection[];
   eligibilities?: ExtractionSection[];
   awards?: ExtractionSection[];
+  voluntaryWork?: ExtractionSection[];
+  specialSkills?: ExtractionSection[];
   warnings?: string[];
+  /** Enterprise observability: how this document was read. */
+  meta?: { parserPath: "deterministic" | "ai" | "hybrid" | "vision"; formRevision: string | null; durationMs: number };
+  /** Attached by the validation layer (pds-validate). */
+  quality?: QualityReport;
 };
 
 const cv = (value: string | number | null, confidence: ConfidentValue["confidence"] = "high"): ConfidentValue =>
@@ -141,6 +148,28 @@ function scanAbove(ws: XLSX.WorkSheet, row: number, col: number, maxUp = 2): str
   return "";
 }
 
+// First non-empty cell to the right of a personal-grid label, tolerating
+// short numbers — "WEIGHT (kg)" answers "68", which scanRight's dropdown
+// guard would reject. The empty-gap cap and label-pattern guard keep the
+// scan from crossing an EMPTY value area into the right-hand grid's next
+// labels ("18. PERMANENT ADDRESS", "20. MOBILE NO.") on blank templates.
+function valueRight(ws: XLSX.WorkSheet, row: number, col: number, maxScan = 8): string {
+  const ref = ws["!ref"];
+  if (!ref) return "";
+  const range = XLSX.utils.decode_range(ref);
+  let gap = 0;
+  for (let c = col + 1; c <= Math.min(range.e.c, col + maxScan); c++) {
+    const t = cellText(ws[XLSX.utils.encode_cell({ r: row, c })]?.v);
+    if (!t || /^(yes|no|true|false)$/i.test(t)) {
+      if (++gap >= 2) break;
+      continue;
+    }
+    if (CAPTION_RE.test(t) || NOISE.test(t) || /^\s*\d{1,2}\s*\.\s/i.test(t)) break;
+    return t;
+  }
+  return "";
+}
+
 // The 2026 edition prints dates as dd/mm/yyyy (2017: mm/dd/yyyy). The flag is
 // set per parse from the detected revision; ambiguous d/m strings resolve
 // through it, unambiguous ones self-detect. Safe across awaits: the parse
@@ -201,15 +230,20 @@ function resolveColumns(ws: XLSX.WorkSheet, headerRow: number, fields: TableSpec
   for (const [key, spec] of Object.entries(fields)) {
     cols[key] = -1;
     if (spec.re) {
-      for (let r = headerRow; r <= headerRow + 3 && cols[key] === -1; r++) {
+      // Prefer the SHORTEST matching caption in the header window. Real
+      // column captions are short ("LICENSE", "RATING"), while section
+      // captions that merely CONTAIN the word are long (the 2026 eligibility
+      // caption ends "…/ DRIVER'S LICENSE") — length is the discriminator.
+      let best: { col: number; len: number } | null = null;
+      for (let r = headerRow; r <= headerRow + 3; r++) {
         for (let c = cStart; c <= cEnd; c++) {
           const t = probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
           if (t && spec.re.test(t) && !NOISE.test(t)) {
-            cols[key] = c;
-            break;
+            if (!best || t.length < best.len) best = { col: c, len: t.length };
           }
         }
       }
+      if (best) cols[key] = best.col;
     }
     if (cols[key] === -1) cols[key] = spec.fallback[0] ?? -1;
   }
@@ -437,6 +471,53 @@ const TABLE_SPECS: TableSpec[] = [
       return { details: cv(details), recognitionType: cv("Award", "medium") };
     },
   },
+  {
+    // §30 Voluntary Work — 2017: "NAME & ADDRESS OF ORGANIZATION …" on the
+    // C3 page after L&D; 2026: own continuation sheet (C10_Vol. Work cont.).
+    key: "voluntaryWork",
+    headerRe: /name\s*(?:&|and)\s*address\s*of\s*organization/i,
+    fallbackHeaderRe: /voluntary\s*work/i,
+    fields: {
+      organization: { fallback: [0, 1] },
+      from: { re: /^from\b/i, fallback: [4, 2] },
+      to: { re: /^to\b/i, fallback: [5, 3] },
+      hours: { re: /number\s*of\s*hours|hours/i, fallback: [6] },
+      position: { re: /position\s*\/|nature\s*of\s*work/i, fallback: [7] },
+    },
+    maxRows: 60,
+    build: (get, cols) => {
+      const org = pickCell([cols.organization, cols.organization + 1], [cols.from, cols.to], get, (v) => plausible(v, 4));
+      if (isNA(org) || NOISE.test(org) || /^\d+$/.test(org) || /name\s*&?\s*and?\s*address/i.test(org)) return null;
+      const entry: ExtractionSection = { organizationName: cv(org) };
+      const dFrom = normDate(get(cols.from));
+      if (dFrom) entry.dateFrom = cv(dFrom, "medium");
+      const dTo = normDate(get(cols.to));
+      if (dTo) entry.dateTo = cv(dTo, "medium");
+      const hours = get(cols.hours);
+      const hNum = Number(String(hours).replace(/[^\d.]/g, ""));
+      if (!isNA(hours) && !Number.isNaN(hNum) && hNum > 0) entry.numberHours = cv(hNum, "medium");
+      const pos = get(cols.position);
+      if (!isNA(pos) && pos.length > 2 && !NOISE.test(pos)) entry.positionNature = cv(pos, "medium");
+      return entry;
+    },
+  },
+  {
+    // §31-33 "Other Information" — special skills (and hobbies) live beside
+    // non-academic distinctions and membership associations on the same grid.
+    key: "specialSkills",
+    headerRe: /special\s*skills\s*and\s*hobbies/i,
+    fallbackHeaderRe: /special\s*skills/i,
+    fields: {
+      skill: { fallback: [0, 1] },
+    },
+    maxRows: 30,
+    build: (get, cols) => {
+      const skill = pickCell([cols.skill, cols.skill + 1], [], get, (v) => plausible(v, 3));
+      if (!skill || NOISE.test(skill) || /^\d+$/.test(skill) || /special\s*skills|hobbies/i.test(skill)) return null;
+      // One row per comma-separated skill — the form prints several per cell.
+      return { skill: cv(skill) };
+    },
+  },
 ];
 
 function detectRevision(wb: XLSX.WorkBook): { label: string; year: number | null } {
@@ -486,6 +567,7 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   const put = (key: string, v: string, conf: ConfidentValue["confidence"] = "high") => {
     const t = String(v).replace(/\s+/g, " ").trim();
     if (!t || isNA(t) || CAPTION_RE.test(t)) return;
+    if (personal[key]) return; // first source wins (e.g. UMID before PhilSys)
     personal[key] = cv(t, conf);
   };
 
@@ -506,6 +588,21 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
     const raw = scanRight(ws, sex.row, sex.col);
     const m = raw.match(/male|female/i);
     if (m) put("gender", m[0][0].toUpperCase() + m[0].slice(1).toLowerCase());
+    else {
+      // The 2026 edition replaces Male/Female TEXT with Excel checkbox form
+      // controls — only their TRUE/FALSE states land in cells. The official
+      // order is MALE then FEMALE, so exactly one ticked boolean resolves
+      // the value (low confidence — layout convention, not a printed label).
+      const ref2 = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+      const slots: Array<{ c: number; on: boolean }> = [];
+      for (let c = sex.col + 1; c <= Math.min(ref2?.e.c ?? sex.col, sex.col + 8); c++) {
+        const cell = ws[XLSX.utils.encode_cell({ r: sex.row, c })] as XLSX.CellObject | undefined;
+        if (cell && typeof cell.v === "boolean") slots.push({ c, on: cell.v });
+      }
+      const ticked = slots.findIndex((s) => s.on);
+      if (ticked === 0) put("gender", "Male", "low");
+      else if (ticked === 1) put("gender", "Female", "low");
+    }
   }
   const cs = findRow(ws, /civil\s*status/i);
   if (cs) {
@@ -515,6 +612,28 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   }
   const cit = findRow(ws, /citizenship/i);
   if (cit) put("citizenship", scanRight(ws, cit.row, cit.col));
+
+  // §7-9 physical attributes + §10-15 government IDs (labels in column B of
+  // the personal grid; 2026 renames some: UMID ID NO., PAG-IBIG ID NO.).
+  const ID_LABELS: Array<[RegExp, string]> = [
+    [/agency\s*employee\s*no\.?/i, "agencyEmployeeNo"],
+    [/\bheight\b/i, "height"],
+    [/\bweight\b/i, "weight"],
+    [/blood\s*type/i, "bloodType"],
+    [/gsis\s*id\s*no\.?/i, "gsis"],
+    [/pag-?ibig\s*id\s*no\.?/i, "pagibig"],
+    [/philhealth\s*no\.?/i, "philhealth"],
+    [/\bsss\s*no\.?/i, "sss"],
+    [/tin\s*no\.?(\/\s*nbi\s*clearance)?/i, "tin"],
+    [/umid\s*id\s*no\.?|philsys\s*(id\s*no\.?|card\s*no\.?)/i, "umidNumber"],
+  ];
+  for (const [re, key] of ID_LABELS) {
+    const hit = findRow(ws, re, 60);
+    if (hit) {
+      const v = valueRight(ws, hit.row, hit.col);
+      if (v && !isNA(v) && !NOISE.test(v) && !CAPTION_RE.test(v)) put(key, v, "medium");
+    }
+  }
 
   // Address blocks — caption-anchored: each underline caption ("House/Block/
   // Lot No.", "Subdivision/Village", …) sits directly BENEATH its value cell,
@@ -625,9 +744,11 @@ From the following ${category} document text, extract structured data as STRICT 
   "workExperiences": [ { "positionTitle": {...}, "employerName": {...}, "dateFrom": {...}, "dateTo": {...}, "monthlySalary": {...}, "isPresentWork": {...} } ],
   "trainings": [ { "title": {...}, "numberHours": {...}, "typeOfTraining": {...}, "dateFrom": {...}, "dateTo": {...} } ],
   "eligibilities": [ { "title": {...}, "rating": {...}, "examDate": {...}, "examPlace": {...}, "licenseNumber": {...}, "licenseValidity": {...} } ],
-  "awards": [ { "details": {...}, "recognitionType": {...}, "provider": {...}, "dateGranted": {...} } ]
+  "awards": [ { "details": {...}, "recognitionType": {...}, "provider": {...}, "dateGranted": {...} } ],
+  "voluntaryWork": [ { "organizationName": {...}, "dateFrom": {...}, "dateTo": {...}, "numberHours": {...}, "positionNature": {...} } ],
+  "specialSkills": [ { "skill": {...} } ]
 }
-personalInfo fields may include: firstName, middleName, lastName, extensionName, birthDate, birthPlace, gender, civilStatus, citizenship, mobileNumber, emailAddress, houseNumber, street, subdivision, barangay, city, province, zipCode.
+personalInfo fields may include: firstName, middleName, lastName, extensionName, birthDate, birthPlace, gender, civilStatus, citizenship, mobileNumber, emailAddress, houseNumber, street, subdivision, barangay, city, province, zipCode, agencyEmployeeNo, height, weight, bloodType, gsis, pagibig, philhealth, sss, tin, umidNumber.
 Rules:
 - extract ONLY what is clearly present; NEVER fabricate; not found ⇒ value null with confidence "none"; all values in the {value, confidence} shape; dates formatted YYYY-MM-DD (respect the form's stated mm/dd/yyyy or dd/mm/yyyy order); respond with JSON only — no markdown fences, no commentary.
 - The document may be a BLANK template. Text that is itself a template caption ("SURNAME", "FIRST NAME", "NAME EXTENSION (JR., SR)", "Pls. indicate country:", "House/Block/Lot No.") is NEVER a value — return null instead. Checkbox options (Male, Single, Filipino) are only values if the form clearly marks them selected.
@@ -693,6 +814,8 @@ function sanitizeAiExtraction(
   out.trainings = filterRows(out.trainings, ["title"]);
   out.eligibilities = filterRows(out.eligibilities, ["title"]);
   out.awards = filterRows(out.awards, ["details"]);
+  out.voluntaryWork = filterRows(out.voluntaryWork, ["organizationName"]);
+  out.specialSkills = filterRows(out.specialSkills, ["skill"]);
   return out;
 }
 
@@ -711,6 +834,53 @@ async function aiExtractText(text: string, category: string): Promise<Extraction
     return parseAiJson(raw);
   } catch (e) {
     console.error("[EXTRACT] AI failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+// Scanned/image PDS pages go through the vision model: the page bitmap is
+// sent as a data URL and the SAME strict JSON contract is enforced, so image
+// uploads become first-class citizens (enterprise parsers all accept images).
+const VISION_PROMPT = (category: string) => `This is a page of a Philippine CS Form 212 Personal Data Sheet (${category}) — a filled government job application form, possibly photographed or scanned.
+Read it visually and extract structured data as STRICT JSON with this exact shape (omit sections you find nothing for):
+{
+  "personalInfo": { "<field>": {"value": <string|number|null>, "confidence": "high"|"medium"|"low"} },
+  "educations": [ { "educationLevel": {...}, "course": {...}, "schoolName": {...}, "yearFrom": {...}, "yearTo": {...}, "yearGraduated": {...}, "awards": {...} } ],
+  "workExperiences": [ { "positionTitle": {...}, "employerName": {...}, "dateFrom": {...}, "dateTo": {...}, "monthlySalary": {...}, "isPresentWork": {...} } ],
+  "trainings": [ { "title": {...}, "numberHours": {...}, "typeOfTraining": {...}, "dateFrom": {...}, "dateTo": {...} } ],
+  "eligibilities": [ { "title": {...}, "rating": {...}, "examDate": {...}, "examPlace": {...}, "licenseNumber": {...}, "licenseValidity": {...} } ],
+  "awards": [ { "details": {...}, "recognitionType": {...}, "provider": {...}, "dateGranted": {...} } ],
+  "voluntaryWork": [ { "organizationName": {...}, "dateFrom": {...}, "dateTo": {...}, "numberHours": {...}, "positionNature": {...} } ],
+  "specialSkills": [ { "skill": {...} } ]
+}
+personalInfo fields may include: firstName, middleName, lastName, extensionName, birthDate, birthPlace, gender, civilStatus, citizenship, mobileNumber, emailAddress, houseNumber, street, subdivision, barangay, city, province, zipCode, agencyEmployeeNo, height, weight, bloodType, gsis, pagibig, philhealth, sss, tin, umidNumber.
+Rules:
+- extract ONLY handwriting/print clearly present on the page; NEVER fabricate; unreadable ⇒ null with confidence "none"; dates YYYY-MM-DD (the form states mm/dd/yyyy or dd/mm/yyyy order); JSON only — no fences, no commentary.
+- Template captions ("SURNAME", "House/Block/Lot No.") are NEVER values. Unticked checkbox options are never values.
+- educationLevel MUST be exactly one of: "Elementary", "Secondary", "Vocational / Trade", "College", "Graduate Studies".`;
+
+async function aiExtractImage(filePath: string, mimeType: string, category: string): Promise<ExtractionResult | null> {
+  try {
+    const data = fs.readFileSync(filePath);
+    const dataUrl = `data:${mimeType || "image/png"};base64,${data.toString("base64")}`;
+    const ZAI = (await import("z-ai-web-dev-sdk")).default;
+    const zai = await ZAI.create();
+    const completion = await zai.chat.completions.createVision({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: VISION_PROMPT(category) },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      thinking: { type: "disabled" },
+    });
+    const raw = completion.choices[0]?.message?.content || "";
+    return parseAiJson(raw);
+  } catch (e) {
+    console.error("[EXTRACT] Vision failed:", e instanceof Error ? e.message : e);
     return null;
   }
 }
@@ -812,7 +982,7 @@ export function countExtractedFields(result: ExtractionResult | null): number {
   let n = 0;
   const countSection = (s?: ExtractionSection) => { if (s) n += Object.values(s).filter((v) => v && v.value !== null && v.value !== "").length; };
   countSection(result.personalInfo);
-  for (const arr of [result.educations, result.workExperiences, result.trainings, result.eligibilities, result.awards]) {
+  for (const arr of [result.educations, result.workExperiences, result.trainings, result.eligibilities, result.awards, result.voluntaryWork, result.specialSkills]) {
     for (const s of arr ?? []) countSection(s);
   }
   return n;
@@ -842,7 +1012,15 @@ export function mergeExtractions(results: (ExtractionResult | null)[]): Extracti
   mergeArr("trainings");
   mergeArr("eligibilities");
   mergeArr("awards");
+  mergeArr("voluntaryWork");
+  mergeArr("specialSkills");
   merged.warnings = valid.flatMap((r) => r.warnings ?? []);
+  // Keep the richest metadata: prefer a path that saw the document directly.
+  const withMeta = valid.filter((r) => r.meta);
+  if (withMeta.length > 0) {
+    const pick = withMeta.find((r) => r.meta?.parserPath === "hybrid") ?? withMeta.find((r) => r.meta?.parserPath === "deterministic") ?? withMeta[0];
+    merged.meta = pick.meta;
+  }
   return merged;
 }
 
@@ -855,6 +1033,8 @@ function dedupeSectionArray(arr: ExtractionSection[], key: string): ExtractionSe
       : key === "awards" ? `${item.details?.value ?? ""}`
       : key === "workExperiences" ? `${item.positionTitle?.value ?? ""}|${item.employerName?.value ?? ""}|${item.dateFrom?.value ?? ""}`
       : key === "eligibilities" ? `${item.title?.value ?? ""}|${item.examDate?.value ?? ""}`
+      : key === "voluntaryWork" ? `${item.organizationName?.value ?? ""}|${item.dateFrom?.value ?? ""}`
+      : key === "specialSkills" ? `${item.skill?.value ?? ""}`
       : `${item.educationLevel?.value ?? ""}|${item.schoolName?.value ?? ""}`;
     if (seen.has(sig)) continue;
     seen.add(sig);
@@ -865,17 +1045,31 @@ function dedupeSectionArray(arr: ExtractionSection[], key: string): ExtractionSe
 
 /**
  * Extract structured data from a stored document (spec §6.4). Deterministic
- * parser first for PDS × Excel; AI fallback otherwise.
+ * parser first for PDS × Excel; AI fallback otherwise; vision model for
+ * images. Every result passes through the normalization/validation layer
+ * (pds-validate) before returning, so callers always see canonical values,
+ * parser metadata, and a quality report.
  */
 export async function extractFromDocument(
   filePath: string,
   category: string,
   mimeType: string
 ): Promise<{ result: ExtractionResult | null; error?: string }> {
+  const t0 = performance.now();
+  type ParserPath = NonNullable<ExtractionResult["meta"]>["parserPath"];
+  const finalize = (result: ExtractionResult | null, parserPath: ParserPath, formRevision: string | null) => {
+    if (!result || countExtractedFields(result) === 0) return null;
+    return finalizeExtraction(result, { parserPath, formRevision, durationMs: Math.round(performance.now() - t0) });
+  };
+
   const ext = path.extname(filePath).toLowerCase();
   if (/\.(xlsx|xls|xlsm)$/.test(ext)) {
     const deterministic = parsePdsWorkbook(filePath);
-    if (deterministic && countExtractedFields(deterministic) >= 3) return { result: deterministic };
+    const revision = deterministic?.warnings?.find((w) => /Revised (\d{4})/.test(w))?.match(/Revised (\d{4})/)?.[1] ?? null;
+    const formRevision = revision ? `CS Form 212 (Revised ${revision})` : deterministic ? "CS Form 212" : null;
+    if (deterministic && countExtractedFields(deterministic) >= 3) {
+      return { result: finalize(deterministic, "deterministic", formRevision) };
+    }
     const text = extractExcelText(filePath);
     if (text.trim().length > 40) {
       // When the deterministic parser RECOGNIZED the form but found nothing
@@ -884,22 +1078,29 @@ export async function extractFromDocument(
       const ai = sanitizeAiExtraction(await aiExtractText(text, category), {
         dropCheckboxGuesses: !!deterministic && countExtractedFields(deterministic) === 0,
       });
-      return { result: mergeExtractions([deterministic, ai]) };
+      const merged = mergeExtractions([deterministic, ai]);
+      return { result: finalize(merged, ai ? "hybrid" : "deterministic", formRevision) };
     }
-    return { result: deterministic };
+    return { result: finalize(deterministic, "deterministic", formRevision) };
   }
   if (ext === ".pdf") {
     const text = await extractPdfText(filePath);
     if (!text.trim()) return { result: null, error: "Could not read text from this PDF. Try uploading the Excel version of the PDS." };
-    return { result: sanitizeAiExtraction(await aiExtractText(text, category)) };
+    const ai = sanitizeAiExtraction(await aiExtractText(text, category));
+    return { result: finalize(ai, "ai", "CS Form 212 (PDF)") };
   }
   if (ext === ".docx" || ext === ".doc") {
     const text = await extractDocxText(filePath);
     if (!text.trim()) return { result: null, error: "Could not read this document. Try a DOCX or XLSX file." };
-    return { result: sanitizeAiExtraction(await aiExtractText(text, category)) };
+    const ai = sanitizeAiExtraction(await aiExtractText(text, category));
+    return { result: finalize(ai, "ai", null) };
   }
   if (/\.(png|jpg|jpeg|gif|webp|bmp)$/.test(ext)) {
-    return { result: null, error: "Image extraction is not available in this deployment. Please upload the PDS as XLSX, PDF, or DOCX." };
+    const vision = sanitizeAiExtraction(await aiExtractImage(filePath, mimeType, category));
+    if (!vision) {
+      return { result: null, error: "Could not read this image. Upload the PDS as XLSX, PDF, or DOCX, or use a sharper photo." };
+    }
+    return { result: finalize(vision, "vision", "CS Form 212 (image)") };
   }
   return { result: null, error: `Unsupported file type for extraction (${mimeType}).` };
 }

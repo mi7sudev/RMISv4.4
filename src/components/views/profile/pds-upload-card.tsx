@@ -40,9 +40,17 @@ const EXTRACTABLE = EXTRACTABLE_CATEGORIES as readonly string[];
 
 type Phase = "idle" | "uploading" | "extracting" | "applying";
 
+type QualityInfo = {
+  score: number;
+  grade: string;
+  needsReview: number;
+  issues?: { severity: string; section: string; field: string; message: string }[];
+};
+
 type ExtractResponse = {
-  results: { id: string; status: string; error?: string }[];
-  merged: Record<string, unknown> | null;
+  results: { id: string; status: string; error?: string; quality?: QualityInfo }[];
+  merged: (Record<string, unknown> & { quality?: QualityInfo }) | null;
+  parserPath?: string;
 };
 
 type AutoApplyResponse = {
@@ -77,6 +85,7 @@ export default function PdsUploadCard({
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<{ message: string; fileName: string } | null>(null);
   const [lastApply, setLastApply] = useState<AutoApplyResponse | null>(null);
+  const [quality, setQuality] = useState<QualityInfo | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -106,6 +115,7 @@ export default function PdsUploadCard({
   const runPipeline = async (file: File) => {
     setError(null);
     setLastApply(null);
+    setQuality(null);
     try {
       // 1 — Upload (category PDS).
       setPhase("uploading");
@@ -129,7 +139,7 @@ export default function PdsUploadCard({
         setError({
           message:
             failed?.error ??
-            "Extraction failed. Try a filled PDS file: Excel CS Form 212 (.xlsx or legacy .xls, Excel 2019 and older), PDF, or DOCX works best.",
+            "Extraction failed. Try a filled PDS file: Excel CS Form 212 (.xlsx or legacy .xls, Excel 2019 and older), PDF, DOCX, or a clear photo of the form.",
           fileName: file.name,
         });
         setPhase("idle");
@@ -137,6 +147,7 @@ export default function PdsUploadCard({
         await onDocsChanged();
         return;
       }
+      setQuality(ext.merged.quality ?? null);
 
       // 3 — Auto-apply (§8.4: personal overrides, sections replace).
       setPhase("applying");
@@ -177,6 +188,7 @@ export default function PdsUploadCard({
       });
       setClearOpen(false);
       setLastApply(null);
+      setQuality(null);
       await onProfileReplaced();
       await refresh();
     } catch (e) {
@@ -249,17 +261,49 @@ export default function PdsUploadCard({
           )}
 
           {/* Extraction result — quiet rows with tabular counts */}
-          {!busy && applyRows.length > 0 && (
+          {!busy && (applyRows.length > 0 || quality) && (
             <div className="mb-4 rounded-xl bg-cloud/60 p-4">
-              <p className="text-xs font-medium text-stone">Extraction applied to your profile</p>
-              <dl className="mt-2 divide-y divide-divider">
-                {applyRows.map(([label, count]) => (
-                  <div key={label} className="flex items-baseline justify-between gap-4 py-1.5 first:pt-0 last:pb-0">
-                    <dt className="text-xs text-stone">{label}</dt>
-                    <dd className="num text-xs font-medium text-ink">{count}</dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-xs font-medium text-stone">Extraction applied to your profile</p>
+                {quality && (
+                  <p className="flex items-center gap-1.5 text-xs text-stone">
+                    <span
+                      className={cn(
+                        "inline-flex h-5 min-w-[2.5rem] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white",
+                        quality.grade === "A" ? "bg-[var(--good, #0a9565)]" : quality.grade === "B" ? "bg-metric-blue" : quality.grade === "C" ? "bg-amber-500" : "bg-[var(--bad)]"
+                      )}
+                    >
+                      {quality.grade} · {quality.score}/100
+                    </span>
+                    extraction quality
+                  </p>
+                )}
+              </div>
+              {applyRows.length > 0 && (
+                <dl className="mt-2 divide-y divide-divider">
+                  {applyRows.map(([label, count]) => (
+                    <div key={label} className="flex items-baseline justify-between gap-4 py-1.5 first:pt-0 last:pb-0">
+                      <dt className="text-xs text-stone">{label}</dt>
+                      <dd className="num text-xs font-medium text-ink">{count}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {quality && quality.needsReview > 0 && (
+                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-ink">
+                  {quality.needsReview} value{quality.needsReview === 1 ? " needs" : "s need"} review — low-confidence reads
+                  {quality.issues?.length ? ` and ${quality.issues.length} checker note${quality.issues.length === 1 ? "" : "s"}` : ""}. Please verify them on your forms below.
+                </p>
+              )}
+              {quality && quality.issues && quality.issues.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {quality.issues.slice(0, 3).map((iss, i) => (
+                    <li key={i} className="text-[11px] leading-relaxed text-stone">
+                      · {iss.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
@@ -309,7 +353,7 @@ export default function PdsUploadCard({
               >
                 <IconChip icon={CloudUpload} tone="plum" size={44} />
                 <span className="text-sm font-medium text-ink">Upload PDS (CS Form 212)</span>
-                <span className="text-xs text-stone">XLSX, PDF, DOCX or image · up to 10 MB</span>
+                <span className="text-xs text-stone">XLSX, PDF, DOCX or image · 2017 & 2026 editions · up to 10 MB</span>
               </button>
               <input
                 ref={inputRef}

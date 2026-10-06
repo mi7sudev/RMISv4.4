@@ -110,6 +110,7 @@ export type DocumentWire = {
   status: "UPLOADED" | "PROCESSING" | "EXTRACTED" | "PARTIALLY_EXTRACTED" | "FAILED";
   extractionError: string | null;
   extractedAt: string | null;
+  qualityScore: number | null;
   createdAt: string;
 };
 
