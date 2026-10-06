@@ -942,3 +942,19 @@ Work Log:
 Stage Summary:
 - The applicant journey timeline now matches the approved reference exactly: jade #00ae75 markers/rails, thick-ring live step, icon-bearing discs (check / star / ×), gray pending disc, colored live-step labels + per-step captions.
 - No API or schema changes; purely presentational rewrite of CheckpointDot + JourneyTimeline in applicant-home.tsx.
+
+---
+Task ID: 8
+Agent: Z.ai Code (main)
+Task: (a) Change the pending third timeline step label from "Awaiting the shortlist decision" to "Awaiting Decision" (never presume the shortlist outcome); (b) fix system-wide StatusDot icons that were too small / visually misaligned (reported on the Analytics "Pipeline conversion" funnel).
+
+Work Log:
+- applicant-home.tsx JourneyTimeline: pending step 3 label → "Awaiting Decision"; caption → "You will be notified once a decision is made"; removed the now-unneeded short-label responsive swap and the `short` field.
+- Measured the funnel rows via agent-browser eval: dot (15px) and label line-box (20px) centers were mathematically aligned (485.7 == 485.7) — the "misalignment" was optical because the 15px disc + 9.3px glyph is undersized next to 14px text.
+- globals.css: .status-dot base 15px → 20px, svg glyph 62% → 66% (13px glyph) — applies to all StatusDot spots (analytics funnel, job workspace Pipeline panel, candidates mini pipeline, candidate detail rail).
+- candidate-detail.tsx: vertical applications rail ::before moved left-[7px] → left-[9.5px] so the 1px line threads the center of the 20px dots (verified by eval: dot center X 322 == rail center 322).
+- bun run lint clean; dev.log clean. Browser-verified: analytics Pipeline conversion funnel, job workspace Pipeline panel, candidate detail rail, and the applicant timeline copy.
+
+Stage Summary:
+- "Awaiting Decision" (outcome-neutral) is the pending timeline label, with matching caption.
+- StatusDot is now 20px system-wide with a 13px glyph — properly weighted and optically aligned against body text; dependent rail offset updated.

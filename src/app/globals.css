@@ -600,20 +600,22 @@
 
 /* Icon status discs — shape-coded markers for pipelines and timelines.
    Same glyph family as the status pills, so state reads from the glyph,
-   not the hue (color is reinforcement, never the sole signal). */
+   not the hue (color is reinforcement, never the sole signal).
+   20px base: optically balances a 14px/20px text line — a 15px disc with a
+   9px glyph reads undersized and looks vertically off-center next to it. */
 .status-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   border-radius: 100px;
   flex: none;
   color: #ffffff;
 }
 .status-dot svg {
-  width: 62%;
-  height: 62%;
+  width: 66%;
+  height: 66%;
 }
 .status-dot.dot-ok { background: var(--ok); }
 .status-dot.dot-warn { background: var(--warn); }

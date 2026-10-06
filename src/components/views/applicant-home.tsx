@@ -167,7 +167,7 @@ function JourneyTimeline({ status }: { status: string }) {
   const stage = stageForStatus(status);
   const decided = stage === "Shortlisted" || stage === "Rejected";
 
-  const steps: { label: string; short?: string; state: CheckpointState; desc: string; doneGlyph?: ReactNode }[] = [
+  const steps: { label: string; state: CheckpointState; desc: string; doneGlyph?: ReactNode }[] = [
     {
       label: "Submitted",
       state: "done",
@@ -184,18 +184,16 @@ function JourneyTimeline({ status }: { status: string }) {
             : "HR will evaluate your application next",
     },
     {
-      label:
-        stage === "Shortlisted" ? "Shortlisted" : stage === "Rejected" ? "Not Shortlisted" : "Awaiting the shortlist decision",
-      // Responsive copy swap (3-d, presentation-only): the full label wraps to 4+ lines
-      // inside a 3-up timeline at 320px; "Shortlisted"/"Not Shortlisted" stay verbatim.
-      short: stage === "Shortlisted" || stage === "Rejected" ? undefined : "Awaiting decision",
+      // Neutral pending label — never presumes the shortlist outcome, since
+      // the decision can go either way.
+      label: stage === "Shortlisted" ? "Shortlisted" : stage === "Rejected" ? "Not Shortlisted" : "Awaiting Decision",
       state: stage === "Shortlisted" ? "done" : stage === "Rejected" ? "failed" : "pending",
       desc:
         stage === "Shortlisted"
           ? "You've been shortlisted for the next step"
           : stage === "Rejected"
             ? "Your application was not shortlisted"
-            : "You will be notified of the shortlist outcome",
+            : "You will be notified once a decision is made",
       // Proper glyph for the achieved decision — a star, not a generic check.
       doneGlyph: <Star aria-hidden="true" className="h-[11px] w-[11px] fill-current" strokeWidth={0} />,
     },
@@ -235,14 +233,7 @@ function JourneyTimeline({ status }: { status: string }) {
                       : undefined
                 }
               >
-                {s.short ? (
-                  <>
-                    <span className="sm:hidden">{s.short}</span>
-                    <span className="hidden sm:inline">{s.label}</span>
-                  </>
-                ) : (
-                  s.label
-                )}
+                {s.label}
               </span>
               <span
                 className="text-[9px] leading-snug text-stone"
