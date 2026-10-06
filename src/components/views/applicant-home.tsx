@@ -8,8 +8,8 @@
 //           quick-view toggle, in-place quick view with six QuickFacts).
 //   RIGHT · Your Applications — sticky rail with its own overflow scroll;
 //           journey cards (No. kicker · status pill · chevron · 3-checkpoint
-//           .status-dot timeline · next-step hint). The rail stacks FIRST on
-//           mobile.
+//           jade progress timeline with per-step captions · next-step hint).
+//           The rail stacks FIRST on mobile.
 // Clicking a journey card opens the full Application detail modal (§7.7)
 // with Cancel Application while the journey is still at "Submitted".
 // Data: parallel /api/applications + /api/jobs — 15 s silent poll + refetch on
@@ -28,11 +28,14 @@ import {
   Bookmark,
   Briefcase,
   CalendarDays,
+  Check,
   ChevronDown,
   ChevronRight,
   Inbox,
   MapPin,
   RefreshCw,
+  Star,
+  X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -45,11 +48,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EmptyState, IconChip, PageHeader, StatusDot, StatusPill } from "@/components/ui/shell";
+import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
 import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
 import { currentStageLabel, stageForStatus } from "@/lib/status";
-import type { StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/session-provider";
 import OnboardingTour from "@/components/onboarding-tour";
@@ -106,34 +108,80 @@ function jobPlace(job: JobWire): string {
 
 type CheckpointState = "done" | "current" | "pending" | "failed";
 
-/** Timeline checkpoint — white ring around an icon status disc. The glyph
- *  (check / clock / alert / minus) carries the state so it never rides on
- *  hue alone; the current stage keeps a pulsing halo — motion-safe only. */
-function CheckpointDot({ state }: { state: CheckpointState }) {
-  const variant: StatusVariant =
-    state === "done" ? "ok" : state === "current" ? "warn" : state === "failed" ? "bad" : "neutral";
+/* Progress-timeline palette, sampled from the approved status spec: jade for
+   achieved/live steps, quiet gray for steps ahead, bad-red for a failed one. */
+const TL_JADE = "#00ae75";
+const TL_JADE_TEXT = "#0a9565";
+const TL_GRAY_DISC = "#e8eaec";
+const TL_GRAY_RAIL = "#ededed";
+
+/** Timeline checkpoint marker (approved status spec): achieved steps are a
+ *  solid jade disc with a white glyph, the live step is a thick jade ring,
+ *  steps ahead are a quiet gray disc, and a failed decision is the app's
+ *  bad-red disc with a white ×. Glyph/shape carries the state so it never
+ *  rides on hue alone; the ring keeps a pulsing halo — motion-safe only. */
+function CheckpointDot({ state, doneGlyph }: { state: CheckpointState; doneGlyph?: ReactNode }) {
+  if (state === "current") {
+    return (
+      <span
+        aria-hidden="true"
+        className="motion-safe:animate-pulse inline-flex h-5 w-5 shrink-0 rounded-full border-[7px] bg-white"
+        style={{ borderColor: TL_JADE }}
+      />
+    );
+  }
+  if (state === "failed") {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--bad)] text-white"
+      >
+        <X aria-hidden="true" className="h-[11px] w-[11px]" strokeWidth={3} />
+      </span>
+    );
+  }
+  if (state === "done") {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
+        style={{ backgroundColor: TL_JADE }}
+      >
+        {doneGlyph ?? <Check aria-hidden="true" className="h-[11px] w-[11px]" strokeWidth={3} />}
+      </span>
+    );
+  }
   return (
     <span
-      className={cn(
-        "inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-white shadow-[0_1px_3px_rgba(24,24,37,0.16),0_0_0_1px_rgba(24,24,37,0.05)]",
-        state === "current" && "motion-safe:animate-pulse"
-      )}
-    >
-      <StatusDot variant={variant} className="h-[13px] w-[13px]" />
-    </span>
+      aria-hidden="true"
+      className="inline-flex h-5 w-5 shrink-0 rounded-full"
+      style={{ backgroundColor: TL_GRAY_DISC }}
+    />
   );
 }
 
-/** 3-checkpoint tracking timeline: Submitted → Review → Decision (§7.3). */
+/** 3-checkpoint tracking timeline: Submitted → Under Review → Decision (§7.3),
+ *  styled to the approved status spec — jade rails, a bold step label with a
+ *  one-line caption under every checkpoint, the live step captioned in jade. */
 function JourneyTimeline({ status }: { status: string }) {
   const stage = stageForStatus(status);
   const decided = stage === "Shortlisted" || stage === "Rejected";
 
-  const steps: { label: string; short?: string; state: CheckpointState }[] = [
-    { label: "Submitted", state: "done" },
+  const steps: { label: string; short?: string; state: CheckpointState; desc: string; doneGlyph?: ReactNode }[] = [
     {
-      label: "Review",
+      label: "Submitted",
+      state: "done",
+      desc: "Your application has been successfully submitted",
+    },
+    {
+      label: "Under Review",
       state: stage === "Under Review" ? "current" : decided ? "done" : "pending",
+      desc:
+        stage === "Under Review"
+          ? "HR is currently reviewing your application"
+          : decided
+            ? "Your application has passed the initial review"
+            : "HR will evaluate your application next",
     },
     {
       label:
@@ -142,6 +190,14 @@ function JourneyTimeline({ status }: { status: string }) {
       // inside a 3-up timeline at 320px; "Shortlisted"/"Not Shortlisted" stay verbatim.
       short: stage === "Shortlisted" || stage === "Rejected" ? undefined : "Awaiting decision",
       state: stage === "Shortlisted" ? "done" : stage === "Rejected" ? "failed" : "pending",
+      desc:
+        stage === "Shortlisted"
+          ? "You've been shortlisted for the next step"
+          : stage === "Rejected"
+            ? "Your application was not shortlisted"
+            : "You will be notified of the shortlist outcome",
+      // Proper glyph for the achieved decision — a star, not a generic check.
+      doneGlyph: <Star aria-hidden="true" className="h-[11px] w-[11px] fill-current" strokeWidth={0} />,
     },
   ];
 
@@ -150,41 +206,51 @@ function JourneyTimeline({ status }: { status: string }) {
       {steps.map((s, i) => {
         const reached = s.state !== "pending";
         return (
-          <div key={`${s.label}-${i}`} className="flex flex-col items-center gap-1.5 text-center">
+          <div key={`${s.label}-${i}`} className="flex flex-col items-center text-center">
             <div className="flex w-full items-center">
-              {/* Traversed connectors render in solid brand blue. Negative
-                  outer margins bridge the grid's gap-1 so each rail reads
-                  as one continuous line, not segments with center gaps. */}
+              {/* Traversed connectors render in the timeline's jade green.
+                  Negative outer margins bridge the grid's gap-1 so each rail
+                  reads as one continuous line, not segments with gaps. */}
               <div
-                className={cn(
-                  "h-px flex-1",
-                  i > 0 && "-ml-1",
-                  i === 0 ? "bg-transparent" : reached ? "bg-primary" : "bg-divider"
-                )}
+                className={cn("h-[2px] flex-1", i > 0 && "-ml-1")}
+                style={{ backgroundColor: i === 0 ? "transparent" : reached ? TL_JADE : TL_GRAY_RAIL }}
               />
-              <CheckpointDot state={s.state} />
+              <CheckpointDot state={s.state} doneGlyph={s.doneGlyph} />
               <div
-                className={cn(
-                  "h-px flex-1",
-                  i < steps.length - 1 && "-mr-1",
-                  i === steps.length - 1
-                    ? "bg-transparent"
-                    : steps[i + 1].state !== "pending"
-                      ? "bg-primary"
-                      : "bg-divider"
-                )}
+                className={cn("h-[2px] flex-1", i < steps.length - 1 && "-mr-1")}
+                style={{
+                  backgroundColor:
+                    i === steps.length - 1 ? "transparent" : steps[i + 1].state !== "pending" ? TL_JADE : TL_GRAY_RAIL,
+                }}
               />
             </div>
-            <span className={cn("text-[10px] leading-tight", s.state === "current" ? "font-medium text-ink" : "text-stone")}>
-              {s.short ? (
-                <>
-                  <span className="sm:hidden">{s.short}</span>
-                  <span className="hidden sm:inline">{s.label}</span>
-                </>
-              ) : (
-                s.label
-              )}
-            </span>
+            <div className="mt-2 flex flex-col gap-0.5">
+              <span
+                className="text-[10px] font-semibold leading-tight text-ink"
+                style={
+                  s.state === "current"
+                    ? { color: TL_JADE_TEXT }
+                    : s.state === "failed"
+                      ? { color: "var(--bad)" }
+                      : undefined
+                }
+              >
+                {s.short ? (
+                  <>
+                    <span className="sm:hidden">{s.short}</span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </>
+                ) : (
+                  s.label
+                )}
+              </span>
+              <span
+                className="text-[9px] leading-snug text-stone"
+                style={s.state === "current" ? { color: TL_JADE_TEXT } : undefined}
+              >
+                {s.desc}
+              </span>
+            </div>
           </div>
         );
       })}

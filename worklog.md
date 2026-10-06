@@ -926,3 +926,19 @@ Work Log:
 
 Stage Summary:
 - No status in the app relies on color alone: pills = icon+text, timeline/pipeline markers = shape-coded discs. Matches the reference pattern (icon-in-disc + tinted pill)
+
+---
+Task ID: 7
+Agent: Z.ai Code (main)
+Task: Redesign the applicant application progress timeline to match the user's reference screenshot exactly (jade green status markers with proper icons instead of plain color dots), and add clean icons for the other statuses.
+
+Work Log:
+- Pixel-sampled the reference screenshot (upload/pasted_image_1791250517460.png) with PIL to extract exact colors: achieved/live green #00ae75, live-step text green #0a9565, pending disc #e8eaec, pending rail #ededed; verified the "Under Review" marker is a thick jade ring (8px ring, white core) and "Submitted" is a solid jade disc with white check.
+- Rewrote CheckpointDot in src/components/views/applicant-home.tsx: done = solid jade disc + white glyph (Check default, Star for the achieved Shortlisted decision), current = thick jade ring with white core (motion-safe pulse kept), pending = quiet gray disc, failed = bad-red (var(--bad)) disc with white X.
+- Rewrote JourneyTimeline: 2px jade traversed rails vs #ededed pending rails (continuous, negative-margin bridging kept), bold labels (ink; jade for the live step; bad-red for Not Shortlisted), and a 9px caption under every step mirroring the reference ("Your application has been successfully submitted", "HR is currently reviewing your application", "You've been shortlisted for the next step", etc.).
+- Removed now-unused StatusDot import and StatusVariant type import; added Check/Star/X lucide icons; updated file-header comments.
+- bun run lint: clean. Browser-verified all states via agent-browser (login testapplicant): Under Review (ring current), Shortlisted (star + full jade rails), Rejected (red X + red label), plus mobile 390px (short-label swap works). Temporarily flipped db application #8 status for state testing and reverted it to "Under Review" afterwards.
+
+Stage Summary:
+- The applicant journey timeline now matches the approved reference exactly: jade #00ae75 markers/rails, thick-ring live step, icon-bearing discs (check / star / ×), gray pending disc, colored live-step labels + per-step captions.
+- No API or schema changes; purely presentational rewrite of CheckpointDot + JourneyTimeline in applicant-home.tsx.
