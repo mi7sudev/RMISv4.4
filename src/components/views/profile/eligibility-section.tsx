@@ -15,7 +15,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { BadgeCheck, Plus, Trash2, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,49 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EmptyState, IconChip, type ChipTone } from "@/components/ui/shell";
+import { EmptyState, SectionCard } from "@/components/ui/shell";
+import { ghostBadBtn, iconBtnBad } from "@/components/ui/buttons";
 import { apiFetch, formatDate } from "@/lib/client";
 import { CSC_ELIGIBILITY_REGISTRY, ELIGIBILITY_SPECS } from "@/lib/constants";
 import FormDialog, { type FormFieldConfig, type FormValue } from "./form-dialog";
 import { SaveHint, useSavedFlash } from "./save-hint";
 import type { EligibilityRow } from "./section-types";
-
-/**
- * Bevel section panel (shared workspace layout system): white surface, 24px,
- * icon-chip heading row with a body-gray caption — local stand-in for the
- * old-theme ui/shell SectionCard.
- */
-function SectionPanel({
-  icon,
-  chipTone,
-  title,
-  description,
-  actions,
-  children,
-}: {
-  icon: LucideIcon;
-  chipTone: ChipTone;
-  title: string;
-  description: string;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="dlg-card-plain min-w-0 p-5 sm:p-6" aria-label={title}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} />
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-body-gray">{description}</p>}
-          </div>
-        </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
-      <div>{children}</div>
-    </section>
-  );
-}
 
 const OTHERS = "Others";
 
@@ -235,7 +199,8 @@ export default function EligibilitySection({
   };
 
   return (
-    <SectionPanel
+    <SectionCard
+      variant="plain"
       icon={BadgeCheck}
       chipTone="gold"
       title="Eligibility"
@@ -297,7 +262,7 @@ export default function EligibilitySection({
                     type="button"
                     onClick={() => setDeleteId(row.id)}
                     aria-label="Delete eligibility"
-                    className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-[var(--bad-bg)] hover:text-[var(--bad)]"
+                    className={iconBtnBad}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -325,7 +290,7 @@ export default function EligibilitySection({
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Remove this eligibility?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-2xl text-ink">Remove this eligibility?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This permanently removes the entry. Jobs requiring this eligibility may no longer match your profile.
             </AlertDialogDescription>
@@ -337,13 +302,13 @@ export default function EligibilitySection({
                 e.preventDefault();
                 if (deleteId !== null) void remove(deleteId);
               }}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)]"
+              className={`${ghostBadBtn} px-5 py-2.5`}
             >
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SectionPanel>
+    </SectionCard>
   );
 }

@@ -132,9 +132,7 @@ export function NotificationCenter() {
               if (rows.length === 0) return null;
               return (
                 <div key={g.group} className="mb-1">
-                  <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-pebble">
-                    {g.group}
-                  </p>
+                  <p className="eyebrow px-3 pb-1 pt-2">{g.group}</p>
                   {rows.map((r) => (
                     <button
                       key={r.label}
@@ -142,7 +140,7 @@ export function NotificationCenter() {
                         setOpen(false);
                         r.go();
                       }}
-                      className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-[10px] px-3 text-left transition-colors hover:bg-fog"
+                      className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-xs px-3 text-left transition-colors hover:bg-fog"
                     >
                       <span className="text-sm text-stone">
                         <span className="num font-medium text-ink">{r.count}</span>{" "}

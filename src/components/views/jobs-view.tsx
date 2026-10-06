@@ -11,7 +11,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
+  Briefcase,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { useApplyFlow } from "@/components/apply/apply-dialogs";
 import { useSession } from "@/components/session-provider";
+import { ghostBadBtn } from "@/components/ui/buttons";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -50,7 +54,8 @@ import { BrandLogo } from "@/components/brand-logo";
 import { divisionName } from "@/lib/constants";
 import { navigate, useHashRoute } from "@/lib/router";
 import type { JobWire } from "@/lib/router";
-import { PageHeader } from "@/components/ui/shell";
+import { Callout, EmptyState, PageHeader, StatusPill } from "@/components/ui/shell";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PAGE_SIZE = 8;
 type SortKey = "newest" | "deadline" | "salary";
@@ -135,18 +140,20 @@ function RichOrPlain({ html, text }: { html?: string | null; text?: string | nul
   return <p className="text-sm text-stone">Not provided.</p>;
 }
 
-function Skeleton({ className }: { className?: string }) {
-  return <div className={`skel ${className ?? ""}`} />;
-}
-
 function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="dlg-card p-8 text-center">
-      <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">Something went wrong</p>
-      <p className="mt-2 text-sm text-stone">{message}</p>
-      <button onClick={onRetry} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
-        Try again
-      </button>
+    <div className="dlg-card">
+      <EmptyState
+        icon={AlertCircle}
+        tone="rose"
+        title="Something went wrong"
+        description={message}
+        action={
+          <button onClick={onRetry} className="dlg-cta min-h-[44px] px-7 text-sm">
+            Try again
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -188,7 +195,7 @@ function QuickView({
         {facts.map(([label, value]) => (
           <div key={label} className="rounded-xl bg-white p-3">
             <p className="text-xs text-stone">{label}</p>
-            <p className="mt-0.5 truncate text-sm text-ink" title={value}>
+            <p className="num mt-0.5 truncate text-sm text-ink" title={value}>
               {value}
             </p>
           </div>
@@ -244,7 +251,7 @@ function JobCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <DeadlinePill job={job} />
-            {applied && <span className="status-pill status-ok">Applied</span>}
+            {applied && <StatusPill status="Applied" />}
           </div>
           <h3 className="mt-2 text-lg font-semibold text-ink">{humanize(job.title)}</h3>
           <p className="mt-1 text-sm text-stone">
@@ -313,7 +320,7 @@ function SummaryCard({
           <div key={label} className="flex items-start justify-between gap-3">
             <dt className="shrink-0 text-stone">{label}</dt>
             <dd
-              className={`text-right text-ink ${
+              className={`num text-right text-ink ${
                 label === "Deadline" && dl.overdue ? "text-[var(--bad)]" : ""
               }`}
             >
@@ -334,6 +341,7 @@ function SummaryCard({
               Closes <span className="num">{formatDate(job.deadlineDate)}</span>
             </span>
           </div>
+          {/* Track contrasts the surface: white-on-cloud / cloud-on-white. */}
           <div className="mt-2 h-1.5 overflow-hidden bg-white" role="presentation">
             <div
               className={`h-full transition-[width] duration-500 ${
@@ -348,15 +356,9 @@ function SummaryCard({
       <div className="mt-5">
         {applied ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-2xl bg-white p-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--ok-bg)] text-sm text-[var(--ok)]">
-                ✓
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-ink">Successfully Applied</p>
-                <p className="text-xs text-stone">Your application is in the pipeline.</p>
-              </div>
-            </div>
+            <Callout tone="ok" icon={Check} title="Successfully Applied">
+              Your application is in the pipeline.
+            </Callout>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button className="dlg-ghost min-h-[44px] w-full text-sm" disabled={cancelling}>
@@ -379,7 +381,7 @@ function SummaryCard({
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={onCancel}
-                    className="min-h-[44px] bg-[var(--bad-bg)] px-6 text-sm font-medium text-[var(--bad)] hover:bg-[#f8ddd6]"
+                    className={`${ghostBadBtn} px-6`}
                   >
                     Cancel application
                   </AlertDialogAction>
@@ -438,9 +440,9 @@ function DetailBody({ job }: { job: JobWire }) {
       <section className="dlg-card p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
           <DeadlinePill job={job} />
-          {(job.applications?.length ?? 0) > 0 && <span className="status-pill status-ok">Applied</span>}
+          {(job.applications?.length ?? 0) > 0 && <StatusPill status="Applied" />}
         </div>
-        <h1 className="mt-3 text-2xl font-semibold tracking-[-0.01em] text-ink sm:text-[40px] sm:leading-none sm:tracking-[-1.2px]">{humanize(job.title)}</h1>
+        <h1 className="mt-3 text-2xl font-semibold tracking-[-0.01em] text-ink sm:text-card-heading">{humanize(job.title)}</h1>
         <p className="mt-2 text-sm text-stone">
           {pos?.placeOfAssignment || "-"} · {divisionName(pos?.division)} ·{" "}
           {job.positionType ? humanize(job.positionType) : "-"}
@@ -513,7 +515,7 @@ function DetailBody({ job }: { job: JobWire }) {
             {vitals.map(([label, value]) => (
               <div key={label} className="rounded-xl bg-white p-4">
                 <p className="text-xs text-stone">{label}</p>
-                <p className="mt-0.5 truncate text-sm text-ink" title={value}>
+                <p className="num mt-0.5 truncate text-sm text-ink" title={value}>
                   {value}
                 </p>
               </div>
@@ -522,18 +524,18 @@ function DetailBody({ job }: { job: JobWire }) {
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-white p-4">
               <p className="text-xs text-stone">Published</p>
-              <p className="mt-0.5 text-sm text-ink">{formatDate(job.publishDate ?? job.publishedAt)}</p>
+              <p className="num mt-0.5 text-sm text-ink">{formatDate(job.publishDate ?? job.publishedAt)}</p>
             </div>
             <div className="rounded-xl bg-white p-4">
               <p className="text-xs text-stone">Deadline</p>
-              <p className={`mt-0.5 text-sm ${dl.overdue ? "text-[var(--bad)]" : "text-ink"}`}>
+              <p className={`num mt-0.5 text-sm ${dl.overdue ? "text-[var(--bad)]" : "text-ink"}`}>
                 {formatDate(job.deadlineDate)}
                 {job.deadlineDate ? ` · ${dl.label}` : ""}
               </p>
             </div>
             <div className="rounded-xl bg-white p-4">
               <p className="text-xs text-stone">Processing</p>
-              <p className="mt-0.5 text-sm text-ink">{formatDate(job.processingDate)}</p>
+              <p className="num mt-0.5 text-sm text-ink">{formatDate(job.processingDate)}</p>
             </div>
           </div>
         </div>
@@ -735,14 +737,17 @@ export default function JobsView() {
         ) : error !== null ? (
           <ErrorCard message={error} onRetry={() => void load(false)} />
         ) : detail === null ? (
-          <div className="dlg-card p-10 text-center">
-            <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">Position not found</p>
-            <p className="mt-2 text-sm text-stone">
-              This position may have closed or is no longer published.
-            </p>
-            <button onClick={() => navigate("vacant-positions")} className="dlg-cta mt-5 min-h-[44px] px-7 text-sm">
-              Back to Vacant Positions
-            </button>
+          <div className="dlg-card">
+            <EmptyState
+              icon={Search}
+              title="Position not found"
+              description="This position may have closed or is no longer published."
+              action={
+                <button onClick={() => navigate("vacant-positions")} className="dlg-cta min-h-[44px] px-7 text-sm">
+                  Back to Vacant Positions
+                </button>
+              }
+            />
           </div>
         ) : (
           // Two-column from lg (matches the filter rail breakpoint): below
@@ -795,7 +800,7 @@ export default function JobsView() {
       </div>
 
       {/* QA 2026-02: Position Category facet — Plantilla vs COS. */}
-      <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-stone">Position Category</p>
+      <p className="eyebrow mt-5 px-1">Position Category</p>
       <div className="mt-2 space-y-0.5">
         {[
           { code: "PLANTILLA", label: "Plantilla" },
@@ -817,7 +822,7 @@ export default function JobsView() {
         ))}
       </div>
 
-      <p className="mt-5 px-1 text-xs font-medium uppercase tracking-wider text-stone">Division</p>
+      <p className="eyebrow mt-5 px-1">Division</p>
       <div className="mt-2 space-y-0.5">
         {facets.map(([code, count]) => (
           <label
@@ -865,21 +870,27 @@ export default function JobsView() {
     content = <ErrorCard message={error} onRetry={() => void load(false)} />;
   } else if ((jobs ?? []).length === 0) {
     content = (
-      <div className="dlg-card p-10 text-center">
-        <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">No vacant positions</p>
-        <p className="mt-2 text-sm text-stone">
-          There are no published postings at the moment. Check back soon.
-        </p>
+      <div className="dlg-card">
+        <EmptyState
+          icon={Briefcase}
+          title="No vacant positions"
+          description="There are no published postings at the moment. Check back soon."
+        />
       </div>
     );
   } else if (filtered.length === 0) {
     content = (
-      <div className="dlg-card p-10 text-center">
-        <p className="text-2xl font-semibold tracking-[-0.01em] text-ink">No positions match your filters</p>
-        <p className="mt-2 text-sm text-stone">Try a different search term or clear the filters.</p>
-        <button onClick={clearFilters} className="dlg-ghost mt-5 min-h-[44px] px-6 text-sm">
-          Clear filters
-        </button>
+      <div className="dlg-card">
+        <EmptyState
+          icon={Search}
+          title="No positions match your filters"
+          description="Try a different search term or clear the filters."
+          action={
+            <button onClick={clearFilters} className="dlg-ghost min-h-[44px] px-6 text-sm">
+              Clear filters
+            </button>
+          }
+        />
       </div>
     );
   } else {
@@ -1024,10 +1035,12 @@ export default function JobsView() {
               {query.trim() && (
                 <span className="dlg-pill inline-flex items-center gap-1.5 bg-cloud py-1.5 pl-3 pr-2 text-xs font-medium text-ink">
                   &ldquo;{query.trim()}&rdquo;
+                  {/* Dismiss button: the ::after inset extends the 28px visual
+                      disc to a 40px+ touch target (36px minimum rule). */}
                   <button
                     onClick={() => changeQuery("")}
                     aria-label="Clear search filter"
-                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink"
+                    className="focus-ring relative -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink after:absolute after:-inset-1.5 after:rounded-full after:content-['']"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>
@@ -1039,10 +1052,11 @@ export default function JobsView() {
                   className="dlg-pill inline-flex items-center gap-1.5 bg-cloud py-1.5 pl-3 pr-2 text-xs font-medium text-ink"
                 >
                   {divisionShort(code)}
+                  {/* Same padded hit zone as the search-chip dismiss. */}
                   <button
                     onClick={() => toggleDivision(code)}
                     aria-label={`Remove ${divisionShort(code)} filter`}
-                    className="focus-ring -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink"
+                    className="focus-ring relative -mr-2 grid h-7 w-7 place-items-center rounded-full text-stone hover:bg-white/70 hover:text-ink after:absolute after:-inset-1.5 after:rounded-full after:content-['']"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>
@@ -1050,7 +1064,7 @@ export default function JobsView() {
               ))}
               <button
                 onClick={clearFilters}
-                className="text-xs text-body-gray underline underline-offset-2 hover:text-ink"
+                className="inline-flex min-h-[36px] items-center text-xs text-body-gray underline underline-offset-2 hover:text-ink"
               >
                 Clear all
               </button>

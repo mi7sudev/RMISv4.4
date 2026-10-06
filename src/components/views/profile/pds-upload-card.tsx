@@ -17,7 +17,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, CloudUpload, Loader2, Lock, RefreshCcw } from "lucide-react";
+import { AlertCircle, ChevronDown, CloudUpload, Loader2, Lock, RefreshCcw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +29,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { IconChip } from "@/components/ui/shell";
+import { ghostBadBtn } from "@/components/ui/buttons";
+import { Callout, IconChip } from "@/components/ui/shell";
 import { apiFetch } from "@/lib/client";
 import { EXTRACTABLE_CATEGORIES } from "@/lib/validation";
 import type { DocumentWire } from "@/lib/router";
@@ -234,6 +235,7 @@ export default function PdsUploadCard({
           {/* Phase progress — thin capsule bar with a Metric Blue fill */}
           {busy && (
             <div className="mb-4">
+              {/* Track contrasts the surface: white-on-cloud / cloud-on-white. */}
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-cloud/60">
                 <div
                   className="h-full rounded-full bg-metric-blue motion-safe:transition-[width] duration-500"
@@ -247,17 +249,18 @@ export default function PdsUploadCard({
           )}
 
           {error && (
-            <div className="mb-4 rounded-xl bg-[var(--bad-bg)] p-4">
-              <p className="text-sm text-ink">{error.message}</p>
-              <p className="mt-0.5 text-xs text-stone">{error.fileName}</p>
+            <Callout tone="bad" icon={AlertCircle} className="mb-4" action={
               <button
                 type="button"
                 onClick={pickFile}
-                className="dlg-ghost mt-3 inline-flex min-h-[44px] items-center gap-2 px-5 py-2 text-sm"
+                className="dlg-ghost inline-flex min-h-[44px] items-center gap-2 px-5 py-2 text-sm"
               >
                 <RefreshCcw className="h-3.5 w-3.5" /> Try Again
               </button>
-            </div>
+            }>
+              <p className="font-medium">{error.message}</p>
+              <p>{error.fileName}</p>
+            </Callout>
           )}
 
           {/* Extraction result — quiet rows with tabular counts */}
@@ -270,7 +273,7 @@ export default function PdsUploadCard({
                     <span
                       className={cn(
                         "inline-flex h-5 min-w-[2.5rem] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white",
-                        quality.grade === "A" ? "bg-[var(--good, #0a9565)]" : quality.grade === "B" ? "bg-metric-blue" : quality.grade === "C" ? "bg-amber-500" : "bg-[var(--bad)]"
+                        quality.grade === "A" ? "bg-[var(--ok)]" : quality.grade === "B" ? "bg-metric-blue" : quality.grade === "C" ? "bg-[var(--warn)]" : "bg-[var(--bad)]"
                       )}
                     >
                       {quality.grade} · {quality.score}/100
@@ -290,7 +293,7 @@ export default function PdsUploadCard({
                 </dl>
               )}
               {quality && quality.needsReview > 0 && (
-                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-ink">
+                <p className="mt-2 rounded-lg bg-[var(--warn-bg)] px-3 py-2 text-xs text-ink">
                   {quality.needsReview} value{quality.needsReview === 1 ? " needs" : "s need"} review — low-confidence reads
                   {quality.issues?.length ? ` and ${quality.issues.length} checker note${quality.issues.length === 1 ? "" : "s"}` : ""}. Please verify them on your forms below.
                 </p>
@@ -323,7 +326,7 @@ export default function PdsUploadCard({
                 type="button"
                 onClick={() => setClearOpen(true)}
                 disabled={clearing}
-                className="inline-flex min-h-[44px] w-fit shrink-0 items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+                className={`${ghostBadBtn} w-fit shrink-0 px-5 py-2.5`}
               >
                 {clearing ? "Clearing…" : "Clear Forms & Re-upload"}
               </button>
@@ -374,7 +377,7 @@ export default function PdsUploadCard({
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Clear all forms and re-upload?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-2xl text-ink">Clear all forms and re-upload?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
               This erases ALL of your profile information — personal details, education, work experience, training,
               eligibility, and awards — and marks your profile incomplete again. Your uploaded files stay for HR review.
@@ -388,7 +391,7 @@ export default function PdsUploadCard({
                 void clearProfile();
               }}
               disabled={clearing}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+              className={`${ghostBadBtn} px-5 py-2.5`}
             >
               {clearing ? "Clearing…" : "Clear Everything"}
             </AlertDialogAction>

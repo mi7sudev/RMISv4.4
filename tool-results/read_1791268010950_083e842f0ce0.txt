@@ -1,0 +1,835 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→// ============================================================================
+     4→     4→// RMIS — shared presentation primitives (Bevel edition).
+     5→     5→// upload/PROPOSED-RMIS-DESIGN.md: white editorial canvas, pale Cloud Card
+     6→     6→// geometry (24px radius, no borders, no shadows — the surface IS the
+     7→     7→// elevation), Ink 600 display headings with tight tracking, stone eyebrows,
+     8→     8→// monochrome chrome with metric accents rationed to data visuals.
+     9→     9→// PageHeader, StatusPill, KpiCard, EmptyState, SectionCard, Monogram,
+    10→    10→// SkeletonBlocks. Pure presentation: no fetching, no business logic.
+    11→    11→// ============================================================================
+    12→    12→
+    13→    13→import * as React from "react";
+    14→    14→import { ArrowLeft, Check, Clock, Minus, Send, X } from "lucide-react";
+    15→    15→import type { LucideIcon } from "lucide-react";
+    16→    16→import { cn } from "@/lib/utils";
+    17→    17→import { getStatusMeta } from "@/lib/status";
+    18→    18→import {
+    19→    19→  pillClass,
+    20→    20→  variantForStatus,
+    21→    21→  variantForVerdict,
+    22→    22→  type StatusVariant,
+    23→    23→} from "@/lib/status-ui";
+    24→    24→
+    25→    25→/** Shared dialog scroll container class — one scroll anatomy for every dialog. */
+    26→    26→export const dialogScroll = "max-h-[92dvh] overflow-y-auto scroll-thin";
+    27→    27→
+    28→    28→// ── PageHeader ──────────────────────────────────────────────────────────────
+    29→    29→// The single enterprise page-header anatomy used by EVERY view:
+    30→    30→// optional labelled back link (detail views) → eyebrow → title row
+    31→    31→// (title + titleAside badge) → description → meta row, with the action
+    32→    32→// cluster right-aligned and stacked below the title below xl.
+    33→    33→// ────────────────────────────────────────────────────────────────────────────
+    34→    34→
+    35→    35→export function PageHeader({
+    36→    36→  title,
+    37→    37→  description,
+    38→    38→  actions,
+    39→    39→  eyebrow,
+    40→    40→  back,
+    41→    41→  leading,
+    42→    42→  titleAside,
+    43→    43→  meta,
+    44→    44→  className,
+    45→    45→}: {
+    46→    46→  title: React.ReactNode;
+    47→    47→  description?: React.ReactNode;
+    48→    48→  actions?: React.ReactNode;
+    49→    49→  eyebrow?: React.ReactNode;
+    50→    50→  /** Detail-view affordance: labelled back link rendered above the title. */
+    51→    51→  back?: { label: string; onClick: () => void };
+    52→    52→  /** Avatar / icon lockup rendered left of the title block. */
+    53→    53→  leading?: React.ReactNode;
+    54→    54→  /** Badge / status pill rendered inline after the title. */
+    55→    55→  titleAside?: React.ReactNode;
+    56→    56→  /** Secondary row under the description (pills, stamps, counts). */
+    57→    57→  meta?: React.ReactNode;
+    58→    58→  className?: string;
+    59→    59→}) {
+    60→    60→  // NOTE: no self animation — AppShell owns the view mount transition, and a
+    61→    61→  // second fade inside the header produced a double-fade on every navigation.
+    62→    62→  return (
+    63→    63→    <header className={className}>
+    64→    64→      {back ? (
+    65→    65→        <button
+    66→    66→          type="button"
+    67→    67→          onClick={back.onClick}
+    68→    68→          className="focus-ring -ml-3 mb-3 inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-sm font-medium text-stone transition-colors hover:bg-cloud hover:text-ink"
+    69→    69→        >
+    70→    70→          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+    71→    71→          {back.label}
+    72→    72→        </button>
+    73→    73→      ) : null}
+    74→    74→      {/* Stacks below xl so wide action clusters (filters, toggles, refresh) can
+    75→    75→          never squeeze the title into a truncated stub on tablet widths. */}
+    76→    76→      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    77→    77→        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+    78→    78→          {leading ? <div className="shrink-0">{leading}</div> : null}
+    79→    79→          <div className="min-w-0">
+    80→    80→            {eyebrow ? (
+    81→    81→              <p className="eyebrow mb-1.5">{eyebrow}</p>
+    82→    82→            ) : null}
+    83→    83→            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    84→    84→              <h1 className="font-display truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
+    85→    85→                {title}
+    86→    86→              </h1>
+    87→    87→              {titleAside}
+    88→    88→            </div>
+    89→    89→            {description ? (
+    90→    90→              typeof description === "string" ? (
+    91→    91→                <p className="mt-1.5 text-sm leading-relaxed text-stone">{description}</p>
+    92→    92→              ) : (
+    93→    93→                <div className="mt-1.5 text-sm leading-relaxed text-stone">{description}</div>
+    94→    94→              )
+    95→    95→            ) : null}
+    96→    96→            {meta ? (
+    97→    97→              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">{meta}</div>
+    98→    98→            ) : null}
+    99→    99→          </div>
+   100→   100→        </div>
+   101→   101→        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+   102→   102→      </div>
+   103→   103→    </header>
+   104→   104→  );
+   105→   105→}
+   106→   106→
+   107→   107→// ── StatusPill ──────────────────────────────────────────────────────────────
+   108→   108→
+   109→   109→// THE one status pill. Displays the normalized status label ("UNDER_REVIEW"
+   110→   110→// renders as "Under Review"); the variant auto-maps from the status tone
+   111→   111→// unless explicitly overridden (used for non-application labels such as
+   112→   112→// verdicts, completion or document states).
+   113→   113→export function StatusPill({
+   114→   114→  status,
+   115→   115→  variant,
+   116→   116→  className,
+   117→   117→}: {
+   118→   118→  /** Raw stored status spelling (normalized internally). */
+   119→   119→  status?: string | null;
+   120→   120→  /** Explicit variant overrides the status→tone mapping. */
+   121→   121→  variant?: StatusVariant;
+   122→   122→  className?: string;
+   123→   123→}) {
+   124→   124→  const meta = status ? getStatusMeta(status) : null;
+   125→   125→  const v: StatusVariant = variant ?? (meta ? variantForStatus(status) : "neutral");
+   126→   126→  return (
+   127→   127→    <span className={cn(pillClass(v), "shrink-0", className)}>
+   128→   128→      {meta ? meta.label : (status ?? "")}
+   129→   129→    </span>
+   130→   130→  );
+   131→   131→}
+   132→   132→
+   133→   133→// ── VerdictPill ─────────────────────────────────────────────────────────────
+   134→   134→
+   135→   135→function verdictMeta(verdict: string): { chip: string; variant: StatusVariant } {
+   136→   136→  switch (verdict) {
+   137→   137→    case "ALL_MET":
+   138→   138→      return { chip: "Qualified", variant: variantForVerdict("Qualified") };
+   139→   139→    case "PARTIAL":
+   140→   140→      return { chip: "Partial", variant: variantForVerdict("Partial") };
+   141→   141→    case "NONE_MET":
+   142→   142→      return { chip: "Not qualified", variant: variantForVerdict("Not qualified") };
+   143→   143→    case "NEEDS_REVIEW":
+   144→   144→      return { chip: "Verify", variant: variantForVerdict("Verify") };
+   145→   145→    case "NO_REQUIREMENTS":
+   146→   146→      return { chip: "No reqs", variant: variantForVerdict("No reqs") };
+   147→   147→    default:
+   148→   148→      return { chip: verdict, variant: variantForVerdict(verdict) };
+   149→   149→  }
+   150→   150→}
+   151→   151→
+   152→   152→/** MQR verdict pill for queue cards / list rows (null when no verdict). */
+   153→   153→export function VerdictPill({
+   154→   154→  verdict,
+   155→   155→  className,
+   156→   156→}: {
+   157→   157→  verdict: string | null | undefined;
+   158→   158→  className?: string;
+   159→   159→}) {
+   160→   160→  if (!verdict) return null;
+   161→   161→  const vm = verdictMeta(verdict);
+   162→   162→  return <span className={cn(pillClass(vm.variant), "shrink-0", className)}>{vm.chip}</span>;
+   163→   163→}
+   164→   164→
+   165→   165→// ── Name initials + monogram avatar ─────────────────────────────────────────
+   166→   166→
+   167→   167→/** First letters of the first two words, uppercase ("Juan Cruz" → "JC"). */
+   168→   168→export function nameInitials(name: string | null | undefined): string {
+   169→   169→  return (
+   170→   170→    (name || "")
+   171→   171→      .split(/\s+/)
+   172→   172→      .filter(Boolean)
+   173→   173→      .slice(0, 2)
+   174→   174→      .map((w) => w[0]?.toUpperCase() ?? "")
+   175→   175→      .join("") || "?"
+   176→   176→  );
+   177→   177→}
+   178→   178→
+   179→   179→/** Gradient monogram avatar with initials derived from the name. */
+   180→   180→export function MonogramAvatar({
+   181→   181→  name,
+   182→   182→  size = 36,
+   183→   183→  warm = false,
+   184→   184→  className,
+   185→   185→}: {
+   186→   186→  name: string;
+   187→   187→  size?: number;
+   188→   188→  warm?: boolean;
+   189→   189→  className?: string;
+   190→   190→}) {
+   191→   191→  return (
+   192→   192→    <span aria-hidden="true">
+   193→   193→      <Monogram size={size} warm={warm} className={cn("rounded-full", className)}>
+   194→   194→        {nameInitials(name)}
+   195→   195→      </Monogram>
+   196→   196→    </span>
+   197→   197→  );
+   198→   198→}
+   199→   199→
+   200→   200→// ── SegmentedControl ────────────────────────────────────────────────────────
+   201→   201→// Mode/view switchers (Kanban⇄List, tab families): fog track + white active
+   202→   202→// pill. One anatomy for every segmented control in the app.
+   203→   203→
+   204→   204→export function SegmentedControl<T extends string>({
+   205→   205→  value,
+   206→   206→  onChange,
+   207→   207→  options,
+   208→   208→  ariaLabel,
+   209→   209→  className,
+   210→   210→}: {
+   211→   211→  value: T;
+   212→   212→  onChange: (next: T) => void;
+   213→   213→  options: { value: T; label: string; icon?: LucideIcon }[];
+   214→   214→  ariaLabel: string;
+   215→   215→  className?: string;
+   216→   216→}) {
+   217→   217→  return (
+   218→   218→    <div
+   219→   219→      role="group"
+   220→   220→      aria-label={ariaLabel}
+   221→   221→      className={cn("inline-flex items-center rounded-full bg-fog p-1", className)}
+   222→   222→    >
+   223→   223→      {options.map((opt) => {
+   224→   224→        const active = opt.value === value;
+   225→   225→        const Icon = opt.icon;
+   226→   226→        return (
+   227→   227→          <button
+   228→   228→            key={opt.value}
+   229→   229→            type="button"
+   230→   230→            aria-pressed={active}
+   231→   231→            onClick={() => onChange(opt.value)}
+   232→   232→            className={cn(
+   233→   233→              "focus-ring inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
+   234→   234→              active ? "bg-white text-ink shadow-e1" : "text-stone hover:text-ink"
+   235→   235→            )}
+   236→   236→          >
+   237→   237→            {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+   238→   238→            {opt.label}
+   239→   239→          </button>
+   240→   240→        );
+   241→   241→      })}
+   242→   242→    </div>
+   243→   243→  );
+   244→   244→}
+   245→   245→
+   246→   246→// ── FilterChip ──────────────────────────────────────────────────────────────
+   247→   247→// Filter/segment chips where the ACTIVE state carries the brand blue (stage
+   248→   248→// tabs, contact filters) — the system-wide blue-fill language for selection.
+   249→   249→
+   250→   250→export function FilterChip({
+   251→   251→  active,
+   252→   252→  onClick,
+   253→   253→  children,
+   254→   254→  count,
+   255→   255→  className,
+   256→   256→}: {
+   257→   257→  active: boolean;
+   258→   258→  onClick: () => void;
+   259→   259→  children: React.ReactNode;
+   260→   260→  count?: number;
+   261→   261→  className?: string;
+   262→   262→}) {
+   263→   263→  return (
+   264→   264→    <button
+   265→   265→      type="button"
+   266→   266→      aria-pressed={active}
+   267→   267→      onClick={onClick}
+   268→   268→      className={cn(
+   269→   269→        "inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-all focus-ring",
+   270→   270→        active
+   271→   271→          ? "bg-primary text-primary-foreground shadow-cta hover:bg-[#0e7abf]"
+   272→   272→          : "border border-[#dfe6f0] bg-white text-stone shadow-[0_1px_2px_rgba(31,32,37,0.04)] hover:bg-fog hover:text-ink",
+   273→   273→        className
+   274→   274→      )}
+   275→   275→    >
+   276→   276→      {children}
+   277→   277→      {typeof count === "number" ? (
+   278→   278→        <span className={cn("num text-[10.5px]", active ? "opacity-80" : "text-ash")}>
+   279→   279→          {count}
+   280→   280→        </span>
+   281→   281→      ) : null}
+   282→   282→    </button>
+   283→   283→  );
+   284→   284→}
+   285→   285→
+   286→   286→// ── StatusDot ───────────────────────────────────────────────────────────────
+   287→   287→
+   288→   288→/** Semantic Lucide glyph inside each tinted chip — the shape carries the state
+   289→   289→ *  so the hue is reinforcement, never the sole signal. Same icon language as
+   290→   290→ *  the CSS-masked status pills: ok=check · warn=clock · bad=x · info=send ·
+   291→   291→ *  neutral=minus. Clean stroke icons (no disc-in-disc knockouts). */
+   292→   292→const STATUS_DOT_GLYPH: Record<StatusVariant, LucideIcon> = {
+   293→   293→  ok: Check,
+   294→   294→  warn: Clock,
+   295→   295→  bad: X,
+   296→   296→  info: Send,
+   297→   297→  neutral: Minus,
+   298→   298→};
+   299→   299→
+   300→   300→/** Icon status chip — a soft tinted disc with the state's stroke glyph in the
+   301→   301→ *  matching strong hue. Replaces the bare color-only stage dots in pipelines,
+   302→   302→ *  funnels and timelines. */
+   303→   303→export function StatusDot({
+   304→   304→  variant,
+   305→   305→  className,
+   306→   306→}: {
+   307→   307→  variant: StatusVariant;
+   308→   308→  className?: string;
+   309→   309→}) {
+   310→   310→  const Glyph = STATUS_DOT_GLYPH[variant];
+   311→   311→  return (
+   312→   312→    <span aria-hidden="true" className={cn("status-dot", `dot-${variant}`, className)}>
+   313→   313→      <Glyph strokeWidth={2.75} />
+   314→   314→    </span>
+   315→   315→  );
+   316→   316→}
+   317→   317→
+   318→   318→// ── Monogram (Charcoal identity avatar) ─────────────────────────────────────
+   319→   319→
+   320→   320→export function Monogram({
+   321→   321→  children,
+   322→   322→  warm = false,
+   323→   323→  className,
+   324→   324→  size = 36,
+   325→   325→}: {
+   326→   326→  children: React.ReactNode;
+   327→   327→  warm?: boolean;
+   328→   328→  className?: string;
+   329→   329→  size?: number;
+   330→   330→}) {
+   331→   331→  return (
+   332→   332→    <span
+   333→   333→      style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}
+   334→   334→      className={cn("monogram", warm && "monogram-warm", className)}
+   335→   335→    >
+   336→   336→      {children}
+   337→   337→    </span>
+   338→   338→  );
+   339→   339→}
+   340→   340→
+   341→   341→// ── Tinted icon chip ────────────────────────────────────────────────────────
+   342→   342→
+   343→   343→export type ChipTone = "amber" | "blue" | "emerald" | "rose" | "slate" | "ink" | "gold" | "plum";
+   344→   344→
+   345→   345→export function IconChip({
+   346→   346→  icon: Icon,
+   347→   347→  tone = "slate",
+   348→   348→  size = 40,
+   349→   349→  iconSize,
+   350→   350→  className,
+   351→   351→}: {
+   352→   352→  icon: LucideIcon;
+   353→   353→  tone?: ChipTone;
+   354→   354→  size?: number;
+   355→   355→  iconSize?: number;
+   356→   356→  className?: string;
+   357→   357→}) {
+   358→   358→  return (
+   359→   359→    <span
+   360→   360→      style={{ width: size, height: size }}
+   361→   361→      className={cn("chip", `chip-${tone}`, className)}
+   362→   362→      aria-hidden="true"
+   363→   363→    >
+   364→   364→      <Icon style={{ width: iconSize ?? Math.round(size * 0.46), height: iconSize ?? Math.round(size * 0.46) }} />
+   365→   365→    </span>
+   366→   366→  );
+   367→   367→}
+   368→   368→
+   369→   369→// ── KpiCard ─────────────────────────────────────────────────────────────────
+   370→   370→// Bevel Cloud Feature Card anatomy: #ebf0f8 surface, 24px radius, NO border,
+   371→   371→// NO shadow, 32px padding (p-8). The eyebrow labels the metric; the oversized
+   372→   372→// tabular numeral is the hero.
+   373→   373→
+   374→   374→const TONE_CHIP: Record<NonNullable<KpiCardProps["tone"]>, ChipTone> = {
+   375→   375→  ok: "emerald",
+   376→   376→  warn: "gold",
+   377→   377→  bad: "rose",
+   378→   378→  info: "plum",
+   379→   379→  neutral: "slate",
+   380→   380→};
+   381→   381→
+   382→   382→export type KpiCardProps = {
+   383→   383→  label: string;
+   384→   384→  value: React.ReactNode;
+   385→   385→  hint?: React.ReactNode;
+   386→   386→  icon?: LucideIcon;
+   387→   387→  tone?: "ok" | "warn" | "bad" | "info" | "neutral";
+   388→   388→  onClick?: () => void;
+   389→   389→  ariaLabel?: string;
+   390→   390→  className?: string;
+   391→   391→  /** Optional decorative trailing element (sparkline, delta, etc.). */
+   392→   392→  aside?: React.ReactNode;
+   393→   393→};
+   394→   394→
+   395→   395→export function KpiCard({
+   396→   396→  label,
+   397→   397→  value,
+   398→   398→  hint,
+   399→   399→  icon: Icon,
+   400→   400→  tone = "neutral",
+   401→   401→  onClick,
+   402→   402→  ariaLabel,
+   403→   403→  className,
+   404→   404→  aside,
+   405→   405→}: KpiCardProps) {
+   406→   406→  const body = (
+   407→   407→    <>
+   408→   408→      <div className="flex items-start justify-between gap-3">
+   409→   409→        <p className="eyebrow pt-0.5">{label}</p>
+   410→   410→        {Icon ? <IconChip icon={Icon} tone={TONE_CHIP[tone]} size={40} /> : null}
+   411→   411→      </div>
+   412→   412→      <div className="mt-4 flex items-end justify-between gap-3">
+   413→   413→        <div className="flex items-baseline gap-2">
+   414→   414→          <span className="num text-[34px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</span>
+   415→   415→          {hint ? <span className="text-xs font-medium text-pebble">{hint}</span> : null}
+   416→   416→        </div>
+   417→   417→        {aside}
+   418→   418→      </div>
+   419→   419→    </>
+   420→   420→  );
+   421→   421→
+   422→   422→  const base = cn(
+   423→   423→    "dlg-card p-6",
+   424→   424→    onClick && "group focus-ring cursor-pointer lift",
+   425→   425→    className
+   426→   426→  );
+   427→   427→
+   428→   428→  if (onClick) {
+   429→   429→    return (
+   430→   430→      <button type="button" onClick={onClick} aria-label={ariaLabel ?? label} className={cn(base, "block w-full text-left")}>
+   431→   431→        {body}
+   432→   432→      </button>
+   433→   433→    );
+   434→   434→  }
+   435→   435→  return <div className={base}>{body}</div>;
+   436→   436→}
+   437→   437→
+   438→   438→// ── StatLedger ──────────────────────────────────────────────────────────────
+   439→   439→// The institutional stat band: a Cloud Card band (24px radius) whose white
+   440→   440→// cells are separated by hairline 1px gaps that let the pale surface show
+   441→   441→// through — no floating cards, no icon chips. The oversized tabular numeral
+   442→   442→// is the hero; a stone eyebrow labels it and a body-gray caption quietly
+   443→   443→// qualifies it.
+   444→   444→
+   445→   445→export function StatLedger({
+   446→   446→  children,
+   447→   447→  className,
+   448→   448→  ariaLabel,
+   449→   449→}: {
+   450→   450→  children: React.ReactNode;
+   451→   451→  className?: string;
+   452→   452→  /** Pass "none" when the caller renders its own skeleton geometry. */
+   453→   453→  ariaLabel?: string;
+   454→   454→}) {
+   455→   455→  return (
+   456→   456→    <div
+   457→   457→      aria-label={ariaLabel}
+   458→   458→      className={cn(
+   459→   459→        "dlg-card grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white xl:grid-cols-4",
+   460→   460→        className
+   461→   461→      )}
+   462→   462→    >
+   463→   463→      {children}
+   464→   464→    </div>
+   465→   465→  );
+   466→   466→}
+   467→   467→
+   468→   468→export function StatCell({
+   469→   469→  label,
+   470→   470→  value,
+   471→   471→  hint,
+   472→   472→  aside,
+   473→   473→  onClick,
+   474→   474→  ariaLabel,
+   475→   475→}: {
+   476→   476→  label: string;
+   477→   477→  value: React.ReactNode;
+   478→   478→  hint?: React.ReactNode;
+   479→   479→  /** Trailing node on the numeral baseline (sparkline, delta, pill). */
+   480→   480→  aside?: React.ReactNode;
+   481→   481→  onClick?: () => void;
+   482→   482→  ariaLabel?: string;
+   483→   483→}) {
+   484→   484→  const body = (
+   485→   485→    <>
+   486→   486→      <p className="eyebrow">{label}</p>
+   487→   487→      <div className="mt-3 flex items-end justify-between gap-3">
+   488→   488→        <p className="num text-[44px] font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+   489→   489→        {aside}
+   490→   490→      </div>
+   491→   491→      {hint ? <p className="mt-2 text-xs text-body-gray">{hint}</p> : null}
+   492→   492→    </>
+   493→   493→  );
+   494→   494→  if (onClick) {
+   495→   495→    return (
+   496→   496→      <button
+   497→   497→        type="button"
+   498→   498→        onClick={onClick}
+   499→   499→        aria-label={ariaLabel ?? label}
+   500→   500→        className="focus-ring block w-full rounded-none bg-transparent p-5 text-left transition-colors hover:bg-white/70 sm:p-6"
+   501→   501→      >
+   502→   502→        {body}
+   503→   503→      </button>
+   504→   504→    );
+   505→   505→  }
+   506→   506→  return <div className="p-5 sm:p-6">{body}</div>;
+   507→   507→}
+   508→   508→
+   509→   509→/** Skeleton twin of StatLedger — identical geometry, shimmer cells. */
+   510→   510→export function StatLedgerSkeleton({ count = 4 }: { count?: number }) {
+   511→   511→  return (
+   512→   512→    <StatLedger aria-hidden="true">
+   513→   513→      {Array.from({ length: count }).map((_, i) => (
+   514→   514→        <div key={i} className="p-5 sm:p-6">
+   515→   515→          <div className="skel h-3 w-20" />
+   516→   516→          <div className="skel mt-4 h-10 w-16" />
+   517→   517→          <div className="skel mt-3 h-3 w-24" />
+   518→   518→        </div>
+   519→   519→      ))}
+   520→   520→    </StatLedger>
+   521→   521→  );
+   522→   522→}
+   523→   523→
+   524→   524→// ── EmptyState ──────────────────────────────────────────────────────────────
+   525→   525→
+   526→   526→export function EmptyState({
+   527→   527→  icon: Icon,
+   528→   528→  title,
+   529→   529→  description,
+   530→   530→  action,
+   531→   531→  compact = false,
+   532→   532→  tone = "slate",
+   533→   533→  className,
+   534→   534→}: {
+   535→   535→  icon: LucideIcon;
+   536→   536→  title: string;
+   537→   537→  description?: string;
+   538→   538→  action?: React.ReactNode;
+   539→   539→  compact?: boolean;
+   540→   540→  tone?: ChipTone;
+   541→   541→  className?: string;
+   542→   542→}) {
+   543→   543→  return (
+   544→   544→    <div
+   545→   545→      className={cn(
+   546→   546→        "flex flex-col items-center justify-center px-6 text-center",
+   547→   547→        compact ? "min-h-[104px] py-6" : "min-h-[176px] py-10",
+   548→   548→        className
+   549→   549→      )}
+   550→   550→    >
+   551→   551→      <span
+   552→   552→        className={cn(
+   553→   553→          "chip mb-4 rounded-full",
+   554→   554→          `chip-${tone}`,
+   555→   555→          compact ? "h-10 w-10" : "h-14 w-14"
+   556→   556→        )}
+   557→   557→      >
+   558→   558→        <Icon className={compact ? "h-4.5 w-4.5" : "h-6 w-6"} aria-hidden="true" />
+   559→   559→      </span>
+   560→   560→      <p className="text-sm font-semibold text-ink">{title}</p>
+   561→   561→      {description ? (
+   562→   562→        <p className="mt-1.5 max-w-sm text-[13px] leading-5 text-stone">{description}</p>
+   563→   563→      ) : null}
+   564→   564→      {action ? <div className="mt-5">{action}</div> : null}
+   565→   565→    </div>
+   566→   566→  );
+   567→   567→}
+   568→   568→
+   569→   569→// ── SectionCard ─────────────────────────────────────────────────────────────
+   570→   570→// Bevel Cloud Feature Card: #ebf0f8 surface, 24px radius, no border, no
+   571→   571→// shadow, 32px padding (p-6 keeps in-app density; p-8 on wide screens).
+   572→   572→
+   573→   573→export function SectionCard({
+   574→   574→  title,
+   575→   575→  description,
+   576→   576→  actions,
+   577→   577→  icon: Icon,
+   578→   578→  chipTone,
+   579→   579→  children,
+   580→   580→  className,
+   581→   581→  bodyClassName,
+   582→   582→  /** "cloud" = pale Cloud Card (default) · "plain" = white panel for content
+   583→   583→   *  sitting inside dialogs / on cloud surfaces (profile section anatomy). */
+   584→   584→  variant = "cloud",
+   585→   585→}: {
+   586→   586→  title?: string;
+   587→   587→  description?: string;
+   588→   588→  actions?: React.ReactNode;
+   589→   589→  icon?: LucideIcon;
+   590→   590→  chipTone?: ChipTone;
+   591→   591→  children: React.ReactNode;
+   592→   592→  className?: string;
+   593→   593→  bodyClassName?: string;
+   594→   594→  variant?: "cloud" | "plain";
+   595→   595→}) {
+   596→   596→  // min-w-0: as a CSS-grid child the card must be allowed to shrink below the
+   597→   597→  // min-content floor of its nowrap description, or the grid track blows out
+   598→   598→  // and the card overflows its viewport (observed at 320–1279px).
+   599→   599→  return (
+   600→   600→    <section
+   601→   601→      className={cn(
+   602→   602→        variant === "plain" ? "dlg-card-plain min-w-0 p-5 sm:p-6" : "dlg-card min-w-0 p-6",
+   603→   603→        className
+   604→   604→      )}
+   605→   605→      aria-label={title}
+   606→   606→    >
+   607→   607→      {title || actions ? (
+   608→   608→        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+   609→   609→          <div className="flex min-w-0 items-center gap-3">
+   610→   610→            {Icon ? (
+   611→   611→              <IconChip
+   612→   612→                icon={Icon}
+   613→   613→                tone={chipTone ?? "slate"}
+   614→   614→                size={36}
+   615→   615→                iconSize={16}
+   616→   616→              />
+   617→   617→            ) : null}
+   618→   618→            <div className="min-w-0">
+   619→   619→              <h2 className="font-display truncate text-lg leading-7 text-ink">{title}</h2>
+   620→   620→              {/* Wraps below sm, truncates from sm up. Full-width nowrap (truncate
+   621→   621→                  everywhere) gave the card a huge min-content floor that blew out
+   622→   622→                  auto grid tracks on phones; wrapping text has none. */}
+   623→   623→              {description ? <p className="text-xs text-stone sm:truncate">{description}</p> : null}
+   624→   624→            </div>
+   625→   625→          </div>
+   626→   626→          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+   627→   627→        </div>
+   628→   628→      ) : null}
+   629→   629→      <div className={bodyClassName}>{children}</div>
+   630→   630→    </section>
+   631→   631→  );
+   632→   632→}
+   633→   633→
+   634→   634→// ── Skeleton blocks ─────────────────────────────────────────────────────────
+   635→   635→
+   636→   636→export function SkeletonKpis({ count = 4, className }: { count?: number; className?: string }) {
+   637→   637→  return (
+   638→   638→    <div className={cn("grid grid-cols-2 gap-4 lg:grid-cols-4", className)} aria-hidden="true">
+   639→   639→      {Array.from({ length: count }).map((_, i) => (
+   640→   640→        <div key={i} className="dlg-card p-6">
+   641→   641→          <div className="flex items-start justify-between">
+   642→   642→            <div className="skel h-3 w-20" />
+   643→   643→            <div className="skel h-10 w-10 rounded-full" />
+   644→   644→          </div>
+   645→   645→          <div className="skel mt-4 h-8 w-16" />
+   646→   646→        </div>
+   647→   647→      ))}
+   648→   648→    </div>
+   649→   649→  );
+   650→   650→}
+   651→   651→
+   652→   652→export function SkeletonRows({
+   653→   653→  rows = 6,
+   654→   654→  className,
+   655→   655→  rowClassName = "h-14",
+   656→   656→}: {
+   657→   657→  rows?: number;
+   658→   658→  className?: string;
+   659→   659→  rowClassName?: string;
+   660→   660→}) {
+   661→   661→  return (
+   662→   662→    <div className={cn("space-y-2", className)} aria-hidden="true">
+   663→   663→      {Array.from({ length: rows }).map((_, i) => (
+   664→   664→        <div key={i} className={cn("skel w-full", rowClassName)} />
+   665→   665→      ))}
+   666→   666→    </div>
+   667→   667→  );
+   668→   668→}
+   669→   669→
+   670→   670→export function SkeletonKanban({ columns = 4, className }: { columns?: number; className?: string }) {
+   671→   671→  return (
+   672→   672→    <div className={cn("grid grid-cols-2 gap-4 xl:grid-cols-4", className)} aria-hidden="true">
+   673→   673→      {Array.from({ length: columns }).map((_, i) => (
+   674→   674→        /* Pale cloud column panel + floating card blocks (mirrors KanbanColumn) */
+   675→   675→        <div key={i} className="flex flex-col gap-2 rounded-2xl bg-cloud p-2.5">
+   676→   676→          <div className="flex items-center gap-2 px-1 pb-0.5 pt-0.5">
+   677→   677→            <div className="skel h-2 w-2 rounded-full" />
+   678→   678→            <div className="skel h-3.5 w-20" />
+   679→   679→            <div className="ml-auto skel h-5 w-6 rounded-full" />
+   680→   680→          </div>
+   681→   681→          <div className="skel h-24 w-full rounded-2xl" />
+   682→   682→          <div className="skel h-24 w-full rounded-2xl" />
+   683→   683→        </div>
+   684→   684→      ))}
+   685→   685→    </div>
+   686→   686→  );
+   687→   687→}
+   688→   688→
+   689→   689→// ── QuickFact ───────────────────────────────────────────────────────────────
+   690→   690→// The canonical job/record fact lockup: stone eyebrow label over a tabular
+   691→   691→// semibold value. Used on job cards, detail panes and summaries.
+   692→   692→
+   693→   693→export function QuickFact({
+   694→   694→  label,
+   695→   695→  value,
+   696→   696→  className,
+   697→   697→}: {
+   698→   698→  label: string;
+   699→   699→  value: React.ReactNode;
+   700→   700→  className?: string;
+   701→   701→}) {
+   702→   702→  return (
+   703→   703→    <div className={cn("min-w-0", className)}>
+   704→   704→      <p className="eyebrow">{label}</p>
+   705→   705→      <p className="num mt-1 truncate text-sm font-semibold text-ink">{value}</p>
+   706→   706→    </div>
+   707→   707→  );
+   708→   708→}
+   709→   709→
+   710→   710→// ── Callout ─────────────────────────────────────────────────────────────────
+   711→   711→// Inline banner for errors/success/info inside a view (full-card empty/error
+   712→   712→// states use EmptyState instead). Tone drives the functional status tint;
+   713→   713→// the glyph disc carries the state shape like every other status marker.
+   714→   714→
+   715→   715→export function Callout({
+   716→   716→  tone = "info",
+   717→   717→  icon: Icon,
+   718→   718→  title,
+   719→   719→  children,
+   720→   720→  action,
+   721→   721→  className,
+   722→   722→}: {
+   723→   723→  tone?: StatusVariant;
+   724→   724→  icon?: LucideIcon;
+   725→   725→  title?: string;
+   726→   726→  children?: React.ReactNode;
+   727→   727→  action?: React.ReactNode;
+   728→   728→  className?: string;
+   729→   729→}) {
+   730→   730→  const tint: Record<StatusVariant, string> = {
+   731→   731→    ok: "bg-[var(--ok-bg)] text-[var(--ok)]",
+   732→   732→    warn: "bg-[var(--warn-bg)] text-[var(--warn)]",
+   733→   733→    bad: "bg-[var(--bad-bg)] text-[var(--bad)]",
+   734→   734→    info: "bg-[var(--info-bg)] text-[var(--info)]",
+   735→   735→    neutral: "bg-[var(--neutral-bg)] text-[var(--neutral)]",
+   736→   736→  };
+   737→   737→  return (
+   738→   738→    <div
+   739→   739→      role={tone === "bad" ? "alert" : "status"}
+   740→   740→      className={cn("flex items-start gap-3 rounded-xl p-4", tint[tone], className)}
+   741→   741→    >
+   742→   742→      {Icon ? (
+   743→   743→        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70">
+   744→   744→          <Icon className="h-4 w-4" aria-hidden="true" />
+   745→   745→        </span>
+   746→   746→      ) : null}
+   747→   747→      <div className="min-w-0 flex-1">
+   748→   748→        {title ? <p className="text-sm font-semibold">{title}</p> : null}
+   749→   749→        {children ? <div className="text-[13px] leading-5 opacity-90">{children}</div> : null}
+   750→   750→        {action ? <div className="mt-2.5">{action}</div> : null}
+   751→   751→      </div>
+   752→   752→    </div>
+   753→   753→  );
+   754→   754→}
+   755→   755→
+   756→   756→// ── EmptyNote ───────────────────────────────────────────────────────────────
+   757→   757→// Quiet text-only empty line for bounded lists inside dialogs/panels
+   758→   758→// (full-card states use EmptyState).
+   759→   759→
+   760→   760→export function EmptyNote({ children, className }: { children: React.ReactNode; className?: string }) {
+   761→   761→  return <p className={cn("py-6 text-center text-sm text-body-gray", className)}>{children}</p>;
+   762→   762→}
+   763→   763→
+   764→   764→// ── LedgerRow ───────────────────────────────────────────────────────────────
+   765→   765→// Hairline label/value row for dossier ledgers. Values shrink and wrap so
+   766→   766→// long emails/URLs can never force a dialog's grid track wider.
+   767→   767→
+   768→   768→export function LedgerRow({
+   769→   769→  label,
+   770→   770→  value,
+   771→   771→  num = false,
+   772→   772→  className,
+   773→   773→}: {
+   774→   774→  label: string;
+   775→   775→  value: React.ReactNode;
+   776→   776→  num?: boolean;
+   777→   777→  className?: string;
+   778→   778→}) {
+   779→   779→  return (
+   780→   780→    <div className={cn("flex items-start justify-between gap-4 border-b border-divider py-2.5 last:border-0", className)}>
+   781→   781→      <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
+   782→   782→      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>
+   783→   783→        {value === "" || value === null || value === undefined ? "-" : value}
+   784→   784→      </span>
+   785→   785→    </div>
+   786→   786→  );
+   787→   787→}
+   788→   788→
+   789→   789→// ── Pagination ──────────────────────────────────────────────────────────────
+   790→   790→// The ONE pagination control: compact 36px ghost capsules, count on the left,
+   791→   791→// controls right-aligned (table-density exception to the 44px rule).
+   792→   792→
+   793→   793→export function Pagination({
+   794→   794→  page,
+   795→   795→  pageCount,
+   796→   796→  total,
+   797→   797→  onPage,
+   798→   798→  unit = "results",
+   799→   799→  className,
+   800→   800→}: {
+   801→   801→  page: number;
+   802→   802→  pageCount: number;
+   803→   803→  total?: number;
+   804→   804→  onPage: (next: number) => void;
+   805→   805→  unit?: string;
+   806→   806→  className?: string;
+   807→   807→}) {
+   808→   808→  return (
+   809→   809→    <div className={cn("flex items-center justify-between gap-3 pt-4", className)}>
+   810→   810→      <p className="num text-xs text-body-gray">
+   811→   811→        {typeof total === "number" ? `${total} ${unit}` : `Page ${page} of ${Math.max(pageCount, 1)}`}
+   812→   812→        {typeof total === "number" ? ` · page ${page} of ${Math.max(pageCount, 1)}` : ""}
+   813→   813→      </p>
+   814→   814→      <div className="flex items-center gap-2">
+   815→   815→        <button
+   816→   816→          type="button"
+   817→   817→          className="dlg-ghost inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+   818→   818→          disabled={page <= 1}
+   819→   819→          onClick={() => onPage(page - 1)}
+   820→   820→        >
+   821→   821→          Previous
+   822→   822→        </button>
+   823→   823→        <button
+   824→   824→          type="button"
+   825→   825→          className="dlg-ghost inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+   826→   826→          disabled={page >= pageCount}
+   827→   827→          onClick={() => onPage(page + 1)}
+   828→   828→        >
+   829→   829→          Next
+   830→   830→        </button>
+   831→   831→      </div>
+   832→   832→    </div>
+   833→   833→  );
+   834→   834→}
+   835→   835→

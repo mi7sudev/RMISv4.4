@@ -14,7 +14,16 @@ import * as React from "react";
 import { ArrowLeft, Check, Clock, Minus, Send, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { pillClass, type StatusVariant } from "@/lib/status-ui";
+import { getStatusMeta } from "@/lib/status";
+import {
+  pillClass,
+  variantForStatus,
+  variantForVerdict,
+  type StatusVariant,
+} from "@/lib/status-ui";
+
+/** Shared dialog scroll container class — one scroll anatomy for every dialog. */
+export const dialogScroll = "max-h-[92dvh] overflow-y-auto scroll-thin";
 
 // ── PageHeader ──────────────────────────────────────────────────────────────
 // The single enterprise page-header anatomy used by EVERY view:
@@ -48,8 +57,10 @@ export function PageHeader({
   meta?: React.ReactNode;
   className?: string;
 }) {
+  // NOTE: no self animation — AppShell owns the view mount transition, and a
+  // second fade inside the header produced a double-fade on every navigation.
   return (
-    <header className={cn("animate-in fade-in slide-in-from-bottom-2 duration-300", className)}>
+    <header className={className}>
       {back ? (
         <button
           type="button"
@@ -95,6 +106,10 @@ export function PageHeader({
 
 // ── StatusPill ──────────────────────────────────────────────────────────────
 
+// THE one status pill. Displays the normalized status label ("UNDER_REVIEW"
+// renders as "Under Review"); the variant auto-maps from the status tone
+// unless explicitly overridden (used for non-application labels such as
+// verdicts, completion or document states).
 export function StatusPill({
   status,
   variant,
@@ -102,15 +117,169 @@ export function StatusPill({
 }: {
   /** Raw stored status spelling (normalized internally). */
   status?: string | null;
-  /** Explicit variant overrides status mapping. */
+  /** Explicit variant overrides the status→tone mapping. */
   variant?: StatusVariant;
   className?: string;
 }) {
-  const v: StatusVariant = variant ?? "neutral";
+  const meta = status ? getStatusMeta(status) : null;
+  const v: StatusVariant = variant ?? (meta ? variantForStatus(status) : "neutral");
   return (
-    <span className={cn(pillClass(v), className)}>
-      {status ?? ""}
+    <span className={cn(pillClass(v), "shrink-0", className)}>
+      {meta ? meta.label : (status ?? "")}
     </span>
+  );
+}
+
+// ── VerdictPill ─────────────────────────────────────────────────────────────
+
+function verdictMeta(verdict: string): { chip: string; variant: StatusVariant } {
+  switch (verdict) {
+    case "ALL_MET":
+      return { chip: "Qualified", variant: variantForVerdict("Qualified") };
+    case "PARTIAL":
+      return { chip: "Partial", variant: variantForVerdict("Partial") };
+    case "NONE_MET":
+      return { chip: "Not qualified", variant: variantForVerdict("Not qualified") };
+    case "NEEDS_REVIEW":
+      return { chip: "Verify", variant: variantForVerdict("Verify") };
+    case "NO_REQUIREMENTS":
+      return { chip: "No reqs", variant: variantForVerdict("No reqs") };
+    default:
+      return { chip: verdict, variant: variantForVerdict(verdict) };
+  }
+}
+
+/** MQR verdict pill for queue cards / list rows (null when no verdict). */
+export function VerdictPill({
+  verdict,
+  className,
+}: {
+  verdict: string | null | undefined;
+  className?: string;
+}) {
+  if (!verdict) return null;
+  const vm = verdictMeta(verdict);
+  return <span className={cn(pillClass(vm.variant), "shrink-0", className)}>{vm.chip}</span>;
+}
+
+// ── Name initials + monogram avatar ─────────────────────────────────────────
+
+/** First letters of the first two words, uppercase ("Juan Cruz" → "JC"). */
+export function nameInitials(name: string | null | undefined): string {
+  return (
+    (name || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
+}
+
+/** Gradient monogram avatar with initials derived from the name. */
+export function MonogramAvatar({
+  name,
+  size = 36,
+  warm = false,
+  className,
+}: {
+  name: string;
+  size?: number;
+  warm?: boolean;
+  className?: string;
+}) {
+  return (
+    <span aria-hidden="true">
+      <Monogram size={size} warm={warm} className={cn("rounded-full", className)}>
+        {nameInitials(name)}
+      </Monogram>
+    </span>
+  );
+}
+
+// ── SegmentedControl ────────────────────────────────────────────────────────
+// Mode/view switchers (Kanban⇄List, tab families): fog track + white active
+// pill. One anatomy for every segmented control in the app.
+
+export function SegmentedControl<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  className,
+}: {
+  value: T;
+  onChange: (next: T) => void;
+  options: { value: T; label: string; icon?: LucideIcon }[];
+  ariaLabel: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={cn("inline-flex items-center rounded-full bg-fog p-1", className)}
+    >
+      {options.map((opt) => {
+        const active = opt.value === value;
+        const Icon = opt.icon;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              "focus-ring inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
+              active ? "bg-white text-ink shadow-e1" : "text-stone hover:text-ink"
+            )}
+          >
+            {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── FilterChip ──────────────────────────────────────────────────────────────
+// Filter/segment chips where the ACTIVE state carries the brand blue (stage
+// tabs, contact filters) — the system-wide blue-fill language for selection.
+
+export function FilterChip({
+  active,
+  onClick,
+  children,
+  count,
+  className,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  count?: number;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-all focus-ring",
+        active
+          ? "bg-primary text-primary-foreground shadow-cta hover:bg-[#0e7abf]"
+          : "border border-[#dfe6f0] bg-white text-stone shadow-[0_1px_2px_rgba(31,32,37,0.04)] hover:bg-fog hover:text-ink",
+        className
+      )}
+    >
+      {children}
+      {typeof count === "number" ? (
+        <span className={cn("num text-[10.5px]", active ? "opacity-80" : "text-ash")}>
+          {count}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -171,7 +340,7 @@ export function Monogram({
 
 // ── Tinted icon chip ────────────────────────────────────────────────────────
 
-export type ChipTone = "amber" | "emerald" | "rose" | "slate" | "ink" | "gold" | "plum";
+export type ChipTone = "amber" | "blue" | "emerald" | "rose" | "slate" | "ink" | "gold" | "plum";
 
 export function IconChip({
   icon: Icon,
@@ -410,6 +579,9 @@ export function SectionCard({
   children,
   className,
   bodyClassName,
+  /** "cloud" = pale Cloud Card (default) · "plain" = white panel for content
+   *  sitting inside dialogs / on cloud surfaces (profile section anatomy). */
+  variant = "cloud",
 }: {
   title?: string;
   description?: string;
@@ -419,12 +591,19 @@ export function SectionCard({
   children: React.ReactNode;
   className?: string;
   bodyClassName?: string;
+  variant?: "cloud" | "plain";
 }) {
   // min-w-0: as a CSS-grid child the card must be allowed to shrink below the
   // min-content floor of its nowrap description, or the grid track blows out
   // and the card overflows its viewport (observed at 320–1279px).
   return (
-    <section className={cn("dlg-card min-w-0 p-6", className)} aria-label={title}>
+    <section
+      className={cn(
+        variant === "plain" ? "dlg-card-plain min-w-0 p-5 sm:p-6" : "dlg-card min-w-0 p-6",
+        className
+      )}
+      aria-label={title}
+    >
       {title || actions ? (
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -503,6 +682,153 @@ export function SkeletonKanban({ columns = 4, className }: { columns?: number; c
           <div className="skel h-24 w-full rounded-2xl" />
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── QuickFact ───────────────────────────────────────────────────────────────
+// The canonical job/record fact lockup: stone eyebrow label over a tabular
+// semibold value. Used on job cards, detail panes and summaries.
+
+export function QuickFact({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <p className="eyebrow">{label}</p>
+      <p className="num mt-1 truncate text-sm font-semibold text-ink">{value}</p>
+    </div>
+  );
+}
+
+// ── Callout ─────────────────────────────────────────────────────────────────
+// Inline banner for errors/success/info inside a view (full-card empty/error
+// states use EmptyState instead). Tone drives the functional status tint;
+// the glyph disc carries the state shape like every other status marker.
+
+export function Callout({
+  tone = "info",
+  icon: Icon,
+  title,
+  children,
+  action,
+  className,
+}: {
+  tone?: StatusVariant;
+  icon?: LucideIcon;
+  title?: string;
+  children?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  const tint: Record<StatusVariant, string> = {
+    ok: "bg-[var(--ok-bg)] text-[var(--ok)]",
+    warn: "bg-[var(--warn-bg)] text-[var(--warn)]",
+    bad: "bg-[var(--bad-bg)] text-[var(--bad)]",
+    info: "bg-[var(--info-bg)] text-[var(--info)]",
+    neutral: "bg-[var(--neutral-bg)] text-[var(--neutral)]",
+  };
+  return (
+    <div
+      role={tone === "bad" ? "alert" : "status"}
+      className={cn("flex items-start gap-3 rounded-xl p-4", tint[tone], className)}
+    >
+      {Icon ? (
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      ) : null}
+      <div className="min-w-0 flex-1">
+        {title ? <p className="text-sm font-semibold">{title}</p> : null}
+        {children ? <div className="text-[13px] leading-5 opacity-90">{children}</div> : null}
+        {action ? <div className="mt-2.5">{action}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+// ── EmptyNote ───────────────────────────────────────────────────────────────
+// Quiet text-only empty line for bounded lists inside dialogs/panels
+// (full-card states use EmptyState).
+
+export function EmptyNote({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn("py-6 text-center text-sm text-body-gray", className)}>{children}</p>;
+}
+
+// ── LedgerRow ───────────────────────────────────────────────────────────────
+// Hairline label/value row for dossier ledgers. Values shrink and wrap so
+// long emails/URLs can never force a dialog's grid track wider.
+
+export function LedgerRow({
+  label,
+  value,
+  num = false,
+  className,
+}: {
+  label: string;
+  value: React.ReactNode;
+  num?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-start justify-between gap-4 border-b border-divider py-2.5 last:border-0", className)}>
+      <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
+      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>
+        {value === "" || value === null || value === undefined ? "-" : value}
+      </span>
+    </div>
+  );
+}
+
+// ── Pagination ──────────────────────────────────────────────────────────────
+// The ONE pagination control: compact 36px ghost capsules, count on the left,
+// controls right-aligned (table-density exception to the 44px rule).
+
+export function Pagination({
+  page,
+  pageCount,
+  total,
+  onPage,
+  unit = "results",
+  className,
+}: {
+  page: number;
+  pageCount: number;
+  total?: number;
+  onPage: (next: number) => void;
+  unit?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-center justify-between gap-3 pt-4", className)}>
+      <p className="num text-xs text-body-gray">
+        {typeof total === "number" ? `${total} ${unit}` : `Page ${page} of ${Math.max(pageCount, 1)}`}
+        {typeof total === "number" ? ` · page ${page} of ${Math.max(pageCount, 1)}` : ""}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="dlg-ghost inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          className="dlg-ghost inline-flex min-h-[36px] items-center gap-1.5 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={page >= pageCount}
+          onClick={() => onPage(page + 1)}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

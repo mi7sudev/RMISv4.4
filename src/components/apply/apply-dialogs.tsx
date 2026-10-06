@@ -6,14 +6,17 @@
 // retired — applicants are sent to finish their profile in the profile
 // builder first, then apply through the normal confirm step.
 // Used by the jobs view. Bevel pass: white 24px dialog surface, cloud/60
-// tiles, charcoal capsule CTAs, functional --bad tints for MQR failures.
+// tiles, .dlg-cta RMIS Electric Blue capsules, functional --bad tints for MQR
+// failures.
 // ============================================================================
 
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { Check, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Callout } from "@/components/ui/shell";
 import { apiFetch, humanize, deadlineState } from "@/lib/client";
 import { navigate } from "@/lib/router";
 import { useSession } from "@/components/session-provider";
@@ -85,17 +88,14 @@ function MqrFailure({ mqr, onGoProfile }: { mqr: MqrResults; onGoProfile: () => 
   ];
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-[var(--bad-bg)] p-4">
-        <p className="text-sm font-medium text-ink">Requirements Not Met</p>
-        <p className="text-sm text-body-gray mt-1">
-          Your credentials do not satisfy every minimum qualification for this position. Nothing was submitted.
-        </p>
-      </div>
+      <Callout tone="bad" icon={X} title="Requirements Not Met">
+        Your credentials do not satisfy every minimum qualification for this position. Nothing was submitted.
+      </Callout>
       <ul className="space-y-2">
         {dims.map(([label, verdict]) => (
           <li key={label} className="flex items-start gap-3 rounded-lg bg-cloud/60 p-3">
-            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${verdict === MQR_MEETS ? "bg-primary text-primary-foreground" : "bg-[var(--bad-bg)] text-[var(--bad)]"}`}>
-              {verdict === MQR_MEETS ? "✓" : "✕"}
+            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${verdict === MQR_MEETS ? "bg-primary text-primary-foreground" : "bg-[var(--bad-bg)] text-[var(--bad)]"}`}>
+              {verdict === MQR_MEETS ? <Check className="h-3 w-3" aria-hidden="true" /> : <X className="h-3 w-3" aria-hidden="true" />}
             </span>
             <div className="min-w-0">
               <p className="text-sm font-medium text-ink">{label}</p>
@@ -179,8 +179,8 @@ export function ApplyDialogs({
         {step === "confirm" && (
           <div className="p-6">
             <DialogHeader className="text-left space-y-2">
-              <div className="dlg-pill inline-flex w-fit items-center rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">Application</div>
-              <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">{jobTitle}</DialogTitle>
+              <div className="dlg-pill w-fit rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">Application</div>
+              <DialogTitle className="font-display text-2xl text-ink">{jobTitle}</DialogTitle>
               <DialogDescription className="text-sm text-body-gray">
                 {place} · {job.positionType ? humanize(job.positionType) : "-"}{job.numberOfVacancy != null ? ` · ${job.numberOfVacancy} vacanc${job.numberOfVacancy === 1 ? "y" : "ies"}` : ""}
               </DialogDescription>
@@ -211,7 +211,7 @@ export function ApplyDialogs({
         {step === "mqr-fail" && mqr && (
           <div className="p-6">
             <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Minimum Qualifications</DialogTitle>
+              <DialogTitle className="font-display text-2xl text-ink">Minimum Qualifications</DialogTitle>
               <DialogDescription className="text-sm text-body-gray">Automated evaluation for {jobTitle}</DialogDescription>
             </DialogHeader>
             <div className="mt-4">
@@ -223,7 +223,10 @@ export function ApplyDialogs({
         {/* Done */}
         {step === "done" && (
           <div className="p-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl text-primary-foreground">✓</div>
+            {/* Success disc — the Check glyph carries the state (no text ✓). */}
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Check className="h-7 w-7" aria-hidden="true" />
+            </div>
             <h3 className="mt-4 text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Application submitted</h3>
             <p className="mt-2 text-sm text-body-gray">
               We received your application for {jobTitle}. You will receive an SMS confirmation shortly.

@@ -20,15 +20,17 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { dialogScroll } from "@/components/ui/shell";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  EmptyState, IconChip, PageHeader, SkeletonRows, StatusPill, type ChipTone,
+  EmptyState, IconChip, PageHeader, Pagination, SkeletonRows, StatusPill, type ChipTone,
 } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate } from "@/lib/client";
 import type { JobWire } from "@/lib/router";
 import { navigate } from "@/lib/router";
+import { useFocusRefresh } from "@/lib/use-focus-refresh";
 import { BrandLogo } from "@/components/brand-logo";
 import { textToHtml } from "@/lib/sanitize";
 import { variantForJobStatus } from "@/lib/status-ui";
@@ -39,20 +41,10 @@ import {
 
 // ── Shared visuals ──────────────────────────────────────────────────────────
 
-export const ghostBtn =
-  "dlg-ghost inline-flex min-h-[44px] items-center justify-center gap-2 px-4 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50";
-export const ctaBtn =
-  "dlg-cta inline-flex min-h-[44px] items-center justify-center gap-2 px-5 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-50";
-
-/** Destructive ghost (contract §3): capsule shape with the functional --bad tint. */
-export const ghostBadBtn =
-  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-[var(--bad)]/30 bg-white px-4 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:cursor-not-allowed disabled:opacity-50";
-/** 36px quiet round icon button (cloud tile on hover) for row quick actions. */
-export const iconBtn =
-  "grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink focus-ring";
-/** 36px destructive round icon button for row quick actions. */
-export const iconBtnBad =
-  "grid h-9 w-9 place-items-center rounded-full text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] focus-ring";
+// Canonical button classes now live in @/components/ui/buttons; these
+// re-exports keep existing import paths stable.
+export { ghostBtn, ctaBtn, ghostBadBtn, iconBtn, iconBtnBad } from "@/components/ui/buttons";
+import { ghostBtn, ctaBtn, ghostBadBtn, iconBtn, iconBtnBad } from "@/components/ui/buttons";
 
 /**
  * Bevel dialog sub-panel: cloud-tint 16px nested surface with an ink heading —
@@ -84,7 +76,8 @@ function isOpenJob(j: JobWire): boolean {
   return j.isActive && !deadlineState(j.deadlineDate).overdue;
 }
 
-function JobStatusPill({ job }: { job: JobWire }) {
+/** Job posting status pill — shared with the job workspace header. */
+export function JobStatusPill({ job }: { job: JobWire }) {
   const open = isOpenJob(job);
   return (
     <StatusPill
@@ -266,7 +259,7 @@ export function JobFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[92dvh] overflow-y-auto scroll-thin">
+      <DialogContent className={`${dialogScroll} sm:max-w-2xl`}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">{editing ? "Edit job posting" : "Create job posting"}</DialogTitle>
           <DialogDescription>
@@ -504,22 +497,14 @@ export default function Recruitment() {
     void load();
   }, [load]);
 
-  // 30 s silent poll + refetch-on-focus.
+  // 30 s silent poll + refetch-on-focus (spec §13).
   useEffect(() => {
     const id = setInterval(() => {
       if (!document.hidden) void load(true);
     }, 30_000);
     return () => clearInterval(id);
   }, [load]);
-  useEffect(() => {
-    const onFocus = () => void load(true);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [load]);
+  useFocusRefresh(load);
 
   // Debounced search (350 ms).
   useEffect(() => {
@@ -643,12 +628,18 @@ export default function Recruitment() {
       </div>
 
       {error ? (
-        <div className="dlg-card p-8 text-center space-y-4">
-          <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-stone">{error}</p>
-          <button type="button" className={ghostBtn} onClick={() => void load()}>
-            Retry
-          </button>
+        <div className="dlg-card p-8">
+          <EmptyState
+            icon={AlertTriangle}
+            tone="rose"
+            title="Couldn't load job postings"
+            description={error}
+            action={
+              <button type="button" className={ghostBtn} onClick={() => void load()}>
+                Retry
+              </button>
+            }
+          />
         </div>
       ) : jobs === null ? (
         <div className="dlg-card p-6">
@@ -769,22 +760,13 @@ export default function Recruitment() {
 
       {/* Pagination */}
       {jobs !== null && filtered.length > 0 && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="num text-xs text-body-gray">
-            {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
-          </p>
-          <div className="flex items-center gap-2">
-            <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
-              Previous
-            </button>
-            <span className="num text-xs text-stone">
-              Page {safePage} of {totalPages}
-            </span>
-            <button type="button" className={ghostBtn + " min-h-[36px] px-3 text-xs"} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
-              Next
-            </button>
-          </div>
-        </div>
+        <Pagination
+          page={safePage}
+          pageCount={totalPages}
+          total={filtered.length}
+          onPage={setPage}
+          unit="postings"
+        />
       )}
 
       <JobFormDialog open={formOpen} onOpenChange={setFormOpen} job={editJob} onSaved={() => void load(true)} />

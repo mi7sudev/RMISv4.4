@@ -4,7 +4,7 @@
 // RMIS — Public landing (spec §7.1): a two-pane job explorer in the
 // reference-board style — TOP: a Bevel "Hero Sky" rounded-32 gradient field
 // in a split composition (Google-Workspace rhythm): display headline + copy
-// + charcoal capsule CTA on the left, the official DOST-MIRDC brand mark
+// + .dlg-cta RMIS Electric Blue capsule CTA on the left, the official DOST-MIRDC brand mark
 // with the agency authority line as the institutional proof block on the
 // right; LEFT: a register of Cloud Card
 // job cards (title · company · place · salary · clamped snippet · posted
@@ -48,8 +48,10 @@ import { SiteHeader } from "@/components/shell/site-header";
 import { Footer } from "@/components/shell/footer";
 import { BrandLogo } from "@/components/brand-logo";
 import { useApplyFlow } from "@/components/apply/apply-dialogs";
-import { EmptyState } from "@/components/ui/shell";
+import { ctaBtn, ghostBtn } from "@/components/ui/buttons";
+import { Callout, EmptyState, QuickFact } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
+import { useSavedJobs } from "@/lib/use-saved-jobs";
 import { navigate } from "@/lib/router";
 import type { JobWire } from "@/lib/router";
 import { cn } from "@/lib/utils";
@@ -57,12 +59,6 @@ import { cn } from "@/lib/utils";
 // ── Bevel accents ───────────────────────────────────────────────────────────
 
 const TITLE_SELECTED = "text-metric-blue";
-// Charcoal Download Pill (spec): Charcoal fill, Cloud text, 128px radius,
-// 16px/22.4 weight-500 text, 8px vertical / 16px horizontal padding.
-const QUICK_APPLY_BTN =
-  "dlg-cta text-nav inline-flex min-h-[44px] items-center justify-center gap-2 px-4 font-medium disabled:cursor-not-allowed disabled:opacity-50";
-const SAVE_BTN =
-  "dlg-ghost text-nav inline-flex min-h-[44px] items-center justify-center gap-2 px-5 font-medium";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -78,55 +74,8 @@ function postedAt(job: JobWire): string {
   return job.publishDate ?? job.publishedAt;
 }
 
-const SAVED_KEY = "rmis-frontpage-saved-jobs";
-
-/** Client-persisted bookmark list for the frontpage explorer. */
-function useSavedJobs() {
-  const [saved, setSaved] = useState<number[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(SAVED_KEY);
-      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-      return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const toggle = useCallback((id: number) => {
-    setSaved((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      try {
-        window.localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable — in-session state still works */
-      }
-      return next;
-    });
-  }, []);
-
-  return { saved, toggle };
-}
-
-// ── Quick-view cell (shared card expansion facts) ───────────────────────────
-
-/** One definition-list cell of the quick view: micro-kicker label over a
- *  semibold tabular value. `danger` flags a passed deadline. */
-function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div>
-      <dt className="eyebrow">{label}</dt>
-      <dd
-        className={cn(
-          "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",
-          danger ? "text-[var(--bad)]" : "text-ink"
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
+// Bookmarks — shared client store with the applicant home Apply Now pane
+// (hook + localStorage key live in lib/use-saved-jobs).
 
 // ── Job card (left register) ────────────────────────────────────────────────
 
@@ -241,7 +190,7 @@ function JobListCard({
                 </div>
               )}
               {/* 3-up everywhere — a 6-up row wraps currency mid-number. */}
-              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
+              <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
                 <QuickFact label="Item No." value={pos?.itemNumber ?? "-"} />
                 <QuickFact label="Vacancies" value={String(job.numberOfVacancy ?? "-")} />
                 <QuickFact
@@ -254,8 +203,13 @@ function JobListCard({
                 />
                 <QuickFact label="Monthly Salary" value={salary != null ? formatCurrency(salary) : "-"} />
                 <QuickFact label="Published" value={formatDate(job.publishDate)} />
-                <QuickFact label="Deadline" value={formatDate(deadline)} danger={overdue} />
-              </dl>
+                <QuickFact
+                  label="Deadline"
+                  value={
+                    overdue ? <span className="text-[var(--bad)]">{formatDate(deadline)}</span> : formatDate(deadline)
+                  }
+                />
+              </div>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
@@ -409,14 +363,14 @@ function JobDetail({
       <p className="num mt-4 text-sm text-stone">Posted {timeAgo(postedAt(job))}</p>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={onApply} disabled={overdue} className={QUICK_APPLY_BTN}>
+        <button type="button" onClick={onApply} disabled={overdue} className={ctaBtn}>
           Quick apply
         </button>
         <button
           type="button"
           onClick={onSave}
           aria-pressed={saved}
-          className={SAVE_BTN}
+          className={ghostBtn}
         >
           <Bookmark className={cn("h-4 w-4", saved && "fill-current")} aria-hidden="true" />
           {saved ? "Saved" : "Save"}
@@ -572,8 +526,8 @@ export default function PublicLanding() {
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
         {/* Hero — Bevel "Hero Sky" field (rounded 32) anchoring the explorer:
             display headline, then the official brand mark + agency name as
-            the quiet institutional proof strip, then the single charcoal
-            capsule CTA (real marks only). */}
+            the quiet institutional proof strip, then the single .dlg-cta RMIS
+            Electric Blue capsule CTA (real marks only). */}
         <section className="hero-sky rounded-[32px] p-6 sm:p-8 lg:px-10 lg:py-10 lg:[@media(max-height:860px)]:py-8">
           {/* QA 2026-02: header renamed to "Job Opportunities" to match the
               Positions tab; the live "N open" pill was removed — it read as
@@ -599,15 +553,21 @@ export default function PublicLanding() {
         </section>
 
         {error !== null ? (
-          <div className="mt-6 rounded-2xl bg-[var(--bad-bg)] p-5">
-            <p className="text-sm text-ink">{error}</p>
-            <button
-              onClick={() => void load(false)}
-              className="mt-2 text-sm text-metric-blue underline underline-offset-2"
-            >
-              Try again
-            </button>
-          </div>
+          <Callout
+            tone="bad"
+            icon={AlertCircle}
+            className="mt-6"
+            action={
+              <button
+                onClick={() => void load(false)}
+                className="inline-flex min-h-[44px] items-center text-sm font-medium text-metric-blue underline underline-offset-2"
+              >
+                Try again
+              </button>
+            }
+          >
+            {error}
+          </Callout>
         ) : jobs === null ? (
           <div className="mt-6 space-y-3.5" aria-hidden="true">
             {[0, 1, 2].map((i) => (

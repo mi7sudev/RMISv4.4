@@ -14,16 +14,17 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Loader2, MapPin, Scale, UserRound, Users, type LucideIcon } from "lucide-react";
+import { ChevronDown, MapPin, Plus, Scale, UserRound, Users } from "lucide-react";
 import { apiFetch } from "@/lib/client";
 import { CIVIL_STATUS_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { IconChip, type ChipTone } from "@/components/ui/shell";
+import { SectionCard } from "@/components/ui/shell";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import YesNoField from "./yes-no-field";
+import { SaveHint } from "./save-hint";
 import {
   Select,
   SelectContent,
@@ -32,43 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ApplicantProfile, CharacterReference } from "./section-types";
-
-/**
- * Bevel section panel (shared workspace layout system): white surface, 24px,
- * icon-chip heading row with a body-gray caption — local stand-in for the
- * old-theme ui/shell SectionCard.
- */
-function SectionPanel({
-  icon,
-  chipTone,
-  title,
-  description,
-  actions,
-  children,
-}: {
-  icon: LucideIcon;
-  chipTone: ChipTone;
-  title: string;
-  description: string;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="dlg-card-plain min-w-0 p-5 sm:p-6" aria-label={title}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} />
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-body-gray">{description}</p>}
-          </div>
-        </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
-      <div>{children}</div>
-    </section>
-  );
-}
 
 // ── Draft model ─────────────────────────────────────────────────────────────
 
@@ -417,30 +381,21 @@ export default function PersonalInfoSection({
     (form.crimeCharge && form.crimeCaseStatus.trim() !== "" ? 1 : 0);
   const refsNamed = refs.filter((r) => (r.name ?? "").trim() !== "").length;
 
-  const saveIndicator =
-    saveState === "saving" ? (
-      <span className="inline-flex items-center gap-1.5 text-xs leading-none text-body-gray">
-        <Loader2 className="h-3 w-3 animate-spin" /> Saving…
-      </span>
-    ) : saveState === "saved" ? (
-      <span className="inline-flex items-center gap-1.5 text-xs leading-none text-[var(--ok)]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--ok)]" aria-hidden="true" /> Saved ✓
-      </span>
-    ) : saveState === "error" ? (
-      <span className="text-xs leading-none text-[var(--bad)]">Save failed. Click Save Changes</span>
-    ) : saveState === "dirty" ? (
-      <span className="text-xs leading-none text-stone">Unsaved changes</span>
-    ) : null;
-
   return (
-    <SectionPanel
+    <SectionCard
+      variant="plain"
       icon={UserRound}
       chipTone="slate"
       title="Personal Information"
       description="Your identity, contact details, and legal declarations."
       actions={
         <div className="flex items-center gap-3">
-          {saveIndicator}
+          <SaveHint
+            saving={saveState === "saving"}
+            saved={saveState === "saved"}
+            dirty={saveState === "dirty"}
+            error={saveState === "error" ? "Save failed. Click Save Changes" : undefined}
+          />
           <button
             type="button"
             onClick={() => void save(true)}
@@ -575,12 +530,12 @@ export default function PersonalInfoSection({
               setRefs((prev) => [...prev, { ...EMPTY_REF }]);
               touch();
             }}
-            className="dlg-ghost mt-3 min-h-[44px] w-full py-2.5 text-sm sm:w-auto sm:px-6"
+            className="dlg-ghost mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 py-2.5 text-sm sm:w-auto sm:px-6"
           >
-            + Add Character Reference
+            <Plus className="h-4 w-4" /> Add Character Reference
           </button>
         </CollapsibleGroup>
       </div>
-    </SectionPanel>
+    </SectionCard>
   );
 }

@@ -153,7 +153,7 @@ export default function OnboardingTour({
           className="dlg-card-plain fixed z-[71] animate-in fade-in slide-in-from-bottom-2 duration-200 p-5 shadow-e4"
           style={cardStyle}
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone">
+          <p className="eyebrow">
             Step {index + 1} of {steps.length}
           </p>
           <h2 className="mt-1.5 text-base font-semibold tracking-[-0.01em] text-ink">{step.title}</h2>

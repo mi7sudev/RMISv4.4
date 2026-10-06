@@ -15,15 +15,17 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle, ArrowUpRight, BriefcaseBusiness, ClipboardList,
-  FileText, ExternalLink, FolderOpen, GraduationCap, Mail, UserRound, type LucideIcon,
+  FileText, ExternalLink, FolderOpen, GraduationCap, Mail, UserRound,
 } from "lucide-react";
-import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusDot, type ChipTone } from "@/components/ui/shell";
+import {
+  EmptyNote, EmptyState, IconChip, KpiCard, LedgerRow, MonogramAvatar, PageHeader, SectionCard,
+  SkeletonKpis, SkeletonRows, StatusDot, StatusPill,
+} from "@/components/ui/shell";
 import { apiFetch, formatDate, formatDateTime, fullName } from "@/lib/client";
 import { pillClass, variantForCompletion, variantForStatus, type StatusVariant } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
-import { cn } from "@/lib/utils";
-import { StatusPill } from "@/components/views/review-workspace";
-import { ghostBtn, ctaBtn } from "@/components/views/recruitment";
+import { useFocusRefresh } from "@/lib/use-focus-refresh";
+import { ghostBtn, ctaBtn } from "@/components/ui/buttons";
 
 // ── Wire shapes ─────────────────────────────────────────────────────────────
 
@@ -89,15 +91,6 @@ function d(v: unknown): string {
   return Number.isNaN(date.getTime()) ? t : formatDate(date);
 }
 
-function LedgerRow({ label, value, num = false }: { label: string; value: string; num?: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] py-2.5 last:border-0">
-      <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
-      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "-"}</span>
-    </div>
-  );
-}
-
 function EntityCard({ title, lines }: { title: string; lines: string[] }) {
   return (
     <div className="rounded-lg bg-white p-4">
@@ -129,85 +122,8 @@ function docStatusVariant(status: string): StatusVariant {
   }
 }
 
-/** Gradient monogram avatar (wave-3) with initials derived from the name. */
-function MonogramAvatar({ name, size = 36, warm = false }: { name: string; size?: number; warm?: boolean }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-  return (
-    <span aria-hidden="true">
-      <Monogram size={size} warm={warm} className="rounded-full">{initials || "?"}</Monogram>
-    </span>
-  );
-}
-
-/**
- * Bevel stat card (shared workspace layout system): cloud surface, 24px,
- * uppercase stone label, ink 3xl .num value, chip icon.
- */
-function StatCard({
-  icon,
-  chipTone,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  chipTone: ChipTone;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="dlg-card p-6">
-      <div className="flex items-start justify-between gap-3">
-        <p className="eyebrow pt-0.5">{label}</p>
-        <IconChip icon={icon} tone={chipTone} size={40} />
-      </div>
-      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
-    </div>
-  );
-}
-
-/**
- * Bevel content panel (shared workspace layout system): white 24px card,
- * p-5 → sm:p-6, ink section heading with body-gray caption.
- */
-function Panel({
-  title,
-  description,
-  icon,
-  chipTone = "slate",
-  className,
-  bodyClassName,
-  children,
-}: {
-  title?: string;
-  description?: string;
-  icon?: LucideIcon;
-  chipTone?: ChipTone;
-  className?: string;
-  bodyClassName?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn("dlg-card min-w-0 p-5 sm:p-6", className)}>
-      {title ? (
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {icon ? <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} /> : null}
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
-              {description ? <p className="mt-0.5 text-xs text-body-gray">{description}</p> : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-      <div className={bodyClassName}>{children}</div>
-    </section>
-  );
-}
+/** Gradient monogram avatar + stat cards + content panels are the shared
+    shell primitives (ui/shell) — single source of truth, no local copies. */
 
 export default function CandidateDetail() {
   const { params } = useHashRoute();
@@ -236,15 +152,7 @@ export default function CandidateDetail() {
   }, [load]);
 
   // Focus refresh only (no poll — spec §13).
-  useEffect(() => {
-    const onFocus = () => void load(true);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [load]);
+  useFocusRefresh(load);
 
   if (!valid) {
     return (
@@ -295,14 +203,7 @@ export default function CandidateDetail() {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="dlg-card p-6">
-              <div className="skel h-3 w-20" />
-              <div className="skel mt-4 h-8 w-16" />
-            </div>
-          ))}
-        </div>
+        <SkeletonKpis count={4} />
         <SkeletonRows rows={6} />
       </div>
     );
@@ -350,16 +251,16 @@ export default function CandidateDetail() {
         }
       />
 
-      {/* Bevel cloud stat grid */}
+      {/* Bevel cloud stat grid — canonical shell KpiCards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={ClipboardList} chipTone="plum" label="Applications" value={detail.applications.length} />
-        <StatCard icon={GraduationCap} chipTone="slate" label="Education" value={detail.educations.length} />
-        <StatCard icon={BriefcaseBusiness} chipTone="slate" label="Experience" value={detail.workExperiences.length} />
-        <StatCard icon={FileText} chipTone="slate" label="Documents" value={detail.documents.length} />
+        <KpiCard icon={ClipboardList} tone="info" label="Applications" value={detail.applications.length} />
+        <KpiCard icon={GraduationCap} tone="neutral" label="Education" value={detail.educations.length} />
+        <KpiCard icon={BriefcaseBusiness} tone="neutral" label="Experience" value={detail.workExperiences.length} />
+        <KpiCard icon={FileText} tone="neutral" label="Documents" value={detail.documents.length} />
       </div>
 
       {/* Contact */}
-      <Panel title="Contact" icon={Mail} chipTone="slate" description="Personal details on record.">
+      <SectionCard title="Contact" icon={Mail} chipTone="slate" description="Personal details on record.">
         <div className="rounded-lg bg-white p-4">
           <LedgerRow label="Email" value={detail.emailAddress ?? ""} />
           <LedgerRow label="Mobile" value={detail.mobileNumber ?? ""} num />
@@ -387,10 +288,10 @@ export default function CandidateDetail() {
             </ul>
           </div>
         )}
-      </Panel>
+      </SectionCard>
 
       {/* Profile summary */}
-      <Panel
+      <SectionCard
         title="Profile summary"
         icon={UserRound}
         chipTone="plum"
@@ -399,7 +300,7 @@ export default function CandidateDetail() {
         <div className="space-y-4">
           <EntityGroup label="Education">
             {detail.educations.length === 0 ? (
-              <p className="text-[13px] text-pebble">No education entries on file.</p>
+              <EmptyNote className="py-0 text-left text-[13px] text-pebble">No education entries on file</EmptyNote>
             ) : (
               detail.educations.map((e, i) => (
                 <EntityCard
@@ -419,7 +320,7 @@ export default function CandidateDetail() {
 
           <EntityGroup label="Experience">
             {detail.workExperiences.length === 0 ? (
-              <p className="text-[13px] text-pebble">No work experience entries on file.</p>
+              <EmptyNote className="py-0 text-left text-[13px] text-pebble">No work experience entries on file</EmptyNote>
             ) : (
               detail.workExperiences.map((w, i) => (
                 <EntityCard
@@ -437,7 +338,7 @@ export default function CandidateDetail() {
 
           <EntityGroup label="Training">
             {detail.trainings.length === 0 ? (
-              <p className="text-[13px] text-pebble">No training entries on file.</p>
+              <EmptyNote className="py-0 text-left text-[13px] text-pebble">No training entries on file</EmptyNote>
             ) : (
               detail.trainings.map((t, i) => (
                 <EntityCard
@@ -454,7 +355,7 @@ export default function CandidateDetail() {
 
           <EntityGroup label="Eligibility">
             {detail.eligibilities.length === 0 ? (
-              <p className="text-[13px] text-pebble">No eligibility records on file.</p>
+              <EmptyNote className="py-0 text-left text-[13px] text-pebble">No eligibility records on file</EmptyNote>
             ) : (
               detail.eligibilities.map((e, i) => (
                 <EntityCard
@@ -473,7 +374,7 @@ export default function CandidateDetail() {
 
           <EntityGroup label="Awards">
             {detail.awards.length === 0 ? (
-              <p className="text-[13px] text-body-gray">No awards or accomplishments on file.</p>
+              <EmptyNote className="py-0 text-left text-[13px] text-body-gray">No awards or accomplishments on file</EmptyNote>
             ) : (
               detail.awards.map((a, i) => (
                 <EntityCard
@@ -485,12 +386,12 @@ export default function CandidateDetail() {
             )}
           </EntityGroup>
         </div>
-      </Panel>
+      </SectionCard>
 
       {/* Documents */}
-      <Panel title="Documents" icon={FolderOpen} chipTone="slate" description="Files are served from the document store.">
+      <SectionCard title="Documents" icon={FolderOpen} chipTone="slate" description="Files are served from the document store.">
         {detail.documents.length === 0 ? (
-          <p className="py-4 text-center text-sm text-body-gray">No documents uploaded.</p>
+          <EmptyNote>No documents uploaded.</EmptyNote>
         ) : (
           <div className="space-y-3">
             {detail.documents.map((doc) => (
@@ -515,10 +416,10 @@ export default function CandidateDetail() {
             ))}
           </div>
         )}
-      </Panel>
+      </SectionCard>
 
       {/* Applications timeline */}
-      <Panel title="Applications" icon={ClipboardList} chipTone="plum" description="Every application on file, most recent first.">
+      <SectionCard title="Applications" icon={ClipboardList} chipTone="plum" description="Every application on file, most recent first.">
         {detail.applications.length === 0 ? (
           <EmptyState icon={BriefcaseBusiness} tone="plum" title="No applications on file" />
         ) : (
@@ -545,7 +446,7 @@ export default function CandidateDetail() {
             ))}
           </div>
         )}
-      </Panel>
+      </SectionCard>
     </div>
   );
 }

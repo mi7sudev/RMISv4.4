@@ -196,7 +196,7 @@ export function DocumentPreviewModal({
             <a
               href={fileUrl(doc)}
               download={doc.originalName}
-              className="focus-ring inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              className="dlg-cta focus-ring inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 text-sm"
             >
               <Download className="h-4 w-4" /> Download
             </a>

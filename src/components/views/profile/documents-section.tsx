@@ -17,7 +17,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Eye, FileText, FileUp, Loader2, Paperclip, Trash2, type LucideIcon } from "lucide-react";
+import { Eye, FileText, FileUp, Loader2, Paperclip, Trash2 } from "lucide-react";
 import { DocumentPreviewModal, documentStatusChip, fileKind } from "@/components/ui/document-preview";
 import {
   AlertDialog,
@@ -37,49 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmptyState, IconChip, StatusPill, type ChipTone } from "@/components/ui/shell";
+import { EmptyState, SectionCard, StatusPill } from "@/components/ui/shell";
+import { ghostBadBtn, iconBtnBad } from "@/components/ui/buttons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiFetch, formatDate, humanize } from "@/lib/client";
 import { DOCUMENT_CATEGORIES, EXTRACTABLE_CATEGORIES } from "@/lib/validation";
 import type { DocumentWire } from "@/lib/router";
 import { SaveHint, useSavedFlash } from "./save-hint";
-
-/**
- * Bevel section panel (shared workspace layout system): white surface, 24px,
- * icon-chip heading row with a body-gray caption — local stand-in for the
- * old-theme ui/shell SectionCard.
- */
-function SectionPanel({
-  icon,
-  chipTone,
-  title,
-  description,
-  actions,
-  children,
-}: {
-  icon: LucideIcon;
-  chipTone: ChipTone;
-  title: string;
-  description: string;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="dlg-card-plain min-w-0 p-5 sm:p-6" aria-label={title}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} />
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-body-gray">{description}</p>}
-          </div>
-        </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
-      <div>{children}</div>
-    </section>
-  );
-}
 
 const CATEGORY_NONE = "__select__";
 const EXTRACTABLE = EXTRACTABLE_CATEGORIES as readonly string[];
@@ -163,7 +127,8 @@ export default function DocumentsSection({
   };
 
   return (
-    <SectionPanel
+    <SectionCard
+      variant="plain"
       icon={FileText}
       chipTone="slate"
       title="Supporting Documents"
@@ -259,7 +224,7 @@ export default function DocumentsSection({
               on phones. The cap returns on lg where the column is roomy. */}
           <div className="mt-4 space-y-2 overflow-y-auto scroll-thin pr-1 lg:max-h-96">
             {docs.map((doc) => {
-              const chip = statusChip(doc);
+              const chip = documentStatusChip(doc);
               return (
                 <div
                   key={doc.id}
@@ -304,6 +269,7 @@ export default function DocumentsSection({
                       )}
                     </Tooltip>
                   )}
+                  {/* Eye button: white hover on cloud/60 rows. */}
                   <button
                     type="button"
                     onClick={() => openPreview(doc)}
@@ -316,7 +282,7 @@ export default function DocumentsSection({
                     type="button"
                     onClick={() => setDeleteTargets([doc.id])}
                     aria-label={`Delete ${doc.originalName}`}
-                    className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-full text-stone transition-colors hover:bg-[var(--bad-bg)] hover:text-[var(--bad)]"
+                    className={iconBtnBad}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -330,7 +296,7 @@ export default function DocumentsSection({
       <AlertDialog open={deleteTargets !== null} onOpenChange={(o) => !o && setDeleteTargets(null)}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">
+            <AlertDialogTitle className="font-display text-2xl text-ink">
               {deleteTargets !== null && deleteTargets.length > 1 ? `Delete ${deleteTargets.length} documents?` : "Delete this document?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
@@ -345,7 +311,7 @@ export default function DocumentsSection({
                 if (deleteTargets) void runDelete(deleteTargets);
               }}
               disabled={deleting}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+              className={`${ghostBadBtn} px-5 py-2.5`}
             >
               {deleting ? "Deleting…" : "Delete"}
             </AlertDialogAction>
@@ -361,6 +327,6 @@ export default function DocumentsSection({
           if (!o) setPreview(null);
         }}
       />
-    </SectionPanel>
+    </SectionCard>
   );
 }

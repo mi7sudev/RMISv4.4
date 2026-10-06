@@ -15,20 +15,22 @@ import {
 } from "recharts";
 import {
   AlertTriangle, Filter, History, Inbox, ChartPie as ChartPieIcon,
-  RefreshCw, ShieldCheck, TrendingUp, UsersRound, type LucideIcon,
+  RefreshCw, ShieldCheck, TrendingUp, UsersRound,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusDot, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, nameInitials, PageHeader, SectionCard, SkeletonKpis, SkeletonRows, StatusDot, StatusPill,
 } from "@/components/ui/shell";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { apiFetch, formatDate, fullName, humanize, timeAgo } from "@/lib/client";
+import { apiFetch, formatDate, fullName } from "@/lib/client";
 import { PIPELINE_STAGES, stageForStatus, getStatusMeta, type StageKey } from "@/lib/status";
 import { navigate } from "@/lib/router";
-import { STAGE_VARIANT, pillClass, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { STAGE_VARIANT, STAGE_VIZ, variantForStatus } from "@/lib/status-ui";
+import { useFocusRefresh } from "@/lib/use-focus-refresh";
 import { cn } from "@/lib/utils";
-import { ghostBtn } from "@/components/views/recruitment";
+import { ghostBtn } from "@/components/ui/buttons";
+import { AuditFeedRow } from "@/components/ui/audit-row";
 import { useSession } from "@/components/session-provider";
 
 type Stats = {
@@ -73,79 +75,19 @@ type AuditRow = {
 
 type Drill = "All" | StageKey;
 
-// ── Data-viz tokens (viz series — globals.css --viz-1..5; lead = brand) ─────
+// ── Data-viz tokens (viz series — STAGE_VIZ in lib/status-ui + CSS vars) ────
 
-const GRID = "#e6ebf3";
-const TICK = { fontSize: 11, fill: "#5d6067" };
-const VIZ_1 = "#1591dc"; // RMIS Electric Blue
+const GRID = "var(--border)";
+const TICK = { fontSize: 11, fill: "var(--stone)" };
+const VIZ_1 = "var(--viz-1)"; // RMIS Electric Blue (lead series)
 
-/** Funnel bar fill per stage — Bevel metric accents (blue/gold/green/coral). */
-const STAGE_BAR: Record<StageKey, string> = {
-  "Applied": "#1591dc", // RMIS Electric Blue
-  "Under Review": "#ffca00", // Signal Gold
-  "Shortlisted": "#31ce01", // Recovery Green
-  "Rejected": "#ffab94", // Coral Signal
-};
+/** Funnel bar fill per stage — the shared STAGE_VIZ map (blue/gold/green/red). */
+const STAGE_BAR = STAGE_VIZ;
 
 /** Donut slice fill for a stored status spelling (stage tokens + fallback). */
 function statusSliceColor(status: string): string {
   const key = STAGE_BAR[stageForStatus(status) as StageKey];
-  return key ?? "#d5dce8";
-}
-
-/**
- * Bevel content panel (shared workspace layout system): white 24px card,
- * p-5 → sm:p-6, ink section heading with body-gray caption and trailing
- * actions. Chart containers re-skin to this card; series keep the viz palette.
- */
-function Panel({
-  title,
-  description,
-  actions,
-  icon,
-  chipTone = "slate",
-  className,
-  bodyClassName,
-  children,
-}: {
-  title?: string;
-  description?: string;
-  actions?: React.ReactNode;
-  icon?: LucideIcon;
-  chipTone?: ChipTone;
-  className?: string;
-  bodyClassName?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn("dlg-card min-w-0 p-5 sm:p-6", className)}>
-      {title || actions ? (
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {icon ? <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} /> : null}
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
-              {description ? <p className="mt-0.5 text-xs text-body-gray">{description}</p> : null}
-            </div>
-          </div>
-          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-        </div>
-      ) : null}
-      <div className={bodyClassName}>{children}</div>
-    </section>
-  );
-}
-
-/** First-letter monogram text ("?" when empty). */
-function monogramOf(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
+  return key ?? "var(--divider)";
 }
 
 export default function Analytics() {
@@ -159,7 +101,6 @@ export default function Analytics() {
   const [auditTotal, setAuditTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [drill, setDrill] = useState<Drill>("All");
-  const [cycle, setCycle] = useState("all-time");
   const [spin, setSpin] = useState(false);
 
   const load = useCallback(async (silent = false) => {
@@ -193,15 +134,7 @@ export default function Analytics() {
     }, 30_000);
     return () => clearInterval(id);
   }, [load]);
-  useEffect(() => {
-    const onFocus = () => void load(true);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [load]);
+  useFocusRefresh(load);
 
   const manualRefresh = useCallback(() => {
     setSpin(true);
@@ -264,12 +197,18 @@ export default function Analytics() {
           title="Analytics"
           description="Pipeline health, application volume, and audit activity."
         />
-        <div className="dlg-card p-8 text-center space-y-4">
-          <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-stone">{error}</p>
-          <button type="button" className={ghostBtn} onClick={() => void load()}>
-            Retry
-          </button>
+        <div className="dlg-card p-8">
+          <EmptyState
+            icon={AlertTriangle}
+            tone="rose"
+            title="Couldn't load analytics"
+            description={error}
+            action={
+              <button type="button" className={ghostBtn} onClick={() => void load()}>
+                Retry
+              </button>
+            }
+          />
         </div>
       </div>
     );
@@ -282,14 +221,7 @@ export default function Analytics() {
           title="Analytics"
           description="Pipeline health, application volume, and audit activity."
         />
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="dlg-card p-6">
-              <div className="skel h-3 w-20" />
-              <div className="skel mt-4 h-8 w-16" />
-            </div>
-          ))}
-        </div>
+        <SkeletonKpis count={4} />
         <div className="grid gap-6 lg:grid-cols-2">
           <SkeletonRows rows={5} rowClassName="h-16 rounded-lg" />
           <SkeletonRows rows={5} rowClassName="h-16 rounded-lg" />
@@ -319,7 +251,7 @@ export default function Analytics() {
             stays balanced; its rows are a hairline ledger (divide-y) whose
             equal-height cells echo the StatLedger band language. */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <Panel
+          <SectionCard
             title="Pipeline conversion"
             description="Click a stage to drill into its applicants. Percentages are of all applications."
             icon={Filter}
@@ -358,10 +290,10 @@ export default function Analytics() {
                 );
               })}
             </div>
-          </Panel>
+          </SectionCard>
 
           <div className="space-y-6">
-            <Panel
+            <SectionCard
               title="Applications per day"
               description="Last 30 days, from the review queue."
               icon={TrendingUp}
@@ -392,16 +324,16 @@ export default function Analytics() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </Panel>
+            </SectionCard>
 
-            <Panel
+            <SectionCard
               title="Status distribution"
               description="All applications by stored status."
               icon={ChartPieIcon}
               chipTone="plum"
             >
               {donutData.length === 0 ? (
-                <EmptyState icon={Inbox} tone="plum" title="No applications recorded yet." compact />
+                <EmptyState icon={Inbox} tone="plum" title="No applications recorded yet" compact />
               ) : (
                 // minmax(0,1fr): the legend rows' nowrap labels must not floor
                 // the 1fr track's auto minimum (observed OV=61 at 1024px).
@@ -456,44 +388,34 @@ export default function Analytics() {
                   </ul>
                 </div>
               )}
-            </Panel>
+            </SectionCard>
           </div>
         </div>
 
         {/* 4. Drill-down */}
-        <Panel
+        <SectionCard
           title="Drill-down"
           description={drill === "All" ? "All stages." : `Filtered to ${drill}.`}
           icon={UsersRound}
           chipTone="plum"
           actions={
-            <>
-              <Select value={drill} onValueChange={(v) => setDrill(v as Drill)}>
-                <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-[170px]" aria-label="Stage drill filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All stages</SelectItem>
-                  {PIPELINE_STAGES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={cycle} onValueChange={setCycle}>
-                <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-[140px]" aria-label="Recruitment cycle">
-                  <SelectValue placeholder="All time" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all-time">All time</SelectItem>
-                </SelectContent>
-              </Select>
-            </>
+            <Select value={drill} onValueChange={(v) => setDrill(v as Drill)}>
+              <SelectTrigger className="dlg-input min-h-[44px] w-full sm:w-[170px]" aria-label="Stage drill filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All stages</SelectItem>
+                {PIPELINE_STAGES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           }
         >
           {drillRows.length === 0 ? (
-            <EmptyState icon={UsersRound} tone="plum" title="No applicants in this selection." compact />
+            <EmptyState icon={UsersRound} tone="plum" title="No applicants in this selection" compact />
           ) : (
             <div className="max-h-96 space-y-1 overflow-y-auto scroll-thin pr-1">
               {drillRows.map((r) => (
@@ -504,7 +426,7 @@ export default function Analytics() {
                   onClick={() => navigate("candidate", { id: String(r.applicantId) })}
                 >
                   <span aria-hidden="true" className="contents">
-                    <Monogram size={32} className="rounded-full">{monogramOf(fullName(r.applicant))}</Monogram>
+                    <Monogram size={32} className="rounded-full">{nameInitials(fullName(r.applicant))}</Monogram>
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{fullName(r.applicant)}</p>
@@ -517,11 +439,11 @@ export default function Analytics() {
               ))}
             </div>
           )}
-        </Panel>
+        </SectionCard>
 
         {/* 5a. System usage & security (QA 2026-02 — admin analytics) */}
         {isAdmin && (
-          <Panel
+          <SectionCard
             title="System usage & security"
             description="Web usage and security signals for the RMIS deployment"
             icon={ShieldCheck}
@@ -552,7 +474,7 @@ export default function Analytics() {
               ).map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-white p-4">
                   <p className="eyebrow">{label}</p>
-                  <p className="num mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
+                  <p className="num mt-1.5 text-3xl font-semibold tracking-[-0.02em] text-ink">{value ?? "-"}</p>
                 </div>
               ))}
             </div>
@@ -561,50 +483,39 @@ export default function Analytics() {
               <button
                 type="button"
                 onClick={() => navigate("settings", { tab: "audit" })}
-                className="text-metric-blue underline underline-offset-2 hover:text-ink"
+                className="focus-ring rounded text-metric-blue underline underline-offset-2 hover:text-ink"
               >
                 Settings → Audit Log
               </button>{" "}
               (administrators only).
             </p>
-          </Panel>
+          </SectionCard>
         )}
 
         {/* 5. Recent activity (audit feed) — admin only per QA 2026-02 */}
         {isAdmin && (
-        <Panel
+        <SectionCard
           title="Recent activity"
           description={`${auditTotal} logged event${auditTotal === 1 ? "" : "s"}`}
           icon={History}
           chipTone="plum"
         >
           {audit.length === 0 ? (
-            <EmptyState icon={Inbox} tone="plum" title="No audit events recorded yet." compact />
+            <EmptyState icon={Inbox} tone="plum" title="No audit events recorded yet" compact />
           ) : (
             <div className="max-h-96 space-y-1 overflow-y-auto scroll-thin pr-1">
               {audit.map((a) => (
-                <div
+                <AuditFeedRow
                   key={a.id}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-fog/60"
-                >
-                  <span
-                    className={`${pillClass("neutral")} shrink-0 uppercase tracking-[0.06em]`}
-                    style={{ fontSize: "10px" }}
-                  >
-                    {humanize(a.action)}
-                  </span>
-                  <span className="max-w-[240px] truncate text-[13px] font-medium text-ink">
-                    {a.userLabel || "System"}
-                  </span>
-                  <span className="min-w-[160px] flex-1 truncate text-[13px] text-body-gray">
-                    {a.description || "-"}
-                  </span>
-                  <span className="num shrink-0 text-xs text-body-gray">{timeAgo(a.timestamp)}</span>
-                </div>
+                  timestamp={a.timestamp}
+                  userLabel={a.userLabel}
+                  action={a.action}
+                  description={a.description}
+                />
               ))}
             </div>
           )}
-        </Panel>
+        </SectionCard>
         )}
       </div>
     </div>

@@ -10,12 +10,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, Building2, ClipboardList, Clock, FileText,
-  MapPin, Pencil, RefreshCw, SquareKanban, Trash2, type LucideIcon,
+  AlertTriangle, ClipboardList, FileText,
+  Pencil, RefreshCw, SquareKanban, Trash2,
 } from "lucide-react";
-import { IconChip, Monogram, PageHeader, StatusDot, StatusPill, type ChipTone } from "@/components/ui/shell";
+import { Monogram, PageHeader, SectionCard, StatusDot, StatusPill, EmptyNote, EmptyState, nameInitials } from "@/components/ui/shell";
 import {
-  KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge,
+  KanbanCardBody, KanbanColumn, KANBAN_CARD,
 } from "@/components/ui/kanban";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,11 +24,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { apiFetch, appliedAgo, deadlineState, formatCurrency, formatDate, fullName, humanize } from "@/lib/client";
-import { PIPELINE_STAGES, stageForStatus, getStatusMeta, type StageKey } from "@/lib/status";
+import { PIPELINE_STAGES, stageForStatus, type StageKey } from "@/lib/status";
 import { navigate, useHashRoute, type JobWire, type ApplicantMini } from "@/lib/router";
-import { STAGE_VARIANT, variantForJobStatus, variantForStatus, type StatusVariant } from "@/lib/status-ui";
+import { STAGE_VARIANT } from "@/lib/status-ui";
+import { useFocusRefresh } from "@/lib/use-focus-refresh";
 import { cn } from "@/lib/utils";
-import { JobFormDialog, ghostBtn, ghostBadBtn, ctaBtn, iconBtn } from "@/components/views/recruitment";
+import { JobFormDialog, JobStatusPill } from "@/components/views/recruitment";
+import { ghostBadModifier, ghostBtn, ghostBadBtn, ctaBtn, iconBtn } from "@/components/ui/buttons";
 
 type QueueRow = {
   id: number;
@@ -45,61 +47,8 @@ type QueueRow = {
 const TABS = ["overview", "pipeline", "candidates"] as const;
 type TabKey = (typeof TABS)[number];
 
-/** First-letter monogram text ("?" when empty). */
-function monogramOf(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
-
-/**
- * Bevel content panel (shared workspace layout system): white 24px card,
- * p-5 → sm:p-6, ink section heading with body-gray caption and trailing
- * actions. Primary content panels are white; nested sub-panels inside use
- * bg-cloud/60 rounded-lg.
- */
-function Panel({
-  title,
-  description,
-  actions,
-  icon,
-  chipTone = "slate",
-  className,
-  bodyClassName,
-  children,
-}: {
-  title?: string;
-  description?: string;
-  actions?: React.ReactNode;
-  icon?: LucideIcon;
-  chipTone?: ChipTone;
-  className?: string;
-  bodyClassName?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn("dlg-card min-w-0 p-5 sm:p-6", className)}>
-      {title || actions ? (
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {icon ? <IconChip icon={icon} tone={chipTone} size={36} iconSize={16} /> : null}
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h2>
-              {description ? <p className="mt-0.5 text-xs text-body-gray">{description}</p> : null}
-            </div>
-          </div>
-          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-        </div>
-      ) : null}
-      <div className={bodyClassName}>{children}</div>
-    </section>
-  );
-}
+// Content panels, empty notes, empty states and monogram initials are the
+// shared shell primitives (ui/shell) — single source of truth, no local copies.
 
 function RichSection({ title, html, text }: { title: string; html: string | null; text: string | null }) {
   if (!html && !text) return null;
@@ -112,16 +61,6 @@ function RichSection({ title, html, text }: { title: string; html: string | null
         <p className="mt-2 whitespace-pre-line text-sm text-body-gray">{text}</p>
       )}
     </section>
-  );
-}
-
-function JobStatusPill({ job, overdue }: { job: JobWire; overdue: boolean }) {
-  const open = job.isActive && !overdue;
-  return (
-    <StatusPill
-      status={open ? "OPEN" : "CLOSED"}
-      variant={variantForJobStatus(open ? "OPEN" : "CLOSED")}
-    />
   );
 }
 
@@ -168,15 +107,7 @@ export default function JobWorkspace() {
     }, 30_000);
     return () => clearInterval(timer);
   }, [load]);
-  useEffect(() => {
-    const onFocus = () => void load(true);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [load]);
+  useFocusRefresh(load);
 
   const apps = useMemo(() => queue ?? [], [queue]);
   const pipeline = useMemo(() => {
@@ -209,23 +140,35 @@ export default function JobWorkspace() {
 
   if (!valid) {
     return (
-      <div className="dlg-card p-8 text-center space-y-3">
-        <p className="text-sm text-stone">No job selected.</p>
-        <button type="button" className={ctaBtn} onClick={() => navigate("recruitment")}>
-          Go to recruitment
-        </button>
+      <div className="dlg-card py-6">
+        <EmptyState
+          icon={ClipboardList}
+          title="No job selected"
+          description="Open a posting from recruitment to see its workspace."
+          action={
+            <button type="button" className={ctaBtn} onClick={() => navigate("recruitment")}>
+              Go to recruitment
+            </button>
+          }
+        />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="dlg-card p-8 text-center space-y-4">
-        <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-        <p className="text-sm text-stone">{error}</p>
-        <button type="button" className={ghostBtn} onClick={() => void load()}>
-          Retry
-        </button>
+      <div className="dlg-card p-8">
+        <EmptyState
+          icon={AlertTriangle}
+          tone="rose"
+          title="Couldn't load the job posting"
+          description={error}
+          action={
+            <button type="button" className={ghostBtn} onClick={() => void load()}>
+              Retry
+            </button>
+          }
+        />
       </div>
     );
   }
@@ -255,7 +198,7 @@ export default function JobWorkspace() {
       <PageHeader
         back={{ label: "Back to Jobs", onClick: () => navigate("recruitment") }}
         title={job.title}
-        titleAside={<JobStatusPill job={job} overdue={dl.overdue} />}
+        titleAside={<JobStatusPill job={job} />}
         description={vitals || "-"}
         actions={
           <>
@@ -287,19 +230,19 @@ export default function JobWorkspace() {
         {/* Overview */}
         <TabsContent value="overview" className="mt-4">
           <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-            <Panel bodyClassName="space-y-6" title="Posting description" icon={FileText} chipTone="plum">
+            <SectionCard bodyClassName="space-y-6" title="Posting description" icon={FileText} chipTone="plum">
               <RichSection title="Brief description" html={job.briefDescriptionHtml} text={job.briefDescription} />
               <RichSection title="Duties & responsibilities" html={job.dutiesHtml} text={job.dutiesResponsibilities} />
               <RichSection title="Compensation package" html={job.compensationHtml} text={job.compensationPackage} />
               <RichSection title="Other qualifications" html={job.otherQualificationsHtml} text={job.otherQualifications} />
               {!job.briefDescriptionHtml && !job.briefDescription && !job.dutiesHtml && !job.dutiesResponsibilities && !job.compensationHtml && !job.compensationPackage && !job.otherQualificationsHtml && !job.otherQualifications && (
-                <p className="py-6 text-center text-sm text-body-gray">No description published for this posting.</p>
+                <EmptyNote>No description published for this posting.</EmptyNote>
               )}
-            </Panel>
+            </SectionCard>
 
             {/* Sticky summary */}
             <div className="space-y-4 self-start xl:sticky xl:top-6">
-              <Panel title="Summary" icon={ClipboardList} chipTone="slate">
+              <SectionCard title="Summary" icon={ClipboardList} chipTone="slate">
                 <dl>
                   {(
                     [
@@ -324,10 +267,10 @@ export default function JobWorkspace() {
                     </div>
                   ))}
                 </dl>
-              </Panel>
+              </SectionCard>
 
               {/* Mini pipeline */}
-              <Panel title="Pipeline" icon={SquareKanban} chipTone="amber">
+              <SectionCard title="Pipeline" icon={SquareKanban} chipTone="amber">
                 <div className="space-y-1">
                   {PIPELINE_STAGES.map((stage) => (
                     <div key={stage} className="flex items-center justify-between gap-3 py-1.5">
@@ -339,7 +282,7 @@ export default function JobWorkspace() {
                     </div>
                   ))}
                 </div>
-              </Panel>
+              </SectionCard>
             </div>
           </div>
         </TabsContent>
@@ -363,33 +306,14 @@ export default function JobWorkspace() {
                           onClick={() => navigate("evaluator-review", { id: String(app.id) })}
                           aria-label={`Review application from ${name}`}
                         >
-                          <div className="flex items-start gap-2.5">
-                            <KanbanAvatar name={name} />
-                            <div className="min-w-0 flex-1">
-                              <p className="min-w-0 truncate text-sm font-semibold text-ink">{name}</p>
-                              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-stone">
-                                <Building2 className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
-                                <span className="min-w-0 flex-1 truncate">{humanize(position)}</span>
-                              </p>
-                              <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
-                                {place && (
-                                  <>
-                                    <MapPin className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
-                                    <span className="min-w-0 truncate">{place}</span>
-                                    <span className="shrink-0 text-pebble" aria-hidden>·</span>
-                                  </>
-                                )}
-                                <Clock className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
-                                <span className="shrink-0 whitespace-nowrap text-pebble">Applied {appliedAgo(app.dateApplied)}</span>
-                              </p>
-                            </div>
-                            <MatchBadge metCount={app.match?.metCount ?? 0} requiredCount={app.match?.requiredCount ?? 0} />
-                          </div>
-                          {(app.tags ?? []).length > 0 && (
-                            <div className={KANBAN_DIVIDER}>
-                              <KanbanTags tags={app.tags ?? []} />
-                            </div>
-                          )}
+                          <KanbanCardBody
+                            name={name}
+                            position={humanize(position)}
+                            placeOfAssignment={place}
+                            appliedLabel={`Applied ${appliedAgo(app.dateApplied)}`}
+                            match={{ metCount: app.match?.metCount ?? 0, requiredCount: app.match?.requiredCount ?? 0 }}
+                            tags={app.tags ?? []}
+                          />
                         </button>
                       );
                     })}
@@ -403,7 +327,11 @@ export default function JobWorkspace() {
         <TabsContent value="candidates" className="mt-4">
           {apps.length === 0 ? (
             <div className="dlg-card p-6 sm:p-10">
-              <p className="py-6 text-center text-sm text-stone">No applications for this posting yet.</p>
+              <EmptyState
+                icon={ClipboardList}
+                title="No candidates yet"
+                description="Applications appear here once candidates apply to this posting."
+              />
             </div>
           ) : (
             <div className="dlg-card overflow-hidden">
@@ -415,7 +343,7 @@ export default function JobWorkspace() {
                   onClick={() => navigate("candidate", { id: String(app.applicantId) })}
                 >
                   <span aria-hidden="true" className="contents">
-                    <Monogram size={36} className="rounded-full">{monogramOf(fullName(app.applicant))}</Monogram>
+                    <Monogram size={36} className="rounded-full">{nameInitials(fullName(app.applicant))}</Monogram>
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{fullName(app.applicant)}</p>
@@ -423,7 +351,7 @@ export default function JobWorkspace() {
                       {humanize(app.job.title)} · Applied {formatDate(app.dateApplied)}
                     </p>
                   </div>
-                  <StatusPill status={getStatusMeta(app.status).label} variant={variantForStatus(app.status)} />
+                  <StatusPill status={app.status} />
                 </button>
               ))}
             </div>
@@ -450,7 +378,7 @@ export default function JobWorkspace() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-full border border-[var(--bad)]/30 bg-white text-[var(--bad)] hover:bg-[var(--bad-bg)]"
+              className={cn(ghostBadModifier, "min-h-[44px] px-4 text-sm font-medium")}
               onClick={(e) => {
                 e.preventDefault();
                 void deleteJob();

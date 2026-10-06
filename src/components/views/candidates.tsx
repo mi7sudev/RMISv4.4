@@ -15,8 +15,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowUpRight, Building2, Clock, KeyRound, LayoutGrid, List, Mail, MapPin,
-  Phone, RefreshCw, Search, UserCheck, UsersRound, type LucideIcon,
+  AlertTriangle, ArrowUpRight, KeyRound, LayoutGrid, List, Mail,
+  Phone, RefreshCw, Search, UserCheck, UsersRound,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -27,18 +27,20 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
-  EmptyState, IconChip, PageHeader, SkeletonRows, StatusDot, type ChipTone,
+  EmptyState, IconChip, KpiCard, PageHeader, Pagination, SegmentedControl, SkeletonKpis, SkeletonRows,
+  StatusDot, StatusPill, dialogScroll,
 } from "@/components/ui/shell";
 import {
-  KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge,
+  KanbanAvatar, KanbanCardBody, KanbanColumn, KANBAN_CARD,
 } from "@/components/ui/kanban";
 import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
 import { useSession } from "@/components/session-provider";
 import { PIPELINE_STAGES, isRejectedStatus, stageForStatus, type StageKey } from "@/lib/status";
 import { variantForCompletion, STAGE_VARIANT } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
-import { StatusPill } from "@/components/views/review-workspace";
-import { ghostBtn, ctaBtn } from "@/components/views/recruitment";
+import { useFocusRefresh } from "@/lib/use-focus-refresh";
+import { cn } from "@/lib/utils";
+import { ghostBtn, ctaBtn } from "@/components/ui/buttons";
 
 // ── Wire shapes ─────────────────────────────────────────────────────────────
 
@@ -93,35 +95,6 @@ function s(v: unknown): string {
   return t;
 }
 
-/**
- * Bevel stat card (shared workspace layout system): cloud surface, 24px,
- * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
- */
-function StatCard({
-  label,
-  value,
-  icon,
-  chipTone,
-  hint,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon: LucideIcon;
-  chipTone: ChipTone;
-  hint: string;
-}) {
-  return (
-    <div className="dlg-card p-6">
-      <div className="flex items-start justify-between gap-3">
-        <p className="eyebrow pt-0.5">{label}</p>
-        <IconChip icon={icon} tone={chipTone} size={40} />
-      </div>
-      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
-      <p className="mt-2 text-xs text-stone">{hint}</p>
-    </div>
-  );
-}
-
 // ── Quick-view modal ────────────────────────────────────────────────────────
 
 function CandidateModal({ id, onClose }: { id: number | null; onClose: () => void }) {
@@ -153,7 +126,7 @@ function CandidateModal({ id, onClose }: { id: number | null; onClose: () => voi
 
   return (
     <Dialog open={id !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[92dvh] overflow-y-auto scroll-thin">
+      <DialogContent className={cn(dialogScroll, "sm:max-w-lg")}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Candidate</DialogTitle>
           <DialogDescription>Quick identity and pipeline snapshot.</DialogDescription>
@@ -318,7 +291,7 @@ export default function Candidates() {
     if (mode === "kanban") void loadQueue();
   }, [mode, loadQueue]);
 
-  // 20 s silent poll + focus refresh.
+  // 20 s silent poll + refetch-on-focus (spec §13).
   useEffect(() => {
     const id = setInterval(() => {
       if (!document.hidden) {
@@ -328,18 +301,10 @@ export default function Candidates() {
     }, 20_000);
     return () => clearInterval(id);
   }, [load, loadQueue, mode]);
-  useEffect(() => {
-    const onFocus = () => {
-      void load(true);
-      if (mode === "kanban") void loadQueue();
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [load, loadQueue, mode]);
+  useFocusRefresh(useCallback(() => {
+    void load(true);
+    if (mode === "kanban") void loadQueue();
+  }, [load, loadQueue, mode]));
 
   // Debounced search (350 ms).
   useEffect(() => {
@@ -379,26 +344,15 @@ export default function Candidates() {
         }
         actions={
           <>
-            <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
-              <button
-                type="button"
-                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
-                onClick={() => setMode("list")}
-                aria-pressed={mode === "list"}
-              >
-                <List className="h-3.5 w-3.5" aria-hidden />
-                List
-              </button>
-              <button
-                type="button"
-                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
-                onClick={() => setMode("kanban")}
-                aria-pressed={mode === "kanban"}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-                Kanban
-              </button>
-            </div>
+            <SegmentedControl
+              ariaLabel="Candidates view mode"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "list", label: "List", icon: List },
+                { value: "kanban", label: "Kanban", icon: LayoutGrid },
+              ]}
+            />
             <button type="button" className={ghostBtn} onClick={manualRefresh}>
               <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
               Refresh
@@ -407,25 +361,15 @@ export default function Candidates() {
         }
       />
 
-      {/* KPI tiles — Bevel cloud stat cards */}
+      {/* KPI tiles — canonical shell KpiCards */}
       {!error && (rows === null ? (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="dlg-card p-6">
-              <div className="flex items-start justify-between">
-                <div className="skel h-3 w-20" />
-                <div className="skel h-10 w-10" />
-              </div>
-              <div className="skel mt-4 h-8 w-16" />
-            </div>
-          ))}
-        </div>
+        <SkeletonKpis count={4} />
       ) : (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          <StatCard label="Total on file" value={total} icon={UsersRound} chipTone="plum" hint="all registered candidates" />
-          <StatCard label="Showing" value={`${start}–${end}`} icon={List} chipTone="slate" hint={`of ${total}`} />
-          <StatCard label="Complete profiles" value={completeOnPage} icon={UserCheck} chipTone="emerald" hint="on this page" />
-          <StatCard label="Has login" value={accountsOnPage} icon={KeyRound} chipTone="slate" hint="on this page" />
+          <KpiCard label="Total on file" value={total} icon={UsersRound} tone="info" hint="all registered candidates" />
+          <KpiCard label="Showing" value={`${start}–${end}`} icon={List} tone="neutral" hint={`of ${total}`} />
+          <KpiCard label="Complete profiles" value={completeOnPage} icon={UserCheck} tone="ok" hint="on this page" />
+          <KpiCard label="Has login" value={accountsOnPage} icon={KeyRound} tone="neutral" hint="on this page" />
         </div>
       ))}
 
@@ -509,14 +453,22 @@ export default function Candidates() {
             </div>
           ) : (
             <div className="dlg-card table-card overflow-hidden">
+              {/* In-card header band — same anatomy as the recruitment table */}
+              <div className="flex items-center gap-3 border-b border-[var(--border)] px-5 py-4">
+                <IconChip icon={UsersRound} tone="slate" size={36} iconSize={16} />
+                <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">{isAdminView ? "Accounts" : "Candidates"}</h2>
+                <span className="dlg-pill num ml-auto bg-fog px-2.5 py-1 text-xs font-medium text-stone">
+                  {list.length} on page
+                </span>
+              </div>
               <div className="overflow-x-auto scroll-thin">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left">
-                      <th scope="col" className="eyebrow px-5 py-3">Candidate</th>
-                      <th scope="col" className="eyebrow px-4 py-3">Profile</th>
-                      <th scope="col" className="eyebrow px-4 py-3">Applications</th>
-                      <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
+                      <th scope="col" className="eyebrow px-5 py-3.5">Candidate</th>
+                      <th scope="col" className="eyebrow px-4 py-3.5">Profile</th>
+                      <th scope="col" className="eyebrow px-4 py-3.5">Applications</th>
+                      <th scope="col" className="px-4 py-3.5"><span className="sr-only">Open</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -524,7 +476,7 @@ export default function Candidates() {
                       const name = fullName(r);
                       return (
                         <tr key={r.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
-                          <td className="px-5 py-3">
+                          <td className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
                               <KanbanAvatar name={name} size={28} />
                               <div className="min-w-0">
@@ -535,16 +487,16 @@ export default function Candidates() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5">
                             <StatusPill
                               status={r.isProfileComplete ? "Complete" : "Incomplete"}
                               variant={variantForCompletion(r.isProfileComplete)}
                             />
                           </td>
-                          <td className="num px-4 py-3 text-[13px] text-stone">
+                          <td className="num px-4 py-3.5 text-[13px] text-stone">
                             {r.applicationCount} application{r.applicationCount === 1 ? "" : "s"}
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
                               <button
                                 type="button"
@@ -571,27 +523,13 @@ export default function Candidates() {
 
           {/* Pagination */}
           {total > PAGE_SIZE && (
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <p className="num text-xs text-body-gray">
-                {start}–{end} of {total}
-              </p>
-              <div className="flex items-center gap-2">
-                <button type="button" className={ghostBtn + " min-h-[44px] px-3 text-xs"} disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                  Previous
-                </button>
-                <span className="num text-xs text-stone">
-                  Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}
-                </span>
-                <button
-                  type="button"
-                  className={ghostBtn + " min-h-[44px] px-3 text-xs"}
-                  disabled={page >= Math.ceil(total / PAGE_SIZE)}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <Pagination
+              page={page}
+              pageCount={Math.ceil(total / PAGE_SIZE)}
+              total={total}
+              onPage={setPage}
+              unit="candidates"
+            />
           )}
         </div>
       ) : (
@@ -613,33 +551,14 @@ export default function Candidates() {
                         onClick={() => navigate("candidate", { id: String(c.applicantId) })}
                         aria-label={`Open ${name}'s candidate profile`}
                       >
-                        <div className="flex items-start gap-2.5">
-                          <KanbanAvatar name={name} />
-                          <div className="min-w-0 flex-1">
-                            <p className="min-w-0 truncate text-sm font-semibold text-ink">{name}</p>
-                            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-stone">
-                              <Building2 className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
-                              <span className="min-w-0 flex-1 truncate">{humanize(position)}</span>
-                            </p>
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
-                              {place && (
-                                <>
-                                  <MapPin className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
-                                  <span className="min-w-0 truncate">{place}</span>
-                                  <span className="shrink-0 text-pebble" aria-hidden>·</span>
-                                </>
-                              )}
-                              <Clock className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
-                              <span className="shrink-0 whitespace-nowrap text-pebble">Applied {appliedAgo(c.dateApplied)}</span>
-                            </p>
-                          </div>
-                          <MatchBadge metCount={c.match?.metCount ?? 0} requiredCount={c.match?.requiredCount ?? 0} />
-                        </div>
-                        {(c.tags ?? []).length > 0 && (
-                          <div className={KANBAN_DIVIDER}>
-                            <KanbanTags tags={c.tags ?? []} />
-                          </div>
-                        )}
+                        <KanbanCardBody
+                          name={name}
+                          position={humanize(position)}
+                          placeOfAssignment={place}
+                          appliedLabel={`Applied ${appliedAgo(c.dateApplied)}`}
+                          match={{ metCount: c.match?.metCount ?? 0, requiredCount: c.match?.requiredCount ?? 0 }}
+                          tags={c.tags ?? []}
+                        />
                       </button>
                     );
                   })}

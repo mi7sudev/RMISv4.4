@@ -9,9 +9,10 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { AlertCircle, KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Callout, IconChip } from "@/components/ui/shell";
 import { BrandLogo } from "@/components/brand-logo";
 import { apiFetch } from "@/lib/client";
 import { navigate, useHashRoute } from "@/lib/router";
@@ -62,9 +63,7 @@ export default function ResetPasswordView() {
             </div>
 
             <div className="mt-6 flex items-start gap-3.5">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-cloud text-metric-blue">
-                <KeyRound className="h-5 w-5" aria-hidden="true" />
-              </span>
+              <IconChip icon={KeyRound} tone="blue" size={44} iconSize={20} />
               <div>
                 <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Choose a new password</h1>
                 <p className="mt-1.5 text-sm leading-relaxed text-body-gray">
@@ -75,7 +74,7 @@ export default function ResetPasswordView() {
             </div>
 
             {missingToken ? (
-              <div className="mt-6 rounded-xl bg-[var(--bad-bg)] p-4 text-sm text-ink">
+              <Callout tone="bad" icon={AlertCircle} className="mt-6">
                 This reset link is missing its token. Please request a new password reset email.
                 <button
                   type="button"
@@ -84,14 +83,11 @@ export default function ResetPasswordView() {
                 >
                   Back to sign in
                 </button>
-              </div>
+              </Callout>
             ) : done ? (
-              <div className="mt-6 rounded-xl bg-cloud/70 p-4 text-sm text-stone">
-                <p className="flex items-center gap-2 font-medium text-ink">
-                  <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Password updated
-                </p>
-                <p className="mt-1">Redirecting you to the sign-in page…</p>
-              </div>
+              <Callout tone="ok" icon={ShieldCheck} title="Password updated" className="mt-6">
+                Redirecting you to the sign-in page…
+              </Callout>
             ) : (
               <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
                 <div>

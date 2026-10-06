@@ -2,10 +2,10 @@
 
 // ============================================================================
 // RMIS — Desktop left navigation rail (spec §13 view registry, §7.10 nav
-// config). PREMIUM DARK RAIL (Linear/Notion pattern): deep-ink gradient,
-// glass hover states, glowing active pill, blue brand mark. LABELED w-64 by
-// default; the collapse toggle sits in the brand row next to "MIRDC
-// Recruitment" (persisted in localStorage "rmis.rail-expanded"). When
+// config). LIGHT RAIL (Bevel white sidebar): paper-to-mist gradient, soft
+// hover states, blue active indicator, official brand mark. LABELED w-64 by
+// default; the collapse toggle sits in the brand row next to "RMIS"
+// (persisted in localStorage "rmis.rail-expanded"). When
 // collapsed to the w-16 icon-only rail there is NO expand button — clicking
 // anywhere on the rail (brand plate or empty chrome) expands it instead.
 // Bottom: applicants get the "How hiring works" info circle, then the user
@@ -43,6 +43,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "@/components/session-provider";
+import { nameInitials } from "@/components/ui/shell";
 import { navigate, ROLE_HOME } from "@/lib/router";
 import type { Role, SessionUser } from "@/lib/router";
 
@@ -122,10 +123,12 @@ export function performSignOut() {
 }
 
 export function initialsOf(user: SessionUser): string {
-  const a = user.firstName?.[0] ?? "";
-  const b = user.lastName?.[0] ?? "";
-  const s = `${a}${b}` || user.username?.slice(0, 2) || user.email?.slice(0, 2) || "?";
-  return s.toUpperCase();
+  // Delegates to the shared shell primitive on the composed display name;
+  // keeps the username/email two-char fallback for accounts that have no
+  // personal name on file.
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  if (name) return nameInitials(name);
+  return (user.username?.slice(0, 2) || user.email?.slice(0, 2) || "?").toUpperCase();
 }
 
 export function displayNameOf(user: SessionUser): string {
@@ -277,9 +280,7 @@ export function NavRail({ view }: { view: string }) {
                       ) : (
                         <Tooltip>
                           <TooltipTrigger asChild>{button}</TooltipTrigger>
-                          <TooltipContent side="right" className="rounded-lg bg-ink text-xs text-white">
-                            {item.label}
-                          </TooltipContent>
+                          <TooltipContent side="right">{item.label}</TooltipContent>
                         </Tooltip>
                       )}
                     </li>

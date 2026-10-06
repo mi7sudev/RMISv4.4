@@ -1,14 +1,14 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, ToasterProps } from "sonner"
 
+// The design system is light-only (no .dark token block in globals.css), and
+// the globals restyle forces white toast chrome — so the theme is fixed here
+// and next-themes is not pulled into the client bundle.
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className="toaster group"
       style={
         {

@@ -23,10 +23,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatusPill } from "@/components/ui/shell";
+import { EmptyState, FilterChip, IconChip, Monogram, nameInitials, PageHeader, Pagination, SkeletonRows, StatusPill, dialogScroll } from "@/components/ui/shell";
+import { AuditFeedRow } from "@/components/ui/audit-row";
 import { apiFetch, formatDateTime, humanize, timeAgo } from "@/lib/client";
 import { useHashRoute, navigate } from "@/lib/router";
 import { pillClass } from "@/lib/status-ui";
+import { cn } from "@/lib/utils";
+import { ghostBadModifier } from "@/components/ui/buttons";
 import { ghostBtn, ctaBtn, iconBtn, iconBtnBad } from "@/components/views/recruitment";
 
 // QA 2026-02: Settings contents are role-scoped — administrators get the full
@@ -47,17 +50,8 @@ function labelCls() {
   return "mb-1.5 block text-xs font-medium text-stone";
 }
 
-/** First-letter monogram text ("?" when empty). */
-function monogramOf(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
+// Monogram initials, filter chips, pagination and the audit-feed rows are the
+// shared primitives (ui/shell + ui/audit-row) — no local copies.
 
 // ───────────────────────────────────────────────────────────── Users panel
 
@@ -163,7 +157,7 @@ function UsersPanel() {
         <button type="button" className={ctaBtn} onClick={() => setCreateOpen(true)}>Create User</button>
       </div>
 
-      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
+      <div className="dlg-card flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
           <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search name, email or username…" className="dlg-input min-h-[44px] pl-9" />
@@ -179,15 +173,15 @@ function UsersPanel() {
         </Select>
       </div>
 
-      <div className="dlg-card-plain table-card overflow-hidden">
+      <div className="dlg-card table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="sticky top-0 z-10 bg-fog text-left eyebrow">
               <tr>
-                <th className="px-5 py-3">User</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Active</th>
-                <th className="px-5 py-3 text-right"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="px-5 py-3.5">User</th>
+                <th scope="col" className="px-4 py-3.5">Role</th>
+                <th scope="col" className="px-4 py-3.5">Active</th>
+                <th scope="col" className="px-5 py-3.5 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -197,16 +191,16 @@ function UsersPanel() {
               {rows?.length === 0 && (
                 <tr>
                   <td colSpan={4} className="p-6">
-                    <EmptyState icon={UsersRound} tone="slate" title="No accounts match your filters." compact />
+                    <EmptyState icon={UsersRound} tone="slate" title="No accounts match your filters" compact />
                   </td>
                 </tr>
               )}
               {rows?.map((u) => (
                 <tr key={u.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <span aria-hidden="true" className="contents">
-                        <Monogram size={32} className="rounded-full">{monogramOf([u.firstName, u.lastName].filter(Boolean).join(" ") || u.username)}</Monogram>
+                        <Monogram size={32} className="rounded-full">{nameInitials([u.firstName, u.lastName].filter(Boolean).join(" ") || u.username)}</Monogram>
                       </span>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-ink">{[u.firstName, u.lastName].filter(Boolean).join(" ") || u.username}</p>
@@ -214,11 +208,11 @@ function UsersPanel() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3"><span className={pillClass("neutral")}>{u.role}</span></td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5"><span className={pillClass("neutral")}>{u.role}</span></td>
+                  <td className="px-4 py-3.5">
                     <Switch checked={!u.blocked} disabled={busyId === u.id} onCheckedChange={() => void toggleActive(u)} aria-label={`Toggle ${u.username}`} />
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3.5">
                     <div className="flex justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
                       <button
                         type="button"
@@ -248,11 +242,7 @@ function UsersPanel() {
       </div>
 
       {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button type="button" className={ghostBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-          <span className="num text-sm text-stone">Page {page} of {pages}</span>
-          <button type="button" className={ghostBtn} disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
-        </div>
+        <Pagination page={page} pageCount={pages} total={total} onPage={setPage} unit="accounts" />
       )}
 
       <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => void load(true)} />
@@ -261,32 +251,32 @@ function UsersPanel() {
       )}
 
       <AlertDialog open={!!disableTarget} onOpenChange={(o) => !o && setDisableTarget(null)}>
-        <AlertDialogContent className="dlg-card-plain">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Disable {disableTarget?.username}?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-stone">
+            <AlertDialogTitle>Disable {disableTarget?.username}?</AlertDialogTitle>
+            <AlertDialogDescription>
               The account will be signed out and cannot sign in until re-enabled. Nothing is permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="dlg-ghost">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="dlg-cta" onClick={() => void confirmDisable()}>Disable</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmDisable()}>Disable</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={!!hardTarget} onOpenChange={(o) => !o && setHardTarget(null)}>
-        <AlertDialogContent className="dlg-card-plain">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Permanently delete {hardTarget?.username}?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-stone">
+            <AlertDialogTitle>Permanently delete {hardTarget?.username}?</AlertDialogTitle>
+            <AlertDialogDescription>
               This removes the account and its applicant profile. Administrators and your own account are protected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="dlg-ghost">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-full border border-[var(--bad)]/30 bg-white text-[var(--bad)] hover:bg-[var(--bad-bg)]"
+              className={cn(ghostBadModifier, "min-h-[44px] px-4 text-sm font-medium")}
               onClick={() => void confirmHardDelete()}
             >
               Delete forever
@@ -321,7 +311,7 @@ function CreateUserDialog({ open, onOpenChange, onCreated }: { open: boolean; on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dlg-card-plain max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-md">
+      <DialogContent className={`dlg-card-plain ${dialogScroll} sm:max-w-md`}>
         <DialogHeader className="text-left">
           <DialogTitle className="font-display text-2xl text-ink">Create User</DialogTitle>
           <DialogDescription className="text-sm text-stone">Staff accounts can only sign in from the MIRDC intranet.</DialogDescription>
@@ -392,7 +382,7 @@ function EditUserDialog({ user, onOpenChange, onSaved }: { user: UserRow; onOpen
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="dlg-card-plain max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-md">
+      <DialogContent className={`dlg-card-plain ${dialogScroll} sm:max-w-md`}>
         <DialogHeader className="text-left">
           <DialogTitle className="font-display text-2xl text-ink">Edit @{user.username}</DialogTitle>
           <DialogDescription className="text-sm text-stone">{user.email}</DialogDescription>
@@ -501,7 +491,7 @@ function AuditPanel() {
         ))}
       </div>
 
-      <div className="dlg-card-plain flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
+      <div className="dlg-card flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble" aria-hidden />
           <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search descriptions and actors…" className="dlg-input min-h-[44px] pl-9" />
@@ -518,31 +508,23 @@ function AuditPanel() {
       <div className="dlg-card-plain overflow-hidden">
         <div className="max-h-96 overflow-y-auto scroll-thin p-2">
           {rows === null && <div className="p-2"><SkeletonRows rows={6} rowClassName="h-11" /></div>}
-          {rows?.length === 0 && <EmptyState icon={ScrollText} tone="plum" title="No audit events match." compact />}
+          {rows?.length === 0 && <EmptyState icon={ScrollText} tone="plum" title="No audit events match" compact />}
           {rows?.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-fog/60">
-              <span className="num w-24 shrink-0 text-xs text-body-gray" title={formatDateTime(r.timestamp)}>
-                {timeAgo(r.timestamp)}
-              </span>
-              <span className="w-44 shrink-0 truncate">
-                <span className="text-[13px] font-medium text-ink">{r.userLabel ?? "System"}</span>
-                {r.userRole ? <span className="num ml-1.5 text-[11px] text-body-gray">{r.userRole}</span> : null}
-              </span>
-              <span className={`${pillClass("neutral")} shrink-0 uppercase tracking-[0.04em]`} style={{ fontSize: "10px" }}>
-                {humanize(r.action)}
-              </span>
-              <span className="min-w-[200px] flex-1 truncate text-[13px] text-body-gray">{r.description ?? "-"}</span>
-            </div>
+            <AuditFeedRow
+              key={r.id}
+              variant="ledger"
+              timestamp={r.timestamp}
+              userLabel={r.userLabel}
+              userRole={r.userRole}
+              action={r.action}
+              description={r.description}
+            />
           ))}
         </div>
       </div>
 
       {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button type="button" className={ghostBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-          <span className="num text-sm text-stone">Page {page} of {pages}</span>
-          <button type="button" className={ghostBtn} disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
-        </div>
+        <Pagination page={page} pageCount={pages} total={summary?.totalEvents ?? 0} onPage={setPage} unit="events" />
       )}
     </div>
   );
@@ -692,15 +674,15 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
       </div>
       )}
 
-      <div className="dlg-card-plain table-card overflow-hidden">
+      <div className="dlg-card table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="sticky top-0 z-10 bg-fog text-left eyebrow">
               <tr>
-                <th className="px-5 py-3">To</th>
-                <th className="px-4 py-3">{kind === "sms" ? "Message" : "Subject"}</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-5 py-3 text-right">When</th>
+                <th scope="col" className="px-5 py-3.5">To</th>
+                <th scope="col" className="px-4 py-3.5">{kind === "sms" ? "Message" : "Subject"}</th>
+                <th scope="col" className="px-4 py-3.5">Status</th>
+                <th scope="col" className="px-5 py-3.5 text-right">When</th>
               </tr>
             </thead>
             <tbody>
@@ -711,7 +693,8 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
                     <EmptyState
                       icon={kind === "sms" ? Send : Mail}
                       tone={kind === "sms" ? "gold" : "emerald"}
-                      title="Nothing sent yet."
+                      title="Nothing sent yet"
+                      description="Send a test message to see its delivery log here."
                       compact
                     />
                   </td>
@@ -719,13 +702,13 @@ function MessagingPanel({ kind, readOnly = false }: { kind: "sms" | "email"; rea
               )}
               {data?.logs.map((l) => (
                 <tr key={l.id} className="border-b border-[var(--border)] align-top transition-colors last:border-0 hover:bg-fog/60">
-                  <td className="px-5 py-3 font-medium text-ink">{l.to}</td>
-                  <td className="max-w-[280px] truncate px-4 py-3 text-body-gray">{l.subject ?? l.message ?? "-"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3.5 font-medium text-ink">{l.to}</td>
+                  <td className="max-w-[280px] truncate px-4 py-3.5 text-body-gray">{l.subject ?? l.message ?? "-"}</td>
+                  <td className="px-4 py-3.5">
                     <StatusChip status={l.status} />
                     {l.error && <p className="mt-1 text-xs text-body-gray">{l.error}</p>}
                   </td>
-                  <td className="num px-5 py-3 text-right text-xs text-body-gray" title={formatDateTime(l.createdAt)}>
+                  <td className="num px-5 py-3.5 text-right text-xs text-body-gray" title={formatDateTime(l.createdAt)}>
                     {timeAgo(l.createdAt)}
                   </td>
                 </tr>
@@ -789,7 +772,9 @@ function ContactPanel() {
       <div className="flex items-center gap-3">
         <IconChip icon={Inbox} tone="slate" size={36} iconSize={16} />
         <h2 className="text-base font-semibold tracking-[-0.01em] text-ink">Contact Requests</h2>
-        <span className="status-pill status-neutral num ml-auto">{rows?.length ?? "…"}</span>
+        <span className="ml-auto">
+          <StatusPill status={`${rows?.length ?? "…"}`} variant="neutral" className="num" />
+        </span>
       </div>
       <p className="text-sm leading-relaxed text-body-gray">
         Inquiries and requests submitted through the public Contact page. Reply to the sender
@@ -798,30 +783,26 @@ function ContactPanel() {
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by status">
         {(["ALL", "OPEN", "RESOLVED"] as const).map((f) => (
-          <button
+          <FilterChip
             key={f}
-            type="button"
-            aria-pressed={filter === f}
+            active={filter === f}
             onClick={() => setFilter(f)}
-            className={`inline-flex min-h-[36px] items-center rounded-full px-4 text-xs font-medium transition-colors ${
-              filter === f ? "bg-primary text-primary-foreground" : "bg-fog text-stone hover:text-ink"
-            }`}
           >
             {f === "ALL" ? "All" : f === "OPEN" ? "Open" : "Resolved"}
-          </button>
+          </FilterChip>
         ))}
       </div>
 
-      <div className="dlg-card-plain table-card overflow-hidden">
+      <div className="dlg-card table-card overflow-hidden">
         <div className="max-h-96 overflow-x-auto overflow-y-auto scroll-thin">
           <table className="w-full min-w-[720px] text-sm">
             <thead className="sticky top-0 z-10 bg-fog text-left eyebrow">
               <tr>
-                <th className="px-5 py-3">From</th>
-                <th className="px-4 py-3">Subject</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Received</th>
-                <th className="px-4 py-3 text-right">Action</th>
+                <th scope="col" className="px-5 py-3.5">From</th>
+                <th scope="col" className="px-4 py-3.5">Subject</th>
+                <th scope="col" className="px-4 py-3.5">Status</th>
+                <th scope="col" className="px-5 py-3.5 text-right">Received</th>
+                <th scope="col" className="px-4 py-3.5 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -829,7 +810,13 @@ function ContactPanel() {
               {rows?.length === 0 && (
                 <tr>
                   <td colSpan={5} className="p-6">
-                    <EmptyState icon={Inbox} tone="slate" title="No contact requests yet." compact />
+                    <EmptyState
+                      icon={Inbox}
+                      tone="slate"
+                      title="No contact requests yet"
+                      description="Messages from the public Contact page will appear here."
+                      compact
+                    />
                   </td>
                 </tr>
               )}

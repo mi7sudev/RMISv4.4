@@ -318,7 +318,7 @@ export default function ProfileView() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]" title={applicantName}>
+              <h1 className="truncate font-display text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]" title={applicantName}>
                 {applicantName}
               </h1>
               {/* Status BELOW the name — never squeezed beside it. */}
@@ -635,7 +635,7 @@ export default function ProfileView() {
       <AlertDialog open={markOpen} onOpenChange={setMarkOpen}>
         <AlertDialogContent className="dlg-card-plain">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Mark your profile as complete?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-2xl text-ink">Mark your profile as complete?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-stone">
               Your profile will be ready for application and subject to verification by HR. All statements become part
               of your civil-service application record.

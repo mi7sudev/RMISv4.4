@@ -209,7 +209,7 @@ export default function SignInView() {
 
             {/* Demo accounts — capsule quick-fill chips (charcoal when active) */}
             <div className="mt-6 border-t border-border pt-5">
-              <p className="text-xs font-medium uppercase tracking-wider text-stone">Demo accounts</p>
+              <p className="eyebrow">Demo accounts</p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 {DEMO_ACCOUNTS.map((name) => {
                   const selected = identifier === name && password === "password123";
@@ -262,7 +262,7 @@ export default function SignInView() {
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="dlg-card-plain sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Reset your password</DialogTitle>
+            <DialogTitle className="font-display text-2xl text-ink">Reset your password</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-body-gray">
               Enter the email address on your account (applicants, evaluators, and administrators
               alike) and we'll send you a reset link. The link expires in 30 minutes.

@@ -1,0 +1,998 @@
+     1→"use client";
+     2→
+     3→// ============================================================================
+     4→// RMIS — Applicant home ("My Application"): editorial welcome header over a
+     5→// two-pane workspace grid (lg:grid-cols-12):
+     6→//   LEFT  · Job Openings — full-width stacked list rows (metric-blue hover
+     7→//           rule, humanized title, pipe-separated vitals, capsule +/−
+     8→//           quick-view toggle, in-place quick view with six QuickFacts).
+     9→//   RIGHT · Your Applications — sticky rail with its own overflow scroll;
+    10→//           journey cards (No. kicker · status pill · chevron · 3-checkpoint
+    11→//           jade progress timeline with per-step captions · next-step hint).
+    12→//           The rail stacks FIRST on mobile.
+    13→// Clicking a journey card opens the full Application detail modal (§7.7)
+    14→// with Cancel Application while the journey is still at "Submitted".
+    15→// Data: parallel /api/applications + /api/jobs — 15 s silent poll + refetch on
+    16→// focus (never flips skeletons or clobbers good data on transient failure).
+    17→// Bevel pass: shared page-header anatomy, cloud journey/position cards, white
+    18→// interior tiles inside the detail modal, capsule CTAs, body-gray copy.
+    19→// ============================================================================
+    20→
+    21→import { useCallback, useEffect, useState, type ReactNode } from "react";
+    22→import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+    23→import { toast } from "sonner";
+    24→import {
+    25→  AlertCircle,
+    26→  ArrowRight,
+    27→  BadgeCheck,
+    28→  Bookmark,
+    29→  Briefcase,
+    30→  CalendarDays,
+    31→  Check,
+    32→  ChevronDown,
+    33→  ChevronRight,
+    34→  Inbox,
+    35→  MapPin,
+    36→  RefreshCw,
+    37→  Star,
+    38→  X,
+    39→} from "lucide-react";
+    40→import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+    41→import {
+    42→  AlertDialog,
+    43→  AlertDialogAction,
+    44→  AlertDialogCancel,
+    45→  AlertDialogContent,
+    46→  AlertDialogDescription,
+    47→  AlertDialogFooter,
+    48→  AlertDialogHeader,
+    49→  AlertDialogTitle,
+    50→} from "@/components/ui/alert-dialog";
+    51→import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
+    52→import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
+    53→import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
+    54→import { currentStageLabel, stageForStatus } from "@/lib/status";
+    55→import { cn } from "@/lib/utils";
+    56→import { useSession } from "@/components/session-provider";
+    57→import OnboardingTour from "@/components/onboarding-tour";
+    58→
+    59→// ── Small helpers ───────────────────────────────────────────────────────────
+    60→
+    61→function startOfToday(): Date {
+    62→  const d = new Date();
+    63→  d.setHours(0, 0, 0, 0);
+    64→  return d;
+    65→}
+    66→
+    67→function notRequired(v: string | null | undefined): boolean {
+    68→  if (!v) return true;
+    69→  const s = v.trim().toLowerCase();
+    70→  return s === "" || s === "n/a" || s === "na" || s === "none" || s === "none required" || s === "not required";
+    71→}
+    72→
+    73→/** Section label (eyebrow) — quiet uppercase kicker above headings. */
+    74→function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+    75→  return (
+    76→    <p className={cn("eyebrow", className)}>{children}</p>
+    77→  );
+    78→}
+    79→
+    80→/** Applicant-facing stage label → functional status variant (§2 status system). */
+    81→const STAGE_VARIANT: Record<string, "ok" | "warn" | "bad" | "info"> = {
+    82→  Submitted: "info",
+    83→  "In Review": "warn",
+    84→  Shortlisted: "ok",
+    85→  "Not Selected": "bad",
+    86→};
+    87→
+    88→function stageVariant(label: string): "ok" | "warn" | "bad" | "info" | "neutral" {
+    89→  return STAGE_VARIANT[label] ?? "neutral";
+    90→}
+    91→
+    92→/** §7.3 Next Step hint paragraph per pipeline stage. */
+    93→function nextStepHint(stage: string): string {
+    94→  if (stage === "Rejected")
+    95→    return "Your application was not shortlisted. You may apply for other open positions.";
+    96→  if (stage === "Shortlisted")
+    97→    return "A notice has been sent to your registered email. HR will contact you for the next steps.";
+    98→  if (stage === "Under Review") return "HR is currently evaluating your application. You will be notified of the outcome.";
+    99→  return "Your application has been received and is awaiting evaluation by the Human Resource Office.";
+   100→}
+   101→
+   102→const PLACE_FALLBACK = "DOST Compound, Taguig";
+   103→
+   104→/** Display place — nested position read, then the agency address. */
+   105→function jobPlace(job: JobWire): string {
+   106→  return job.position?.placeOfAssignment ?? PLACE_FALLBACK;
+   107→}
+   108→
+   109→type CheckpointState = "done" | "current" | "pending" | "failed";
+   110→
+   111→/* Progress-timeline palette, sampled from the approved status spec: jade for
+   112→   achieved/live steps, quiet gray for steps ahead, bad-red for a failed one. */
+   113→const TL_JADE = "#00ae75";
+   114→const TL_JADE_TEXT = "#0a9565";
+   115→const TL_GRAY_DISC = "#e8eaec";
+   116→const TL_GRAY_RAIL = "#ededed";
+   117→
+   118→/** Timeline checkpoint marker (approved status spec): achieved steps are a
+   119→ *  solid jade disc with a white glyph, the live step is a thick jade ring,
+   120→ *  steps ahead are a quiet gray disc, and a failed decision is the app's
+   121→ *  bad-red disc with a white ×. Glyph/shape carries the state so it never
+   122→ *  rides on hue alone; the ring keeps a pulsing halo — motion-safe only. */
+   123→function CheckpointDot({ state, doneGlyph }: { state: CheckpointState; doneGlyph?: ReactNode }) {
+   124→  if (state === "current") {
+   125→    return (
+   126→      <span
+   127→        aria-hidden="true"
+   128→        className="motion-safe:animate-pulse inline-flex h-5 w-5 shrink-0 rounded-full border-[7px] bg-white"
+   129→        style={{ borderColor: TL_JADE }}
+   130→      />
+   131→    );
+   132→  }
+   133→  if (state === "failed") {
+   134→    return (
+   135→      <span
+   136→        aria-hidden="true"
+   137→        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--bad)] text-white"
+   138→      >
+   139→        <X aria-hidden="true" className="h-[11px] w-[11px]" strokeWidth={3} />
+   140→      </span>
+   141→    );
+   142→  }
+   143→  if (state === "done") {
+   144→    return (
+   145→      <span
+   146→        aria-hidden="true"
+   147→        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
+   148→        style={{ backgroundColor: TL_JADE }}
+   149→      >
+   150→        {doneGlyph ?? <Check aria-hidden="true" className="h-[11px] w-[11px]" strokeWidth={3} />}
+   151→      </span>
+   152→    );
+   153→  }
+   154→  return (
+   155→    <span
+   156→      aria-hidden="true"
+   157→      className="inline-flex h-5 w-5 shrink-0 rounded-full"
+   158→      style={{ backgroundColor: TL_GRAY_DISC }}
+   159→    />
+   160→  );
+   161→}
+   162→
+   163→/** 3-checkpoint tracking timeline: Submitted → Under Review → Decision (§7.3),
+   164→ *  styled to the approved status spec — jade rails, a bold step label with a
+   165→ *  one-line caption under every checkpoint, the live step captioned in jade. */
+   166→function JourneyTimeline({ status }: { status: string }) {
+   167→  const stage = stageForStatus(status);
+   168→  const decided = stage === "Shortlisted" || stage === "Rejected";
+   169→
+   170→  const steps: { label: string; state: CheckpointState; desc: string; doneGlyph?: ReactNode }[] = [
+   171→    {
+   172→      label: "Submitted",
+   173→      state: "done",
+   174→      desc: "Your application has been successfully submitted",
+   175→    },
+   176→    {
+   177→      label: "Under Review",
+   178→      state: stage === "Under Review" ? "current" : decided ? "done" : "pending",
+   179→      desc:
+   180→        stage === "Under Review"
+   181→          ? "HR is currently reviewing your application"
+   182→          : decided
+   183→            ? "Your application has passed the initial review"
+   184→            : "HR will evaluate your application next",
+   185→    },
+   186→    {
+   187→      // Neutral pending label — never presumes the shortlist outcome, since
+   188→      // the decision can go either way.
+   189→      label: stage === "Shortlisted" ? "Shortlisted" : stage === "Rejected" ? "Not Shortlisted" : "Awaiting Decision",
+   190→      state: stage === "Shortlisted" ? "done" : stage === "Rejected" ? "failed" : "pending",
+   191→      desc:
+   192→        stage === "Shortlisted"
+   193→          ? "You've been shortlisted for the next step"
+   194→          : stage === "Rejected"
+   195→            ? "Your application was not shortlisted"
+   196→            : "You will be notified once a decision is made",
+   197→      // Proper glyph for the achieved decision — a star, not a generic check.
+   198→      doneGlyph: <Star aria-hidden="true" className="h-[11px] w-[11px] fill-current" strokeWidth={0} />,
+   199→    },
+   200→  ];
+   201→
+   202→  return (
+   203→    <div className="mt-3 grid grid-cols-3 gap-1">
+   204→      {steps.map((s, i) => {
+   205→        const reached = s.state !== "pending";
+   206→        return (
+   207→          <div key={`${s.label}-${i}`} className="flex flex-col items-center text-center">
+   208→            <div className="flex w-full items-center">
+   209→              {/* Traversed connectors render in the timeline's jade green.
+   210→                  Negative outer margins bridge the grid's gap-1 so each rail
+   211→                  reads as one continuous line, not segments with gaps. */}
+   212→              <div
+   213→                className={cn("h-[2px] flex-1", i > 0 && "-ml-1")}
+   214→                style={{ backgroundColor: i === 0 ? "transparent" : reached ? TL_JADE : TL_GRAY_RAIL }}
+   215→              />
+   216→              <CheckpointDot state={s.state} doneGlyph={s.doneGlyph} />
+   217→              <div
+   218→                className={cn("h-[2px] flex-1", i < steps.length - 1 && "-mr-1")}
+   219→                style={{
+   220→                  backgroundColor:
+   221→                    i === steps.length - 1 ? "transparent" : steps[i + 1].state !== "pending" ? TL_JADE : TL_GRAY_RAIL,
+   222→                }}
+   223→              />
+   224→            </div>
+   225→            <div className="mt-2 flex flex-col gap-0.5">
+   226→              <span
+   227→                className="text-[10px] font-semibold leading-tight text-ink"
+   228→                style={
+   229→                  s.state === "current"
+   230→                    ? { color: TL_JADE_TEXT }
+   231→                    : s.state === "failed"
+   232→                      ? { color: "var(--bad)" }
+   233→                      : undefined
+   234→                }
+   235→              >
+   236→                {s.label}
+   237→              </span>
+   238→              <span
+   239→                className="text-[9px] leading-snug text-stone"
+   240→                style={s.state === "current" ? { color: TL_JADE_TEXT } : undefined}
+   241→              >
+   242→                {s.desc}
+   243→              </span>
+   244→            </div>
+   245→          </div>
+   246→        );
+   247→      })}
+   248→    </div>
+   249→  );
+   250→}
+   251→
+   252→/** Posting age source — editorial publish date, else the record timestamp. */
+   253→function postedAt(job: JobWire): string {
+   254→  return job.publishDate ?? job.publishedAt;
+   255→}
+   256→
+   257→// Shared with the frontpage explorer — bookmarks saved here show as saved
+   258→// there and vice versa.
+   259→const SAVED_KEY = "rmis-frontpage-saved-jobs";
+   260→
+   261→/** Client-persisted bookmark list (same store as the frontpage). */
+   262→function useSavedJobs() {
+   263→  const [saved, setSaved] = useState<number[]>(() => {
+   264→    if (typeof window === "undefined") return [];
+   265→    try {
+   266→      const raw = window.localStorage.getItem(SAVED_KEY);
+   267→      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+   268→      return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
+   269→    } catch {
+   270→      return [];
+   271→    }
+   272→  });
+   273→
+   274→  const toggle = useCallback((id: number) => {
+   275→    setSaved((prev) => {
+   276→      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+   277→      try {
+   278→        window.localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+   279→      } catch {
+   280→        /* storage unavailable — in-session state still works */
+   281→      }
+   282→      return next;
+   283→    });
+   284→  }, []);
+   285→
+   286→  return { saved, toggle };
+   287→}
+   288→
+   289→// ── Application journey card (right rail) ───────────────────────────────────
+   290→
+   291→function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; index: number; onOpen: () => void }) {
+   292→  const stage = stageForStatus(app.status);
+   293→  const label = currentStageLabel(app.status);
+   294→  const place = app.job?.position?.placeOfAssignment ?? null;
+   295→
+   296→  return (
+   297→    <button
+   298→      type="button"
+   299→      onClick={onOpen}
+   300→      aria-haspopup="dialog"
+   301→      aria-label={`View complete posting and application details: ${app.job?.title ?? "position"}`}
+   302→      className="dlg-card lift focus-ring min-h-[44px] w-full p-4 text-left sm:p-5"
+   303→    >
+   304→      {/* Header — the chevron is the whole-card affordance: the card opens
+   305→          the full posting in the detail modal. */}
+   306→      <div className="flex items-start justify-between gap-2">
+   307→        <span className="num text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">
+   308→          No. {String(index + 1).padStart(2, "0")}
+   309→        </span>
+   310→        <span className="flex shrink-0 items-center gap-1.5">
+   311→          <StatusPill status={label} variant={stageVariant(label)} />
+   312→          <ChevronRight
+   313→            aria-hidden="true"
+   314→            className="h-4 w-4 text-pebble transition-all duration-200 group-hover:translate-x-0.5"
+   315→          />
+   316→        </span>
+   317→      </div>
+   318→      <h3 className="mt-3 text-base font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-lg">{app.job?.title ?? "Position"}</h3>
+   319→      {place && (
+   320→        <p className="mt-2 flex items-center gap-1.5 text-sm text-stone">
+   321→          <MapPin className="h-4 w-4" aria-hidden="true" /> {place}
+   322→        </p>
+   323→      )}
+   324→      <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
+   325→        <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Applied{" "}
+   326→        <span className="num">{formatDate(app.dateApplied)}</span>
+   327→      </p>
+   328→
+   329→      <JourneyTimeline status={app.status} />
+   330→
+   331→      {/* Next hint — the card's closing block (the full posting lives one
+   332→          click away, in the application detail modal). */}
+   333→      <div className="mt-3 border-t border-divider pt-2.5">
+   334→        <p className="eyebrow text-stone">Next Step</p>
+   335→        <p className="mt-1 text-xs leading-relaxed text-stone">{nextStepHint(stage)}</p>
+   336→      </div>
+   337→    </button>
+   338→  );
+   339→}
+   340→
+   341→// ── Application detail modal (spec §7.7) ────────────────────────────────────
+   342→
+   343→function RichSection({ title, text, html }: { title: string; text?: string | null; html?: string | null }) {
+   344→  if (html && html.trim()) {
+   345→    return (
+   346→      <section className="space-y-2">
+   347→        <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h4>
+   348→        <div className="rich-text text-sm leading-relaxed text-body-gray" dangerouslySetInnerHTML={{ __html: html }} />
+   349→      </section>
+   350→    );
+   351→  }
+   352→  if (text && text.trim()) {
+   353→    return (
+   354→      <section className="space-y-2">
+   355→        <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">{title}</h4>
+   356→        <p className="whitespace-pre-line text-sm leading-relaxed text-body-gray">{text}</p>
+   357→      </section>
+   358→    );
+   359→  }
+   360→  return null;
+   361→}
+   362→
+   363→function MqrLedger({ position }: { position: PositionWire | null }) {
+   364→  if (!position) return null;
+   365→  const rows: { label: string; value: string | null | undefined }[] = [
+   366→    { label: "Education", value: position.cscEducation },
+   367→    { label: "Work Experience", value: position.cscWorkExperience },
+   368→    { label: "Training", value: position.cscTraining },
+   369→    { label: "Eligibility", value: position.cscEligibilityGroup || position.cscEligibility },
+   370→    { label: "License / Certification", value: position.license },
+   371→  ];
+   372→  const visible = rows.filter((r) => !notRequired(r.value));
+   373→  if (visible.length === 0) return null;
+   374→  return (
+   375→    <section className="space-y-2">
+   376→      <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Minimum Qualification Requirements</h4>
+   377→      <div className="space-y-2">
+   378→        {visible.map((r) => (
+   379→          <div key={r.label} className="rounded-lg bg-cloud/60 p-3">
+   380→            <p className="text-xs font-medium text-stone">{r.label}</p>
+   381→            <p className="mt-0.5 whitespace-pre-line text-sm text-stone">{r.value}</p>
+   382→          </div>
+   383→        ))}
+   384→      </div>
+   385→    </section>
+   386→  );
+   387→}
+   388→
+   389→function ApplicationDetailModal({
+   390→  application,
+   391→  onClose,
+   392→  onCancelled,
+   393→}: {
+   394→  application: ApplicationWire;
+   395→  onClose: () => void;
+   396→  onCancelled: () => void;
+   397→}) {
+   398→  const [confirmOpen, setConfirmOpen] = useState(false);
+   399→  const [cancelling, setCancelling] = useState(false);
+   400→  const job = application.job ?? null;
+   401→  const position = job?.position ?? null;
+   402→  const label = currentStageLabel(application.status);
+   403→  const cancellable = label === "Submitted";
+   404→  const dl = deadlineState(job?.deadlineDate ?? null);
+   405→
+   406→  const cancelApplication = async () => {
+   407→    setCancelling(true);
+   408→    try {
+   409→      await apiFetch(`/api/applications/${application.id}`, { method: "DELETE" });
+   410→      toast.success("Application cancelled", { description: "Your application has been withdrawn." });
+   411→      setConfirmOpen(false);
+   412→      onClose();
+   413→      onCancelled();
+   414→    } catch (e) {
+   415→      // Progressed applications: surface the server's guidance (e.g. "contact HR") as-is.
+   416→      toast.error(e instanceof Error ? e.message : "Unable to cancel this application");
+   417→      setConfirmOpen(false);
+   418→    } finally {
+   419→      setCancelling(false);
+   420→    }
+   421→  };
+   422→
+   423→  const facts: [string, string][] = [
+   424→    ["Place of Assignment", position?.placeOfAssignment ?? "-"],
+   425→    ["Employment Type", job?.positionType ? humanize(job.positionType) : position?.positionType ? humanize(position.positionType) : "-"],
+   426→    ["Vacancies", job?.numberOfVacancy == null ? "-" : String(job.numberOfVacancy)],
+   427→    ["Monthly Salary", formatCurrency(position?.salaryAmount ?? null)],
+   428→    ["Salary Grade", position?.salaryGrade ? `SG-${position.salaryGrade}${position.salaryStep ? ` Step ${position.salaryStep}` : ""}` : "-"],
+   429→    ["Item No.", position?.itemNumber ?? "-"],
+   430→    ["Published", formatDate(job?.publishDate ?? null)],
+   431→    ["Deadline", job ? dl.label : "-"],
+   432→  ];
+   433→
+   434→  return (
+   435→    <Dialog open onOpenChange={(o) => !o && onClose()}>
+   436→      <DialogContent className="dlg-card-plain max-h-[90dvh] w-full overflow-y-auto scroll-thin p-0 sm:max-w-3xl">
+   437→        <div className="p-6">
+   438→          <DialogHeader className="space-y-2 text-left">
+   439→            <div className="flex flex-wrap items-center gap-2">
+   440→              <StatusPill status={label} variant={stageVariant(label)} />
+   441→              <span className="dlg-pill num rounded-full bg-fog px-3 py-1 text-xs font-medium text-stone">
+   442→                Application #{application.id}
+   443→              </span>
+   444→            </div>
+   445→            <DialogTitle className="font-display text-2xl leading-tight tracking-[-0.02em] text-ink">
+   446→              {job?.title ?? "Application"}
+   447→            </DialogTitle>
+   448→          </DialogHeader>
+   449→
+   450→          {/* Successfully-applied strip (§7.7) */}
+   451→          <div className="mt-4 flex items-center gap-3 rounded-lg bg-cloud/60 p-3">
+   452→            <IconChip icon={BadgeCheck} tone="emerald" size={36} iconSize={17} />
+   453→            <div>
+   454→              <p className="text-sm font-medium text-ink">Successfully Applied</p>
+   455→              <p className="text-xs text-stone">
+   456→                Applied <span className="num">{formatDate(application.dateApplied)}</span>
+   457→              </p>
+   458→            </div>
+   459→          </div>
+   460→
+   461→          {/* Vitals summary grid */}
+   462→          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+   463→            {facts.map(([k, v]) => (
+   464→              <div key={k} className="rounded-lg bg-cloud/60 p-3">
+   465→                <p className="text-[11px] text-stone">{k}</p>
+   466→                <p className="num mt-0.5 truncate text-sm text-ink" title={v}>
+   467→                  {v}
+   468→                </p>
+   469→              </div>
+   470→            ))}
+   471→          </div>
+   472→
+   473→          <div className="mt-6 space-y-6">
+   474→            <MqrLedger position={position} />
+   475→            <RichSection title="Brief Description" text={job?.briefDescription} html={job?.briefDescriptionHtml} />
+   476→            <RichSection title="Duties & Responsibilities" text={job?.dutiesResponsibilities} html={job?.dutiesHtml} />
+   477→            <RichSection title="Compensation Package" text={job?.compensationPackage} html={job?.compensationHtml} />
+   478→            <RichSection title="Other Qualifications" text={job?.otherQualifications} html={job?.otherQualificationsHtml} />
+   479→          </div>
+   480→
+   481→          <div className="mt-8 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+   482→            {cancellable && (
+   483→              <button
+   484→                type="button"
+   485→                onClick={() => setConfirmOpen(true)}
+   486→                disabled={cancelling}
+   487→                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-6 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+   488→              >
+   489→                Cancel Application
+   490→              </button>
+   491→            )}
+   492→            <button type="button" onClick={onClose} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
+   493→              Close
+   494→            </button>
+   495→          </div>
+   496→        </div>
+   497→
+   498→        {/* Nested destructive confirm (§7.7) */}
+   499→        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+   500→          <AlertDialogContent className="dlg-card-plain">
+   501→            <AlertDialogHeader>
+   502→              <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Cancel this application?</AlertDialogTitle>
+   503→              <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
+   504→                Your application for {job?.title ?? "this position"} will be withdrawn. You may apply again while the
+   505→                position is still open. Once review has started, applications can no longer be cancelled.
+   506→              </AlertDialogDescription>
+   507→            </AlertDialogHeader>
+   508→            <AlertDialogFooter>
+   509→              <AlertDialogCancel className="dlg-ghost min-h-[44px] px-5 py-2.5 text-sm">Keep it</AlertDialogCancel>
+   510→              <AlertDialogAction
+   511→                onClick={(e) => {
+   512→                  e.preventDefault();
+   513→                  void cancelApplication();
+   514→                }}
+   515→                disabled={cancelling}
+   516→                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+   517→              >
+   518→                {cancelling ? "Cancelling…" : "Cancel Application"}
+   519→              </AlertDialogAction>
+   520→            </AlertDialogFooter>
+   521→          </AlertDialogContent>
+   522→        </AlertDialog>
+   523→      </DialogContent>
+   524→    </Dialog>
+   525→  );
+   526→}
+   527→
+   528→// ── Open-position list row (left pane) ──────────────────────────────────────
+   529→
+   530→/** One definition-list cell of the quick view: micro-kicker label over a
+   531→ *  semibold tabular value. `tone="danger"` flags a passed deadline. */
+   532→function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+   533→  return (
+   534→    <div>
+   535→      <dt className="eyebrow">{label}</dt>
+   536→      <dd
+   537→        className={cn(
+   538→          "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",
+   539→          danger ? "text-[var(--bad)]" : "text-ink"
+   540→        )}
+   541→      >
+   542→        {value}
+   543→      </dd>
+   544→    </div>
+   545→  );
+   546→}
+   547→
+   548→/** The frontpage job card, ported for the applicant — tuned: the summary is
+   549→ *  deliberately inert, so the chevron is the single door to the quick view;
+   550→ *  there the solid "Read full description" button deep-links into the job's
+   551→ *  full posting (where the apply flow lives). Applicant extras kept: the
+   552→ *  gold Applied pill beside the title and the applied notice in the quick
+   553→ *  view. */
+   554→function JobListCard({
+   555→  job,
+   556→  applied,
+   557→  expanded,
+   558→  saved,
+   559→  onToggle,
+   560→  onSave,
+   561→  onOpen,
+   562→}: {
+   563→  job: JobWire;
+   564→  applied: boolean;
+   565→  expanded: boolean;
+   566→  saved: boolean;
+   567→  onToggle: () => void;
+   568→  onSave: () => void;
+   569→  onOpen: () => void;
+   570→}) {
+   571→  const reduced = useReducedMotion();
+   572→  const pos = job.position;
+   573→  const title = pos?.positionTitle || job.title || "Position Title Unavailable";
+   574→  const company = pos?.division || "DOST-MIRDC";
+   575→  const salary = pos?.salaryAmount ?? null;
+   576→  const deadline = job.deadlineDate;
+   577→  const overdue = deadline ? new Date(deadline).getTime() < Date.now() : false;
+   578→
+   579→  return (
+   580→    <article className="dlg-card lift">
+   581→      {/* Static summary — deliberately not clickable: the chevron below is
+   582→          the single door to the quick view and its description jump. */}
+   583→      <div className="px-4 pt-4 sm:px-5 sm:pt-5">
+   584→        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+   585→          <h3 className="min-w-0 text-lg font-semibold leading-snug text-ink">{humanize(title)}</h3>
+   586→          {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
+   587→        </div>
+   588→        <p className="mt-1 text-lg text-ink">{company}</p>
+   589→        <p className="mt-2.5 text-sm text-stone">{jobPlace(job)}</p>
+   590→        {salary != null && <p className="num mt-0.5 text-sm text-stone">{formatCurrency(salary)} per month</p>}
+   591→        {job.briefDescription && (
+   592→          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
+   593→        )}
+   594→      </div>
+   595→
+   596→      {/* Bottom register — posted age left, quick-view + bookmark right */}
+   597→      <div className="flex items-center justify-between gap-2 px-2.5 pb-2 sm:px-3.5">
+   598→        <span className="num px-2 py-1.5 text-xs text-stone">{timeAgo(postedAt(job))}</span>
+   599→        <div className="flex items-center">
+   600→          <button
+   601→            type="button"
+   602→            onClick={onToggle}
+   603→            aria-expanded={expanded}
+   604→            aria-label={expanded ? `Collapse: ${humanize(title)}` : `Quick view: ${humanize(title)}`}
+   605→            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
+   606→          >
+   607→            <ChevronDown
+   608→              className={cn("h-[18px] w-[18px] transition-transform duration-200", expanded && "rotate-180")}
+   609→            />
+   610→          </button>
+   611→          <button
+   612→            type="button"
+   613→            onClick={onSave}
+   614→            aria-pressed={saved}
+   615→            aria-label={saved ? `Remove ${humanize(title)} from saved` : `Save ${humanize(title)}`}
+   616→            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
+   617→          >
+   618→            <Bookmark className={cn("h-[18px] w-[18px]", saved && "fill-current text-metric-blue")} />
+   619→          </button>
+   620→        </div>
+   621→      </div>
+   622→
+   623→      {/* Quick view — inline expansion: the clicked card opens IN PLACE with
+   624→          a clamped job description and the position's vital facts. SMOOTH
+   625→          HEIGHT GLIDE via framer-motion (reduced-motion users get a plain
+   626→          opacity crossfade). */}
+   627→      <AnimatePresence initial={false}>
+   628→        {expanded && (
+   629→          <motion.div
+   630→            key="quickview"
+   631→            initial={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+   632→            animate={reduced ? { opacity: 1 } : { height: "auto", opacity: 1 }}
+   633→            exit={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+   634→            transition={reduced ? { duration: 0.15, ease: "linear" } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+   635→            className="overflow-hidden"
+   636→          >
+   637→            <div className="border-t border-divider px-4 pb-6 pt-4 sm:px-5 sm:pt-5">
+   638→              {job.briefDescription && (
+   639→                <div>
+   640→                  <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Job description</h4>
+   641→                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
+   642→                </div>
+   643→              )}
+   644→              {/* 3-up everywhere: a 6-up row inside the 7/12 pane leaves
+   645→                  ~50-85px per fact, which wraps currency mid-number. */}
+   646→              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
+   647→                <QuickFact label="Item No." value={pos?.itemNumber ?? "-"} />
+   648→                <QuickFact label="Vacancies" value={String(job.numberOfVacancy ?? "-")} />
+   649→                <QuickFact
+   650→                  label="Salary Grade"
+   651→                  value={pos?.salaryGrade ? `SG ${pos.salaryGrade}${pos.salaryStep ? `/${pos.salaryStep}` : ""}` : "-"}
+   652→                />
+   653→                <QuickFact label="Monthly Salary" value={salary != null ? formatCurrency(salary) : "-"} />
+   654→                <QuickFact label="Published" value={formatDate(job.publishDate)} />
+   655→                <QuickFact label="Deadline" value={formatDate(deadline)} danger={overdue} />
+   656→              </dl>
+   657→              <div className="mt-6 flex flex-wrap items-center gap-3">
+   658→                {/* Read full description — the quick view's primary action;
+   659→                    deep-links into the complete posting, where the apply
+   660→                    flow lives. */}
+   661→                <button
+   662→                  type="button"
+   663→                  onClick={onOpen}
+   664→                  className="dlg-cta focus-ring inline-flex min-h-[44px] items-center gap-2 px-6 py-2.5 text-sm"
+   665→                >
+   666→                  Read full description <ArrowRight className="h-4 w-4" aria-hidden="true" />
+   667→                </button>
+   668→                {applied && <StatusPill status="Applied (track it on your Home)" variant="info" />}
+   669→                {overdue && !applied && (
+   670→                  <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--bad)]">
+   671→                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" /> Deadline passed
+   672→                  </span>
+   673→                )}
+   674→              </div>
+   675→            </div>
+   676→          </motion.div>
+   677→        )}
+   678→      </AnimatePresence>
+   679→    </article>
+   680→  );
+   681→}
+   682→
+   683→// ── Skeleton ────────────────────────────────────────────────────────────────
+   684→
+   685→function HomeSkeleton() {
+   686→  return (
+   687→    <div className="space-y-6">
+   688→      <div>
+   689→        <div className="skel h-3 w-32" />
+   690→        <div className="skel mt-3 h-8 w-72 sm:h-9" />
+   691→        <div className="skel mt-3 h-4 w-1/2" />
+   692→      </div>
+   693→      {/* Two-pane skeleton — positions (left, register rows) · applications (right) */}
+   694→      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
+   695→        <div className="space-y-4 lg:order-1 lg:col-span-7">
+   696→          <div className="skel h-3 w-44" />
+   697→          <div className="skel h-6 w-36" />
+   698→          <div className="space-y-4 sm:space-y-5">
+   699→            {[0, 1, 2, 3].map((i) => (
+   700→              <div key={i} className="dlg-card px-5 py-5 sm:px-6">
+   701→                <div className="min-w-0 space-y-3">
+   702→                  <div className="skel h-6 w-3/4" />
+   703→                  <div className="skel h-5 w-1/2" />
+   704→                  <div className="skel h-4 w-2/3" />
+   705→                </div>
+   706→                <div className="mt-4 flex items-center justify-between">
+   707→                  <div className="skel h-4 w-14 rounded-full" />
+   708→                  <div className="flex items-center gap-1.5">
+   709→                    <div className="skel h-9 w-9 rounded-full" />
+   710→                    <div className="skel h-9 w-9 rounded-full" />
+   711→                  </div>
+   712→                </div>
+   713→              </div>
+   714→            ))}
+   715→          </div>
+   716→        </div>
+   717→        <div className="space-y-4 lg:order-2 lg:col-span-5">
+   718→          <div className="skel h-3 w-40" />
+   719→          <div className="skel h-6 w-32" />
+   720→          {[0, 1, 2].map((i) => (
+   721→            <div key={i} className="skel h-64" />
+   722→          ))}
+   723→        </div>
+   724→      </div>
+   725→    </div>
+   726→  );
+   727→}
+   728→
+   729→// ── Main view ───────────────────────────────────────────────────────────────
+   730→
+   731→export default function ApplicantHome() {
+   732→  const { user } = useSession();
+   733→  const [apps, setApps] = useState<ApplicationWire[] | null>(null);
+   734→  const [jobs, setJobs] = useState<JobWire[] | null>(null);
+   735→  const [error, setError] = useState<string | null>(null);
+   736→  const [detail, setDetail] = useState<ApplicationWire | null>(null);
+   737→  // Quick view — single-expand: opening one card closes the previous one.
+   738→  const [expandedId, setExpandedId] = useState<number | null>(null);
+   739→  // Bookmarks — the same client store the frontpage explorer uses.
+   740→  const { saved, toggle: toggleSave } = useSavedJobs();
+   741→
+   742→  const reload = useCallback(async (silent: boolean) => {
+   743→    try {
+   744→      const [appRes, jobRes] = await Promise.all([
+   745→        apiFetch<ApplicationWire[]>("/api/applications"),
+   746→        apiFetch<JobWire[]>("/api/jobs"),
+   747→      ]);
+   748→      setApps(appRes);
+   749→      setJobs(jobRes);
+   750→      setError(null);
+   751→    } catch (e) {
+   752→      if (!silent) setError(e instanceof Error ? e.message : "Unable to load your workspace");
+   753→      // Silent failures keep the last good data (§13 polling contract).
+   754→    }
+   755→  }, []);
+   756→
+   757→  useEffect(() => {
+   758→    void reload(false);
+   759→    const interval = setInterval(() => {
+   760→      if (!document.hidden) void reload(true);
+   761→    }, 15_000);
+   762→    const onFocus = () => void reload(true);
+   763→    const onVisible = () => {
+   764→      if (!document.hidden) void reload(true);
+   765→    };
+   766→    window.addEventListener("focus", onFocus);
+   767→    document.addEventListener("visibilitychange", onVisible);
+   768→    return () => {
+   769→      clearInterval(interval);
+   770→      window.removeEventListener("focus", onFocus);
+   771→      document.removeEventListener("visibilitychange", onVisible);
+   772→    };
+   773→  }, [reload]);
+   774→
+   775→  const loading = apps === null && jobs === null;
+   776→  const firstName = user?.firstName || "there";
+   777→
+   778→  // Right rail — every application on record, newest first. The rail has its
+   779→  // own overflow scroll, so no cap is needed.
+   780→  const sortedApps = (apps ?? []).sort((a, b) => Date.parse(b.dateApplied) - Date.parse(a.dateApplied));
+   781→
+   782→  // Left pane — every open posting (deadline not passed), newest published
+   783→  // first. This pane is the browsing surface: the full list scrolls in place.
+   784→  const openJobs = (jobs ?? [])
+   785→    .filter((j) => !j.deadlineDate || new Date(j.deadlineDate) >= startOfToday())
+   786→    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+   787→
+   788→  const profileComplete = user?.applicant?.isProfileComplete ?? false;
+   789→
+   790→  if (loading) return <HomeSkeleton />;
+   791→
+   792→  if (error && apps === null) {
+   793→    return (
+   794→      <div className="space-y-6">
+   795→        <PageHeader eyebrow="Applicant Portal" title="My Application" />
+   796→        <div className="dlg-card p-6 sm:p-10">
+   797→          <EmptyState
+   798→            icon={AlertCircle}
+   799→            tone="rose"
+   800→            title="Couldn't load your workspace"
+   801→            description={error}
+   802→            action={
+   803→              <button type="button" onClick={() => void reload(false)} className="dlg-ghost min-h-[44px] px-6 py-2.5 text-sm">
+   804→                <RefreshCw className="mr-2 inline h-3.5 w-3.5" /> Retry
+   805→              </button>
+   806→            }
+   807→          />
+   808→        </div>
+   809→      </div>
+   810→    );
+   811→  }
+   812→
+   813→  return (
+   814→    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+   815→      {/* ===== Enterprise page header (PageHeader) — shared anatomy ===== */}
+   816→      <PageHeader
+   817→        eyebrow="Applicant Portal"
+   818→        title={<>Welcome Back, {firstName}</>}
+   819→        description={
+   820→          <>
+   821→            <p>Track your applications and discover new opportunities at DOST-MIRDC.</p>
+   822→            <p className="italic">Your recruitment journey, structured and transparent.</p>
+   823→          </>
+   824→        }
+   825→      />
+   826→
+   827→      {/* ===== Profile completion banner ===== */}
+   828→      {!profileComplete && (
+   829→        <div data-tour="profile-banner" className="dlg-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+   830→          <div className="flex items-start gap-3">
+   831→            <IconChip icon={AlertCircle} tone="gold" size={36} iconSize={17} className="mt-0.5" />
+   832→            <div>
+   833→              <p className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Complete Your Profile</p>
+   834→              <p className="mt-0.5 text-sm text-stone">
+   835→                Finish your applicant profile to apply for positions and speed up processing.
+   836→              </p>
+   837→            </div>
+   838→          </div>
+   839→          <button
+   840→            type="button"
+   841→            onClick={() => navigate("profile")}
+   842→            className="dlg-cta focus-ring inline-flex min-h-[44px] w-fit shrink-0 items-center gap-2 px-6 py-2.5 text-sm"
+   843→          >
+   844→            Complete Profile <ArrowRight className="h-4 w-4" aria-hidden="true" />
+   845→          </button>
+   846→        </div>
+   847→      )}
+   848→
+   849→      {/* ===== Two-pane workspace =======================================
+   850→           LEFT  · Open Positions — the scrollable browsing pane in the
+   851→           board job-card register. RIGHT · Your Applications — sticky rail
+   852→           with its own overflow scroll, so statuses stay in view while the
+   853→           applicant browses. Mobile: stacks Your Applications first, then
+   854→           Open Positions. ============================================== */}
+   855→      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
+   856→        {/* ---- Right rail · Your Applications (first on mobile) ---- */}
+   857→        <aside data-tour="my-applications" className="order-1 min-w-0 lg:order-2 lg:col-span-5">
+   858→          <div className="flex flex-col lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)]">
+   859→            {/* Rail header — pinned above the scrolling cards */}
+   860→            <div className="flex shrink-0 items-end justify-between gap-2 border-b border-border pb-4">
+   861→              <div>
+   862→                <Eyebrow>Your Applications</Eyebrow>
+   863→                <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
+   864→                  In Progress
+   865→                </h2>
+   866→              </div>
+   867→              {sortedApps.length > 0 && <span className="status-pill status-neutral num">{sortedApps.length}</span>}
+   868→            </div>
+   869→
+   870→            {/* Independently scrollable application cards */}
+   871→            <div className="scroll-thin mt-6 min-h-0 flex-1 lg:overflow-y-auto lg:pr-1">
+   872→              {sortedApps.length === 0 ? (
+   873→                <div className="dlg-card">
+   874→                  <EmptyState
+   875→                    icon={Inbox}
+   876→                    tone="plum"
+   877→                    title="No applications yet"
+   878→                    description="Browse open positions to start your application journey."
+   879→                    action={
+   880→                      <button
+   881→                        type="button"
+   882→                        onClick={() => navigate("vacant-positions")}
+   883→                        className="dlg-cta inline-flex min-h-[44px] items-center gap-2 px-6 py-2.5 text-sm"
+   884→                      >
+   885→                        <Briefcase className="h-4 w-4" aria-hidden="true" /> Browse Positions
+   886→                      </button>
+   887→                    }
+   888→                  />
+   889→                </div>
+   890→              ) : (
+   891→                <div className="space-y-4 pb-1">
+   892→                  {sortedApps.map((app, i) => (
+   893→                    <ApplicationJourneyCard key={app.id} app={app} index={i} onOpen={() => setDetail(app)} />
+   894→                  ))}
+   895→                </div>
+   896→              )}
+   897→            </div>
+   898→          </div>
+   899→        </aside>
+   900→
+   901→        {/* ---- Left pane · Job Openings (browsing surface) ---- */}
+   902→        <section data-tour="apply-now" className="order-2 min-w-0 lg:order-1 lg:col-span-7">
+   903→          <div className="flex items-end justify-between border-b border-border pb-4">
+   904→            <div>
+   905→              <Eyebrow>Job Openings</Eyebrow>
+   906→              <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
+   907→                Apply Now
+   908→              </h2>
+   909→            </div>
+   910→            {openJobs.length > 0 && (
+   911→              <button
+   912→                type="button"
+   913→                onClick={() => navigate("vacant-positions")}
+   914→                className="dlg-ghost hidden min-h-[44px] items-center gap-2 px-5 py-2 text-sm sm:inline-flex"
+   915→              >
+   916→                View All <ArrowRight className="h-4 w-4" aria-hidden="true" />
+   917→              </button>
+   918→            )}
+   919→          </div>
+   920→
+   921→          <div className="mt-6">
+   922→            {openJobs.length === 0 ? (
+   923→              <div className="dlg-card">
+   924→                <EmptyState
+   925→                  icon={Briefcase}
+   926→                  tone="amber"
+   927→                  title="No open positions right now"
+   928→                  description="New postings appear here as soon as they are published."
+   929→                  action={
+   930→                    <button
+   931→                      type="button"
+   932→                      onClick={() => navigate("vacant-positions")}
+   933→                      className="dlg-ghost inline-flex min-h-[44px] items-center px-5 py-2 text-sm"
+   934→                    >
+   935→                      Browse All Jobs
+   936→                    </button>
+   937→                  }
+   938→                />
+   939→              </div>
+   940→            ) : (
+   941→              <div className="space-y-4 sm:space-y-5">
+   942→                {openJobs.map((j) => (
+   943→                  <JobListCard
+   944→                    key={j.id}
+   945→                    job={j}
+   946→                    applied={(j.applications?.length ?? 0) > 0}
+   947→                    expanded={expandedId === j.id}
+   948→                    saved={saved.includes(j.id)}
+   949→                    onToggle={() => setExpandedId(expandedId === j.id ? null : j.id)}
+   950→                    onSave={() => toggleSave(j.id)}
+   951→                    onOpen={() => navigate("jobs", { job: String(j.id) })}
+   952→                  />
+   953→                ))}
+   954→              </div>
+   955→            )}
+   956→          </div>
+   957→        </section>
+   958→      </div>
+   959→
+   960→      {detail && (
+   961→        <ApplicationDetailModal
+   962→          application={detail}
+   963→          onClose={() => setDetail(null)}
+   964→          onCancelled={() => {
+   965→            setDetail(null);
+   966→            void reload(true);
+   967→          }}
+   968→        />
+   969→      )}
+   970→
+   971→      {/* QA 2026-02 — Guided tooltips for first-time users: proceed with the
+   972→          tutorial or dismiss/skip it (remembered per browser). */}
+   973→      <OnboardingTour
+   974→        storageKey="rmis.tour.applicant.v1"
+   975→        title="Welcome to the Applicant Portal"
+   976→        description="This quick guided tour points out the essentials: finish your profile, apply to vacancies, and track where you stand. You can skip it anytime."
+   977→        steps={[
+   978→          {
+   979→            selector: '[data-tour="profile-banner"]',
+   980→            title: "Complete your profile",
+   981→            body: "Fill out your Personal Data Sheet once. You can even upload your PDS and let RMIS auto-fill the forms. A complete profile is required before applying.",
+   982→          },
+   983→          {
+   984→            selector: '[data-tour="apply-now"]',
+   985→            title: "Apply Now",
+   986→            body: "Browse every open vacancy here. Expand a posting with the dropdown to read the full description, then continue to the posting to apply; your profile carries over.",
+   987→          },
+   988→          {
+   989→            selector: '[data-tour="my-applications"]',
+   990→            title: "Track your applications",
+   991→            body: "Every application you submit appears here with its live stage: from qualification screening to shortlisting, exams, and interviews.",
+   992→          },
+   993→        ]}
+   994→      />
+   995→    </div>
+   996→  );
+   997→}
+   998→

@@ -1058,3 +1058,78 @@ Work Log:
 
 Stage Summary:
 - Review Queue header simplified per user direction; review CTA now uses the system-wide primary blue capsule. Component shared by evaluator and admin — both roles get the changes with no role-specific branching.
+
+---
+Task ID: 3-c
+Agent: general-purpose
+Task: Shell chrome — production UI consistency pass (role-aware breadcrumb, rail bar, eyebrow discipline)
+
+Work Log:
+- workspace-header.tsx: breadcrumb label is now role-aware — NAV_CONFIG (imported from @/components/shell/nav-rail, the real export location) items for the signed-in user's role are searched by view name and win over VIEW_LABELS, with VIEW_LABELS → humanize as fallback; ADMIN "candidates" now reads "Users" (agrees with the rail), "recruitment" reads "Jobs", and the dead "jobs: Positions" entry was aligned to "Vacant Positions" (the alias-target slug); breadcrumb structure untouched
+- app-shell.tsx: mobile top bar no longer misuses the .rail class (whose border-right drew a stray vertical line on a horizontal bar and whose unlayered CSS would beat border-r-0 anyway) — composed the identical rail gradient + bottom hairline via border-b border-[var(--rail-border)] + bg-[linear-gradient(...)] utilities; comment corrected "dark premium strip" → "light rail strip"
+- notifications-panel.tsx: group label → className="eyebrow"; row hover rounded-[10px] → rounded-xs (8px Bevel scale)
+- onboarding-tour.tsx: ad-hoc "Step x of y" eyebrow (text-xs font-semibold tracking-[0.14em]) → className="eyebrow"
+- footer.tsx: stale "Sharp square icon chip / ember accent" comments corrected to the actual soft capsule Cloud tile + brand-blue shield (comment-only)
+- nav-rail.tsx + rail-journey-info.tsx: removed the now-redundant rounded-lg bg-ink text-xs text-white TooltipContent overrides (ui/tooltip default is identical); side props kept
+- nav-rail.tsx: initialsOf(SessionUser) now delegates to the shared nameInitials(ui/shell) primitive on the composed first+last name, keeping the username/email two-char fallback; stale "PREMIUM DARK RAIL" header comments in nav-rail/rail-journey-info corrected to the light rail
+- rail-journey-info.tsx: raw boxShadow "0 1px 3px rgb(0 0 0 / 0.25)" → var(--shadow-e2)
+- Audit (minimal): mobile-nav Sheet trigger gained rounded-full + transition-colors so its hover bg matches the rail pill idiom (h-11 = 44px kept); site-header (sticky/glass, h-16, 44px targets, quiet hovers), command-menu (CommandDialog with title/description, 44px ghost header trigger) and auth-brand-panel (tokens only, no raw hex) verified clean — no further changes
+
+Stage Summary:
+- Breadcrumb and rail now speak the same role-aware labels; mobile bar renders the true light-rail strip with a bottom hairline; eyebrow/radius/shadow/tooltip drift cleared across the shell. No routing, session, keyboard-command or business-logic changes; BrandLogo untouched. bun run lint clean; tsc reports no errors in touched files; sanity greps confirm no text-[11px] uppercase tracking-wider, no rounded-[10px], no bg-primary tooltips.
+
+---
+
+---
+Task ID: 3-a
+Agent: general-purpose
+Task: Applicant/public views — production UI consistency pass (buttons/status/colors dedup onto shared kit)
+
+Work Log:
+- NEW src/lib/use-saved-jobs.ts: extracted the shared bookmark hook ("use client", exports useSavedJobs + SAVED_KEY "rmis-frontpage-saved-jobs", key unchanged); applicant-home.tsx and public-landing.tsx now import it and their local copies are deleted
+- applicant-home.tsx: deleted the jade/gray hex timeline palette (TL_*) → tokens var(--ok)/var(--neutral-bg)/var(--divider) in CheckpointDot/JourneyTimeline (comments updated); local STAGE_VARIANT deleted in favor of APPLICANT_STAGE_VARIANT + StatusVariant from lib/status-ui; both inline ghost-bad capsules (Cancel Application + nested AlertDialogAction) → ghostBadBtn (+px/py via merge); local QuickFact deleted → shell QuickFact (danger deadline passed as bad-tinted span, dl→div); hand-rolled "No. 01" kicker → .eyebrow; "Successfully Applied" strip → Callout tone ok (BadgeCheck); AlertDialogTitle → font-display text-2xl text-ink
+- public-landing.tsx: QUICK_APPLY_BTN/SAVE_BTN deleted → ctaBtn/ghostBtn from ui/buttons (canonical px-5/px-4); error banner → Callout tone bad (AlertCircle) with 44px "Try again" link-button; local QuickFact deleted → shell QuickFact; stale "charcoal capsule CTA" comments corrected to .dlg-cta RMIS Electric Blue
+- jobs-view.tsx: raw "#f8ddd6" destructive AlertDialogAction → ghostBadBtn; both `{applied && <span class="status-pill status-ok">Applied</span>}` → StatusPill (auto-maps Applied→info); local Skeleton wrapper deleted → ui/skeleton; ErrorCard + "Position not found" + "No vacant positions" + "No positions match your filters" rebuilt on EmptyState (Search/Briefcase/AlertCircle icons, CTAs where a real action exists, copy kept); ✓ success banner in SummaryCard → Callout tone ok (Check); filter-rail "Position Category"/"Division" → .eyebrow; .num added to SummaryCard dd values, QuickView facts, DetailBody vitals + Published/Deadline/Processing; white progress track comment added; hero h1 sm:text-[40px]/leading-none/tracking → sm:text-card-heading token utility (verified generated CSS: 40px/1/-1.2px); filter-chip dismiss buttons got padded ::after hit zones (28px visual → 40px touch) and "Clear all" got inline-flex min-h-[36px]
+- signin-view.tsx: "Demo accounts" → .eyebrow; forgot-password DialogTitle → font-display text-2xl text-ink
+- reset-password-view.tsx: KeyRound cloud tile → IconChip tone="blue" size 44; missing-token banner → Callout tone bad (AlertCircle, "Back to sign in" action kept); "Password updated" banner → Callout tone ok (ShieldCheck)
+- contact-view.tsx: "Inquiry received" 48px tile and channel 40px tiles → IconChip tone="blue" (blue token replaces raw bg-cloud/text-metric-blue)
+- profile-view.tsx: identity h1 → font-display (PageHeader anatomy); "Mark your profile as complete?" AlertDialogTitle → font-display text-2xl text-ink
+- apply-dialogs.tsx: header comment "charcoal capsule CTAs" → ".dlg-cta RMIS Electric Blue capsules"; MQR "Requirements Not Met" banner → Callout tone bad (X icon); "✓"/"✕" text glyphs → Check/X lucide icons (verdict discs + done-step success disc); both DialogTitles → font-display text-2xl text-ink; "Application" micro-pill classes aligned to the canonical dlg-pill set
+- profile/save-hint.tsx: SaveHint extended with optional dirty ("Unsaved changes", stone) and error (bad tint, string message or default) props; "Saving…" now carries the Loader2 spinner (matches personal-info's old inline pattern); personal-info-section.tsx inline saveIndicator deleted → shared SaveHint (exact copy preserved via error string)
+- profile/* 7 sections (awards, education, training, work-experience, eligibility, personal-info, documents): identical local SectionPanel deleted in each → SectionCard variant="plain" from ui/shell (title/description/icon/chipTone/actions/children map 1:1; canonical font-display text-lg heading accepted); row delete icon buttons → iconBtnBad; delete-confirm AlertDialogActions → ghostBadBtn (+px-5 py-2.5 merge); all 7 AlertDialogTitles → font-display text-2xl text-ink
+- profile/pds-upload-card.tsx: quality grade chip A→bg-[var(--ok)] (the bg-[var(--good,…)] fallback resolved to a raw non-token hex), C→bg-[var(--warn)], D-F→bg-[var(--bad)], B kept bg-metric-blue; needsReview strip bg-amber-500/10 → bg-[var(--warn-bg)]; extraction error banner → Callout tone bad (AlertCircle) with Try Again action; both Clear buttons → ghostBadBtn; cloud progress-track comment added
+- profile/personal-info-section.tsx: "+ Add Character Reference" → Plus lucide icon + "Add Character Reference" (flex-centered, matching sibling sections)
+- profile/documents-section.tsx: "white hover on cloud/60 rows" comment added to the eye button
+- profile/training-section.tsx: inline toLocaleDateString full-date renders → formatDate from lib/client (identical en-PH output)
+- Verification: bun run lint clean; bunx tsc --noEmit (after clearing a stale tsconfig.tsbuildinfo) shows zero errors in touched files — remaining errors are the documented pre-existing ones in examples/, scripts/, src/lib/pds-*; greps confirm no leftover SectionPanel/TL_*/QUICK_APPLY_BTN/SAVE_BTN/saveIndicator duplicates
+
+Stage Summary:
+- All P0/P1/P2 fixes applied; single sources of truth now: buttons from ui/buttons, SectionCard/Callout/QuickFact/StatusPill/EmptyState/IconChip/Skeleton from ui/shell, APPLICANT_STAGE_VARIANT from status-ui, useSavedJobs from lib/use-saved-jobs
+- Judgment calls for the orchestrator: (1) contact-view:70 and apply-dialogs:226 are CENTERED success/confirmation screens, not inline banners — they keep their anatomy and were modernized via the more surgical #15/#19 instructions (IconChip tone=blue; Check icon in the disc) instead of being flattened into left-aligned Callouts; (2) work-experience month-year toLocaleDateString kept (formatDate would add the day and change displayed semantics); (3) shell QuickFact (14px, mt-1, truncate) replaces the slightly larger local 16px variant in both quick views — canonical size accepted; (4) profile row delete icons are now permanently bad-tinted (iconBtnBad canonical) instead of stone-until-hover; (5) a stale tsconfig.tsbuildinfo masked true tsc state — deleted; regenerate freely
+- localStorage key, API calls, handlers, polling and all copy are unchanged; no emoji in UI; no colors outside the token system
+---
+---
+Task ID: 3-b
+Agent: general-purpose
+Task: Staff views — production UI consistency pass (status/confirm/segmented/pagination/table unification)
+
+Work Log:
+- NEW src/lib/use-focus-refresh.ts: shared refetch-on-focus hook (window focus + visibilitychange, 5 s dedupe); adopted in command-center, recruitment, job-workspace, review-queue, candidates, analytics, candidate-detail — private copies/inline focus listeners deleted, polling intervals untouched
+- NEW src/components/ui/audit-row.tsx: shared AuditFeedRow with "feed" (analytics) and "ledger" (settings) variants; inline style={{fontSize:"10px"}} hacks replaced by text-[10px]; both audit surfaces now consume it
+- src/components/ui/kanban.tsx (additive only): exported KanbanCardBody (avatar+name+position+place/applied meta+match badge+tags+divider, optional top-right `action`) — adopted by job-workspace, candidates, review-queue; exact prior visuals preserved (KanbanAvatar + MatchBadge kept, NOT swapped to MonogramAvatar/VerdictPill, per "do not change what's displayed")
+- review-workspace.tsx: deleted local StatusPill, toneClass (dead, zero importers), verdictMeta+VerdictPill, MonogramAvatar, LedgerRow, EmptyNote and local ghostBtn/ctaBtn/destructiveGhost constants; imports StatusPill/VerdictPill/MonogramAvatar/LedgerRow/EmptyNote from ui/shell + buttons from ui/buttons; verdict "meaning" caption kept as local VERDICT_MEANING map (display copy the shell pill doesn't carry); decision/rail destructive buttons + all destructive AlertDialogActions use cn(ghostBadModifier, "min-h-[44px] px-4 text-sm font-medium"); "Present" badge → pillClass("info"); attach-files label merged onto ghostBtn; DialogContents → dialogScroll
+- review-queue.tsx: StatusPill/VerdictPill now from shell (only ReviewWorkspace still imported from review-workspace); hand-rolled Kanban/List toggle → SegmentedControl ("Queue view mode"); stage tabs → FilterChip (count prop); regret button → ghostBadBtn; bulk-regret AlertDialogAction → ghostBadModifier; list Review/View capsule → "dlg-cta" 36px recipe; kanban card div role=button → real <button> + KanbanCardBody (native Space/Enter/focus; profile quick-action now iconBtn 36px keeping the focus-visible reveal); header count span → StatusPill variant="neutral"; in-card header band (IconChip + title + count pill) added to the list table; table cells py-3 → py-3.5; modal scroll → dialogScroll
+- candidates.tsx: StatCard → KpiCard (plum/slate/emerald → info/neutral/ok), KPI skeleton → SkeletonKpis; SegmentedControl ("Candidates view mode"); StatusPill from shell; Pagination (total/unit="candidates"); KanbanCardBody; in-card header band + py-3.5 table; modal dialogScroll
+- candidate-detail.tsx: StatCard → KpiCard, Panel ×4 → SectionCard, local LedgerRow/MonogramAvatar deleted (shell versions), EmptyNote for pebble empty paragraphs + documents note, KPI skeleton → SkeletonKpis, StatusPill from shell, useFocusRefresh(load)
+- job-workspace.tsx: Panel ×3 → SectionCard; JobStatusPill now imported from recruitment (overdue prop dropped — identical open/closed semantics computed inside); candidates-tab empty → EmptyState "No candidates yet" + cause; !valid and error blocks → EmptyState; "No description published" → EmptyNote; delete confirm → ghostBadModifier; candidates rows use StatusPill auto-mapping + nameInitials; KanbanCardBody; useFocusRefresh
+- recruitment.tsx: exported JobStatusPill; error block → EmptyState (AlertTriangle rose + Retry); Pagination (unit="postings"); JobFormDialog scroll → dialogScroll; useFocusRefresh; button-constant re-exports untouched
+- analytics.tsx: Panel ×6 → SectionCard; GRID/TICK/VIZ_1 hexes → var(--border)/var(--stone)/var(--viz-1); STAGE_BAR → STAGE_VIZ (Rejected now red per map, was coral); donut fallback → var(--divider); dead single-option cycle filter removed (state + Select); system-usage tiles unified to text-3xl num; Settings→Audit Log link gets focus-ring; error block → EmptyState; KPI skeleton → SkeletonKpis; audit feed → AuditFeedRow; empty titles de-perioded; useFocusRefresh
+- command-center.tsx: STAGE_SPARK → STAGE_VIZ; initialsOf → nameInitials; error block → EmptyState; rounded-[16px] → rounded-lg; empty-state titles de-perioded; unused ChipTone import dropped; useFocusRefresh
+- settings.tsx: filter toolbars + users/messaging/contact tables dlg-card-plain → dlg-card; scope="col" on all table headers; row padding standardized to py-3.5; users/audit pagination → shell Pagination (unit="accounts"/"events"); contact filter chips → FilterChip; contact count → StatusPill; disable/hard-delete confirms back to standard AlertDialog anatomy (content/title/Cancel/Action overrides removed; hard delete keeps ghostBadModifier); CreateUser/EditUser dialogs → dialogScroll; audit rows → AuditFeedRow (ledger); empty copy normalized ("Nothing sent yet" + cause, no trailing periods)
+
+Stage Summary:
+- StatusPill/VerdictPill/MonogramAvatar/LedgerRow/EmptyNote/Panel(SectionCard)/StatCard(KpiCard)/buttons/initials/pagination/audit-rows/focus-refresh/kanban-card-body are now single-sourced; zero business-logic or API changes; recruitment re-exports intact; Radix TabsList systems untouched
+- Decisions: KanbanCardBody keeps KanbanAvatar+MatchBadge (visual-output rule wins over the MonogramAvatar/VerdictPill suggestion in the brief); VERDICT_MEANING stays local (shell VerdictPill doesn't expose captions); review-queue card is a real <button> containing the iconBtn quick-action (nested interactive elements — works via DOM rendering in this client-only SPA, flagged as a known tradeoff); settings audit list surface stays dlg-card-plain (not in the enumerated table list)
+- Skipped: settings useFocusRefresh adoption (not in the specified view list); settings search inputs (explicitly kept as-is); candidate-detail header skeleton (odd shape, kept)
+- Verification: bun run lint clean; bunx tsc --noEmit shows no errors in src/components or src/lib outside pre-existing pds-*/scripts/examples errors; grep confirms no StatusPill/VerdictPill imports from review-workspace and no local copies of the dedup targets
+---

@@ -4,7 +4,7 @@
 // RMIS — Applicant journey info button + modal (spec §13 sidebar): a small
 // circular (!) affordance PINNED TO THE BOTTOM of the navigation, directly
 // ABOVE the active-user profile card (avatar + name + role — APPLICANT role
-// only). It renders in the dark desktop rail (variant "rail", default) and
+// only). It renders in the light desktop rail (variant "rail", default) and
 // in the white mobile drawer (variant "drawer") — both surfaces carry the
 // same circle → divider → profile-card bottom stack. Clicking it opens the
 // "How hiring works" infographic as a modal dialog. The steps mirror the
@@ -97,7 +97,7 @@ export function RailJourneyInfo({
         style={{
           background: "var(--primary)",
           color: "#ffffff",
-          boxShadow: "0 1px 3px rgb(0 0 0 / 0.25)",
+          boxShadow: "var(--shadow-e2)",
         }}
       >
         <CircleAlert className="h-4 w-4" />
@@ -114,9 +114,7 @@ export function RailJourneyInfo({
         <TooltipTrigger asChild>
           <DialogTrigger asChild>{trigger}</DialogTrigger>
         </TooltipTrigger>
-        <TooltipContent side="right" className="rounded-lg bg-ink text-xs text-white">
-          How hiring works
-        </TooltipContent>
+        <TooltipContent side="right">How hiring works</TooltipContent>
       </Tooltip>
 
       <DialogContent className="dlg-card-plain max-h-[90dvh] overflow-y-auto scroll-thin sm:max-w-md">

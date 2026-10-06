@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 type User = {
   id: string;
@@ -105,16 +103,16 @@ export default function SocketDemo() {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+      <div className="dlg-card p-6">
+        <div className="mb-4">
+          <h2 className="flex items-center justify-between">
             WebSocket Demo
             <span className={`text-sm px-2 py-1 rounded ${isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </h2>
+        </div>
+        <div className="space-y-4">
           {!isUsernameSet ? (
             <div className="space-y-2">
               <Input
@@ -139,7 +137,7 @@ export default function SocketDemo() {
             </div>
           ) : (
             <>
-              <ScrollArea className="h-80 w-full border rounded-md p-4">
+              <div className="h-80 w-full overflow-y-auto scroll-thin rounded-lg border p-4">
                 <div className="space-y-2">
                   {messages.length === 0 ? (
                     <p className="text-gray-500 text-center">No messages yet</p>
@@ -169,7 +167,7 @@ export default function SocketDemo() {
                     ))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
 
               <div className="flex space-x-2">
                 <Input
@@ -189,8 +187,8 @@ export default function SocketDemo() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

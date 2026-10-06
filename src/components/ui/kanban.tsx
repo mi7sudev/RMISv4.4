@@ -10,7 +10,7 @@
 // ============================================================================
 
 import * as React from "react";
-import { Inbox } from "lucide-react";
+import { Building2, Clock, Inbox, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StageKey } from "@/lib/status";
 import { STAGE_VARIANT, type StatusVariant } from "@/lib/status-ui";
@@ -137,7 +137,7 @@ export function KanbanTags({ tags, className }: { tags: string[]; className?: st
 
 // ── Card shell ──────────────────────────────────────────────────────────────
 
-/** White applicant card: 16px radius (spec imagery radii), hairline elevation,
+/** White applicant card: 24px radius (Bevel card geometry), hairline elevation,
     hover lift with the spec image-lift shadow. */
 export const KANBAN_CARD =
   "rounded-2xl bg-white shadow-e1 lift duration-200";
@@ -145,20 +145,84 @@ export const KANBAN_CARD =
 /** Hairline divider above the credential tags. */
 export const KANBAN_DIVIDER = "mt-3 border-t border-black/[0.06] pt-2.5";
 
+// ── Shared card body ────────────────────────────────────────────────────────
+
+/**
+ * The ONE applicant card body for every staff kanban board (job workspace
+ * pipeline, candidate registry, review queue): pastel avatar + name + position
+ * + place/applied meta row + match badge, then the credential tags over the
+ * hairline divider. `action` (review queue's profile quick-action) renders
+ * anchored top-right inside the divider row and keeps that divider visible
+ * even when the card has no tags. Pure presentation — the card shell, click
+ * wiring and aria-labels stay with the caller.
+ */
+export function KanbanCardBody({
+  name,
+  position,
+  placeOfAssignment,
+  appliedLabel,
+  match,
+  tags,
+  action,
+}: {
+  name: string;
+  /** Position title (humanized by the caller where needed). */
+  position: string;
+  placeOfAssignment: string | null;
+  /** Preformatted applied-age label, e.g. "Applied 3d ago". */
+  appliedLabel: string;
+  match?: { metCount: number; requiredCount: number };
+  tags: string[];
+  action?: React.ReactNode;
+}) {
+  return (
+    <>
+      <div className="flex items-start gap-2.5">
+        <KanbanAvatar name={name} />
+        <div className="min-w-0 flex-1">
+          <p className="min-w-0 truncate text-sm font-semibold text-ink">{name}</p>
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-stone">
+            <Building2 className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
+            <span className="min-w-0 flex-1 truncate">{position}</span>
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
+            {placeOfAssignment && (
+              <>
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
+                <span className="min-w-0 truncate">{placeOfAssignment}</span>
+                <span className="shrink-0 text-pebble" aria-hidden>·</span>
+              </>
+            )}
+            <Clock className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
+            <span className="shrink-0 whitespace-nowrap text-pebble">{appliedLabel}</span>
+          </p>
+        </div>
+        {match ? <MatchBadge metCount={match.metCount} requiredCount={match.requiredCount} /> : null}
+      </div>
+      {(action || tags.length > 0) && (
+        <div className={cn(KANBAN_DIVIDER, action && "relative flex items-center")}>
+          <KanbanTags tags={tags} className={cn(action && "min-w-0 flex-1 pr-8")} />
+          {action}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── Column ──────────────────────────────────────────────────────────────────
 
 /** Cards shown per column before the "+ N more" expander (reference parity). */
 const CARDS_PREVIEW = 4;
 
 /**
- * Board column — Bevel pipeline column: pale Cloud Card panel (16px radius,
- * no border, no shadow — the surface is the elevation) with the header INSIDE
- * (stage dot + label + white capsule count chip) and floating white cards
- * stacked below. The body never scrolls: the first CARDS_PREVIEW cards render,
- * then a "+ N more" expander reveals the rest ("Show less" collapses again).
- * Empty columns show a quiet dashed inset. On phones the column is a
- * snap-scroll lane card (min(320px, 85vw)); from md up the grid stretches all
- * columns to equal height.
+ * Board column — Bevel pipeline column: pale Cloud Card panel (16px radius via
+ * rounded-xl, no border, no shadow — the surface is the elevation) with the
+ * header INSIDE (stage dot + label + white capsule count chip) and floating
+ * white cards stacked below. The body never scrolls: the first CARDS_PREVIEW
+ * cards render, then a "+ N more" expander reveals the rest ("Show less"
+ * collapses again). Empty columns show a quiet dashed inset. On phones the
+ * column is a snap-scroll lane card (min(320px, 85vw)); from md up the grid
+ * stretches all columns to equal height.
  */
 export function KanbanColumn({
   label,
@@ -179,7 +243,7 @@ export function KanbanColumn({
 
   return (
     <div className="flex w-[min(320px,85vw)] shrink-0 snap-start flex-col md:w-auto md:shrink">
-      <div className="flex min-h-[280px] flex-1 flex-col bg-cloud p-2.5 md:min-h-0">
+      <div className="flex min-h-[280px] flex-1 flex-col rounded-xl bg-cloud p-2.5 md:min-h-0">
         {/* Header — stage dot + label + count chip */}
         <div className="flex items-center gap-2 px-1 pb-2.5 pt-0.5">
           <StageDot stage={stage} />

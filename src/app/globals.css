@@ -457,6 +457,13 @@
   background: #fff4c2;
   color: #7a6400;
 }
+.chip-blue {
+  /* Pale blue icon chip — the quiet "informational" chip (cloud-tinted tile
+     with the RMIS blue icon). Complements chip-ink (solid brand fill) without
+     spending the blue fill on a passive tile. */
+  background: var(--info-bg);
+  color: var(--info);
+}
 .chip-emerald {
   background: #e4f5df;
   color: #1f7a02;

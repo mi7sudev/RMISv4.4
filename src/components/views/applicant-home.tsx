@@ -48,12 +48,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
+import { ghostBadBtn } from "@/components/ui/buttons";
+import { Callout, EmptyState, IconChip, PageHeader, QuickFact, StatusPill } from "@/components/ui/shell";
 import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
 import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
 import { currentStageLabel, stageForStatus } from "@/lib/status";
+import { APPLICANT_STAGE_VARIANT, type StatusVariant } from "@/lib/status-ui";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/session-provider";
+import { useSavedJobs } from "@/lib/use-saved-jobs";
 import OnboardingTour from "@/components/onboarding-tour";
 
 // ── Small helpers ───────────────────────────────────────────────────────────
@@ -70,23 +73,19 @@ function notRequired(v: string | null | undefined): boolean {
   return s === "" || s === "n/a" || s === "na" || s === "none" || s === "none required" || s === "not required";
 }
 
-/** Section label (eyebrow) — quiet uppercase kicker above headings. */
+/** Section label (eyebrow) — quiet uppercase kicker above headings (the
+ *  .eyebrow class in globals.css is the single source of the styling). */
 function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <p className={cn("eyebrow", className)}>{children}</p>
   );
 }
 
-/** Applicant-facing stage label → functional status variant (§2 status system). */
-const STAGE_VARIANT: Record<string, "ok" | "warn" | "bad" | "info"> = {
-  Submitted: "info",
-  "In Review": "warn",
-  Shortlisted: "ok",
-  "Not Selected": "bad",
-};
-
-function stageVariant(label: string): "ok" | "warn" | "bad" | "info" | "neutral" {
-  return STAGE_VARIANT[label] ?? "neutral";
+/** Applicant-facing stage label → functional status variant (§2 status system).
+ *  Shared mapping from lib/status-ui — the applicant timeline, tracker chips
+ *  and board badges all agree on hue AND glyph. */
+function stageVariant(label: string): StatusVariant {
+  return APPLICANT_STAGE_VARIANT[label] ?? "neutral";
 }
 
 /** §7.3 Next Step hint paragraph per pipeline stage. */
@@ -108,16 +107,16 @@ function jobPlace(job: JobWire): string {
 
 type CheckpointState = "done" | "current" | "pending" | "failed";
 
-/* Progress-timeline palette, sampled from the approved status spec: jade for
-   achieved/live steps, quiet gray for steps ahead, bad-red for a failed one. */
-const TL_JADE = "#00ae75";
-const TL_JADE_TEXT = "#0a9565";
-const TL_GRAY_DISC = "#e8eaec";
-const TL_GRAY_RAIL = "#ededed";
+/* Progress-timeline palette — the system's functional status tokens: ok green
+   for achieved/live steps, neutral disc for steps ahead, divider gray rails,
+   bad-red for a failed decision. Same hue source as the status dots/pills. */
+const TL_OK = "var(--ok)";
+const TL_PENDING_DISC = "var(--neutral-bg)";
+const TL_PENDING_RAIL = "var(--divider)";
 
-/** Timeline checkpoint marker (approved status spec): achieved steps are a
- *  solid jade disc with a white glyph, the live step is a thick jade ring,
- *  steps ahead are a quiet gray disc, and a failed decision is the app's
+/** Timeline checkpoint marker (system status spec): achieved steps are a
+ *  solid ok-green disc with a white glyph, the live step is a thick ok ring,
+ *  steps ahead are a quiet neutral disc, and a failed decision is the app's
  *  bad-red disc with a white ×. Glyph/shape carries the state so it never
  *  rides on hue alone; the ring keeps a pulsing halo — motion-safe only. */
 function CheckpointDot({ state, doneGlyph }: { state: CheckpointState; doneGlyph?: ReactNode }) {
@@ -126,7 +125,7 @@ function CheckpointDot({ state, doneGlyph }: { state: CheckpointState; doneGlyph
       <span
         aria-hidden="true"
         className="motion-safe:animate-pulse inline-flex h-5 w-5 shrink-0 rounded-full border-[7px] bg-white"
-        style={{ borderColor: TL_JADE }}
+        style={{ borderColor: TL_OK }}
       />
     );
   }
@@ -145,7 +144,7 @@ function CheckpointDot({ state, doneGlyph }: { state: CheckpointState; doneGlyph
       <span
         aria-hidden="true"
         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
-        style={{ backgroundColor: TL_JADE }}
+        style={{ backgroundColor: TL_OK }}
       >
         {doneGlyph ?? <Check aria-hidden="true" className="h-[11px] w-[11px]" strokeWidth={3} />}
       </span>
@@ -155,14 +154,14 @@ function CheckpointDot({ state, doneGlyph }: { state: CheckpointState; doneGlyph
     <span
       aria-hidden="true"
       className="inline-flex h-5 w-5 shrink-0 rounded-full"
-      style={{ backgroundColor: TL_GRAY_DISC }}
+      style={{ backgroundColor: TL_PENDING_DISC }}
     />
   );
 }
 
 /** 3-checkpoint tracking timeline: Submitted → Under Review → Decision (§7.3),
- *  styled to the approved status spec — jade rails, a bold step label with a
- *  one-line caption under every checkpoint, the live step captioned in jade. */
+ *  styled to the system status spec — ok-green rails, a bold step label with a
+ *  one-line caption under every checkpoint, the live step captioned in ok. */
 function JourneyTimeline({ status }: { status: string }) {
   const stage = stageForStatus(status);
   const decided = stage === "Shortlisted" || stage === "Rejected";
@@ -206,19 +205,19 @@ function JourneyTimeline({ status }: { status: string }) {
         return (
           <div key={`${s.label}-${i}`} className="flex flex-col items-center text-center">
             <div className="flex w-full items-center">
-              {/* Traversed connectors render in the timeline's jade green.
+              {/* Traversed connectors render in the system's ok green.
                   Negative outer margins bridge the grid's gap-1 so each rail
                   reads as one continuous line, not segments with gaps. */}
               <div
                 className={cn("h-[2px] flex-1", i > 0 && "-ml-1")}
-                style={{ backgroundColor: i === 0 ? "transparent" : reached ? TL_JADE : TL_GRAY_RAIL }}
+                style={{ backgroundColor: i === 0 ? "transparent" : reached ? TL_OK : TL_PENDING_RAIL }}
               />
               <CheckpointDot state={s.state} doneGlyph={s.doneGlyph} />
               <div
                 className={cn("h-[2px] flex-1", i < steps.length - 1 && "-mr-1")}
                 style={{
                   backgroundColor:
-                    i === steps.length - 1 ? "transparent" : steps[i + 1].state !== "pending" ? TL_JADE : TL_GRAY_RAIL,
+                    i === steps.length - 1 ? "transparent" : steps[i + 1].state !== "pending" ? TL_OK : TL_PENDING_RAIL,
                 }}
               />
             </div>
@@ -227,7 +226,7 @@ function JourneyTimeline({ status }: { status: string }) {
                 className="text-[10px] font-semibold leading-tight text-ink"
                 style={
                   s.state === "current"
-                    ? { color: TL_JADE_TEXT }
+                    ? { color: TL_OK }
                     : s.state === "failed"
                       ? { color: "var(--bad)" }
                       : undefined
@@ -237,7 +236,7 @@ function JourneyTimeline({ status }: { status: string }) {
               </span>
               <span
                 className="text-[9px] leading-snug text-stone"
-                style={s.state === "current" ? { color: TL_JADE_TEXT } : undefined}
+                style={s.state === "current" ? { color: TL_OK } : undefined}
               >
                 {s.desc}
               </span>
@@ -254,37 +253,8 @@ function postedAt(job: JobWire): string {
   return job.publishDate ?? job.publishedAt;
 }
 
-// Shared with the frontpage explorer — bookmarks saved here show as saved
-// there and vice versa.
-const SAVED_KEY = "rmis-frontpage-saved-jobs";
-
-/** Client-persisted bookmark list (same store as the frontpage). */
-function useSavedJobs() {
-  const [saved, setSaved] = useState<number[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(SAVED_KEY);
-      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-      return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const toggle = useCallback((id: number) => {
-    setSaved((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      try {
-        window.localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable — in-session state still works */
-      }
-      return next;
-    });
-  }, []);
-
-  return { saved, toggle };
-}
+// Bookmarks — the same client store the frontpage explorer uses
+// (shared hook + localStorage key in lib/use-saved-jobs).
 
 // ── Application journey card (right rail) ───────────────────────────────────
 
@@ -304,9 +274,7 @@ function ApplicationJourneyCard({ app, index, onOpen }: { app: ApplicationWire; 
       {/* Header — the chevron is the whole-card affordance: the card opens
           the full posting in the detail modal. */}
       <div className="flex items-start justify-between gap-2">
-        <span className="num text-[10px] font-semibold uppercase tracking-[0.14em] text-stone">
-          No. {String(index + 1).padStart(2, "0")}
-        </span>
+        <span className="eyebrow">No. {String(index + 1).padStart(2, "0")}</span>
         <span className="flex shrink-0 items-center gap-1.5">
           <StatusPill status={label} variant={stageVariant(label)} />
           <ChevronRight
@@ -447,16 +415,10 @@ function ApplicationDetailModal({
             </DialogTitle>
           </DialogHeader>
 
-          {/* Successfully-applied strip (§7.7) */}
-          <div className="mt-4 flex items-center gap-3 rounded-lg bg-cloud/60 p-3">
-            <IconChip icon={BadgeCheck} tone="emerald" size={36} iconSize={17} />
-            <div>
-              <p className="text-sm font-medium text-ink">Successfully Applied</p>
-              <p className="text-xs text-stone">
-                Applied <span className="num">{formatDate(application.dateApplied)}</span>
-              </p>
-            </div>
-          </div>
+          {/* Successfully-applied strip (§7.7) — shared Callout anatomy */}
+          <Callout tone="ok" icon={BadgeCheck} title="Successfully Applied" className="mt-4">
+            Applied <span className="num">{formatDate(application.dateApplied)}</span>
+          </Callout>
 
           {/* Vitals summary grid */}
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -484,7 +446,7 @@ function ApplicationDetailModal({
                 type="button"
                 onClick={() => setConfirmOpen(true)}
                 disabled={cancelling}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-6 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+                className={`${ghostBadBtn} px-6 py-2.5`}
               >
                 Cancel Application
               </button>
@@ -499,7 +461,7 @@ function ApplicationDetailModal({
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent className="dlg-card-plain">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Cancel this application?</AlertDialogTitle>
+              <AlertDialogTitle className="font-display text-2xl text-ink">Cancel this application?</AlertDialogTitle>
               <AlertDialogDescription className="text-sm leading-relaxed text-body-gray">
                 Your application for {job?.title ?? "this position"} will be withdrawn. You may apply again while the
                 position is still open. Once review has started, applications can no longer be cancelled.
@@ -513,7 +475,7 @@ function ApplicationDetailModal({
                   void cancelApplication();
                 }}
                 disabled={cancelling}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bad)]/30 bg-white px-5 py-2.5 text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-bg)] disabled:opacity-50"
+                className={`${ghostBadBtn} px-5 py-2.5`}
               >
                 {cancelling ? "Cancelling…" : "Cancel Application"}
               </AlertDialogAction>
@@ -526,24 +488,6 @@ function ApplicationDetailModal({
 }
 
 // ── Open-position list row (left pane) ──────────────────────────────────────
-
-/** One definition-list cell of the quick view: micro-kicker label over a
- *  semibold tabular value. `tone="danger"` flags a passed deadline. */
-function QuickFact({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div>
-      <dt className="eyebrow">{label}</dt>
-      <dd
-        className={cn(
-          "num mt-1.5 break-words text-base font-semibold tracking-[-0.01em]",
-          danger ? "text-[var(--bad)]" : "text-ink"
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
 
 /** The frontpage job card, ported for the applicant — tuned: the summary is
  *  deliberately inert, so the chevron is the single door to the quick view;
@@ -643,7 +587,7 @@ function JobListCard({
               )}
               {/* 3-up everywhere: a 6-up row inside the 7/12 pane leaves
                   ~50-85px per fact, which wraps currency mid-number. */}
-              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
+              <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
                 <QuickFact label="Item No." value={pos?.itemNumber ?? "-"} />
                 <QuickFact label="Vacancies" value={String(job.numberOfVacancy ?? "-")} />
                 <QuickFact
@@ -652,8 +596,11 @@ function JobListCard({
                 />
                 <QuickFact label="Monthly Salary" value={salary != null ? formatCurrency(salary) : "-"} />
                 <QuickFact label="Published" value={formatDate(job.publishDate)} />
-                <QuickFact label="Deadline" value={formatDate(deadline)} danger={overdue} />
-              </dl>
+                <QuickFact
+                  label="Deadline"
+                  value={overdue ? <span className="text-[var(--bad)]">{formatDate(deadline)}</span> : formatDate(deadline)}
+                />
+              </div>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 {/* Read full description — the quick view's primary action;
                     deep-links into the complete posting, where the apply

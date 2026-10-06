@@ -1,0 +1,656 @@
+     1→"use client";
+     2→
+     3→// ============================================================================
+     4→// RMIS — Candidate registry (spec §7.11). Server-paginated (25/page) master
+     5→// list from /api/admin/applicants with KPI tiles, debounced search, profile
+     6→// status / has-account filters, list rows with quick-view modal, and a kanban
+     7→// mode over the evaluator queue. 20 s silent poll + focus refresh.
+     8→// Enterprise polish pass: Bevel stat cards, single-card filter toolbar,
+     9→// table-card rows with hover quick-view, EmptyState, skeleton loading.
+    10→// Reference-board pass: kanban rebuilt on the shared ui/kanban primitives —
+    11→// dot+label+count columns, pastel avatars, match badge, position / applied
+    12→// relative date rows and credential tags. Handlers byte-identical.
+    13→// ============================================================================
+    14→
+    15→import { useCallback, useEffect, useMemo, useState } from "react";
+    16→import { toast } from "sonner";
+    17→import {
+    18→  AlertTriangle, ArrowUpRight, Building2, Clock, KeyRound, LayoutGrid, List, Mail, MapPin,
+    19→  Phone, RefreshCw, Search, UserCheck, UsersRound, type LucideIcon,
+    20→} from "lucide-react";
+    21→import { Skeleton } from "@/components/ui/skeleton";
+    22→import {
+    23→  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    24→} from "@/components/ui/dialog";
+    25→import {
+    26→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    27→} from "@/components/ui/select";
+    28→import { Input } from "@/components/ui/input";
+    29→import {
+    30→  EmptyState, IconChip, PageHeader, SkeletonRows, StatusDot, type ChipTone,
+    31→} from "@/components/ui/shell";
+    32→import {
+    33→  KanbanAvatar, KanbanColumn, KanbanTags, KANBAN_CARD, KANBAN_DIVIDER, MatchBadge,
+    34→} from "@/components/ui/kanban";
+    35→import { apiFetch, appliedAgo, formatDate, fullName, humanize } from "@/lib/client";
+    36→import { useSession } from "@/components/session-provider";
+    37→import { PIPELINE_STAGES, isRejectedStatus, stageForStatus, type StageKey } from "@/lib/status";
+    38→import { variantForCompletion, STAGE_VARIANT } from "@/lib/status-ui";
+    39→import { navigate, useHashRoute } from "@/lib/router";
+    40→import { StatusPill } from "@/components/views/review-workspace";
+    41→import { ghostBtn, ctaBtn } from "@/components/views/recruitment";
+    42→
+    43→// ── Wire shapes ─────────────────────────────────────────────────────────────
+    44→
+    45→type ApplicantRow = {
+    46→  id: number;
+    47→  firstName: string | null;
+    48→  lastName: string | null;
+    49→  emailAddress: string | null;
+    50→  mobileNumber: string | null;
+    51→  gender: string | null;
+    52→  isProfileComplete: boolean;
+    53→  hasAccount: boolean;
+    54→  user: { id: string; email: string; username: string; role: string; blocked: boolean } | null;
+    55→  applicationCount: number;
+    56→};
+    57→
+    58→type EduRow = Record<string, unknown>;
+    59→
+    60→type ApplicantDetail = ApplicantRow & {
+    61→  middleName: string | null;
+    62→  contactNumber: string | null;
+    63→  civilStatus: string | null;
+    64→  birthDate: string | null;
+    65→  birthPlace: string | null;
+    66→  presentAddress: string | null;
+    67→  educations: EduRow[];
+    68→  workExperiences: EduRow[];
+    69→  documents: { id: string; originalName: string; category: string; status: string; filePath: string; size: number }[];
+    70→  applications: { id: number; status: string; dateApplied: string; jobId: number; positionTitle: string | null; jobTitle: string }[];
+    71→};
+    72→
+    73→type QueueRow = {
+    74→  id: number;
+    75→  status: string;
+    76→  stage: StageKey;
+    77→  dateApplied: string;
+    78→  applicantId: number;
+    79→  applicant: { id: number; firstName: string | null; lastName: string | null; emailAddress: string | null };
+    80→  job: { id: number; title: string; position: { positionTitle: string; placeOfAssignment: string | null } | null };
+    81→  match: { verdict: string; metCount: number; requiredCount: number };
+    82→  tags: string[];
+    83→};
+    84→
+    85→const PAGE_SIZE = 25;
+    86→
+    87→const iconBtn =
+    88→  "focus-ring inline-flex h-9 w-9 items-center justify-center rounded-full text-stone transition-colors hover:bg-cloud hover:text-ink";
+    89→
+    90→function s(v: unknown): string {
+    91→  if (v === null || v === undefined) return "";
+    92→  const t = String(v).trim();
+    93→  return t;
+    94→}
+    95→
+    96→/**
+    97→ * Bevel stat card (shared workspace layout system): cloud surface, 24px,
+    98→ * uppercase stone label, ink 3xl .num value, body-gray hint row, chip icon.
+    99→ */
+   100→function StatCard({
+   101→  label,
+   102→  value,
+   103→  icon,
+   104→  chipTone,
+   105→  hint,
+   106→}: {
+   107→  label: string;
+   108→  value: React.ReactNode;
+   109→  icon: LucideIcon;
+   110→  chipTone: ChipTone;
+   111→  hint: string;
+   112→}) {
+   113→  return (
+   114→    <div className="dlg-card p-6">
+   115→      <div className="flex items-start justify-between gap-3">
+   116→        <p className="eyebrow pt-0.5">{label}</p>
+   117→        <IconChip icon={icon} tone={chipTone} size={40} />
+   118→      </div>
+   119→      <p className="num mt-4 text-3xl font-semibold leading-none tracking-[-0.02em] text-ink">{value}</p>
+   120→      <p className="mt-2 text-xs text-stone">{hint}</p>
+   121→    </div>
+   122→  );
+   123→}
+   124→
+   125→// ── Quick-view modal ────────────────────────────────────────────────────────
+   126→
+   127→function CandidateModal({ id, onClose }: { id: number | null; onClose: () => void }) {
+   128→  const [detail, setDetail] = useState<ApplicantDetail | null>(null);
+   129→  const [error, setError] = useState<string | null>(null);
+   130→
+   131→  useEffect(() => {
+   132→    if (id === null) {
+   133→      setDetail(null);
+   134→      setError(null);
+   135→      return;
+   136→    }
+   137→    let alive = true;
+   138→    apiFetch<ApplicantDetail>(`/api/admin/applicants/${id}`)
+   139→      .then((d) => {
+   140→        if (alive) setDetail(d);
+   141→      })
+   142→      .catch((e: unknown) => {
+   143→        if (alive) setError(e instanceof Error ? e.message : "Failed to load the candidate");
+   144→      });
+   145→    return () => {
+   146→      alive = false;
+   147→    };
+   148→  }, [id]);
+   149→
+   150→  const apps = detail?.applications ?? [];
+   151→  const countBy = (stage: StageKey) => apps.filter((a) => stageForStatus(a.status) === stage).length;
+   152→  const anyRejected = apps.some((a) => isRejectedStatus(a.status));
+   153→
+   154→  return (
+   155→    <Dialog open={id !== null} onOpenChange={(v) => !v && onClose()}>
+   156→      <DialogContent className="sm:max-w-lg max-h-[92dvh] overflow-y-auto scroll-thin">
+   157→        <DialogHeader>
+   158→          <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Candidate</DialogTitle>
+   159→          <DialogDescription>Quick identity and pipeline snapshot.</DialogDescription>
+   160→        </DialogHeader>
+   161→
+   162→        {error ? (
+   163→          <p className="py-4 text-sm text-[var(--bad)]">{error}</p>
+   164→        ) : !detail ? (
+   165→          <div className="space-y-3">
+   166→            <Skeleton className="h-10 w-2/3" />
+   167→            <Skeleton className="h-20 w-full rounded-lg" />
+   168→          </div>
+   169→        ) : (
+   170→          <div className="space-y-4">
+   171→            <div className="flex items-center gap-3">
+   172→              <KanbanAvatar name={fullName(detail)} size={40} />
+   173→              <div className="min-w-0">
+   174→                <p className="truncate text-sm font-medium text-ink">{fullName(detail)}</p>
+   175→                <p className="num text-xs text-pebble">#{detail.id}</p>
+   176→              </div>
+   177→              <span className="ml-auto shrink-0">
+   178→                <StatusPill
+   179→                  status={detail.isProfileComplete ? "Complete" : "Incomplete"}
+   180→                  variant={variantForCompletion(detail.isProfileComplete)}
+   181→                />
+   182→              </span>
+   183→            </div>
+   184→
+   185→            <div className="flex flex-wrap gap-2">
+   186→              {detail.emailAddress && (
+   187→                <a
+   188→                  href={`mailto:${detail.emailAddress}`}
+   189→                  className="dlg-pill focus-ring inline-flex min-h-[36px] items-center gap-1.5 bg-fog px-3 text-xs text-ink transition-colors hover:bg-cloud"
+   190→                >
+   191→                  <Mail className="h-3.5 w-3.5" aria-hidden />
+   192→                  {detail.emailAddress}
+   193→                </a>
+   194→              )}
+   195→              {detail.mobileNumber && (
+   196→                <a
+   197→                  href={`tel:${detail.mobileNumber}`}
+   198→                  className="dlg-pill focus-ring inline-flex min-h-[36px] items-center gap-1.5 bg-fog px-3 text-xs text-ink transition-colors hover:bg-cloud"
+   199→                >
+   200→                  <Phone className="h-3.5 w-3.5" aria-hidden />
+   201→                  {detail.mobileNumber}
+   202→                </a>
+   203→              )}
+   204→            </div>
+   205→
+   206→            {/* Mini pipeline dots: Submitted → Review → Shortlisted */}
+   207→            <div className="rounded-lg bg-cloud/60 p-4">
+   208→              <div className="flex flex-wrap items-center justify-between gap-2">
+   209→                {(["Applied", "Under Review", "Shortlisted"] as StageKey[]).map((stage, i) => (
+   210→                  <div key={stage} className="flex flex-1 items-center gap-2">
+   211→                    <div className="flex items-center gap-1.5">
+   212→                      <StatusDot variant={countBy(stage) > 0 ? STAGE_VARIANT[stage] : "neutral"} />
+   213→                      <span className="text-xs text-stone">{["Submitted", "Review", "Shortlisted"][i]}</span>
+   214→                      <span className="num text-xs text-ink">{countBy(stage)}</span>
+   215→                    </div>
+   216→                  </div>
+   217→                ))}
+   218→                {anyRejected && <span className="status-pill status-bad shrink-0">Not Selected</span>}
+   219→              </div>
+   220→            </div>
+   221→
+   222→            <div>
+   223→              <p className="text-xs font-medium text-stone">Education</p>
+   224→              {detail.educations.length === 0 ? (
+   225→                <p className="mt-1 text-xs text-pebble">No education entries.</p>
+   226→              ) : (
+   227→                <ul className="mt-1 space-y-1">
+   228→                  {detail.educations.slice(0, 2).map((e, i) => (
+   229→                    <li key={i} className="text-sm text-ink">
+   230→                      {[s(e.degree) || s(e.course), s(e.schoolName)].filter(Boolean).join(" · ") || "-"}
+   231→                    </li>
+   232→                  ))}
+   233→                </ul>
+   234→              )}
+   235→            </div>
+   236→
+   237→            <div className="flex flex-wrap gap-1.5">
+   238→              <span className="status-pill status-neutral">
+   239→                Documents: <span className="num">{detail.documents.length}</span>
+   240→              </span>
+   241→              <span className="status-pill status-neutral">
+   242→                Applications: <span className="num">{detail.applicationCount ?? apps.length}</span>
+   243→              </span>
+   244→            </div>
+   245→          </div>
+   246→        )}
+   247→
+   248→        <DialogFooter>
+   249→          <button type="button" className={ghostBtn} onClick={onClose}>
+   250→            Close
+   251→          </button>
+   252→          {detail && (
+   253→            <button type="button" className={ctaBtn} onClick={() => navigate("candidate", { id: String(detail.id) })}>
+   254→              View full profile
+   255→            </button>
+   256→          )}
+   257→        </DialogFooter>
+   258→      </DialogContent>
+   259→    </Dialog>
+   260→  );
+   261→}
+   262→
+   263→// ── Registry ────────────────────────────────────────────────────────────────
+   264→
+   265→export default function Candidates() {
+   266→  // QA 2026-02: admins manage ALL registered users here ("Users"); for
+   267→  // evaluators the same registry is framed as "Candidates" who applied.
+   268→  const { user: sessionUser } = useSession();
+   269→  const isAdminView = sessionUser?.role === "ADMIN";
+   270→  const { params } = useHashRoute();
+   271→  const initialStatus = params.status === "complete" || params.status === "incomplete" ? params.status : "all";
+   272→
+   273→  const [rows, setRows] = useState<ApplicantRow[] | null>(null);
+   274→  const [total, setTotal] = useState(0);
+   275→  const [page, setPage] = useState(1);
+   276→  const [error, setError] = useState<string | null>(null);
+   277→  const [search, setSearch] = useState("");
+   278→  const [debounced, setDebounced] = useState("");
+   279→  const [status, setStatus] = useState<"all" | "complete" | "incomplete">(initialStatus as "all" | "complete" | "incomplete");
+   280→  const [hasAccount, setHasAccount] = useState<"all" | "yes" | "no">("all");
+   281→  const [mode, setMode] = useState<"list" | "kanban">("list");
+   282→  const [modalId, setModalId] = useState<number | null>(null);
+   283→  const [queue, setQueue] = useState<QueueRow[] | null>(null);
+   284→  const [spin, setSpin] = useState(false);
+   285→
+   286→  const load = useCallback(
+   287→    async (silent = false) => {
+   288→      if (!silent) setError(null);
+   289→      try {
+   290→        const sp = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+   291→        if (debounced) sp.set("search", debounced);
+   292→        if (status !== "all") sp.set("status", status);
+   293→        if (hasAccount !== "all") sp.set("hasAccount", hasAccount);
+   294→        const res = await apiFetch<{ data: ApplicantRow[]; total: number }>(`/api/admin/applicants?${sp.toString()}`);
+   295→        setRows(res.data);
+   296→        setTotal(res.total);
+   297→      } catch (e) {
+   298→        if (!silent) setError(e instanceof Error ? e.message : "Failed to load candidates");
+   299→      }
+   300→    },
+   301→    [page, debounced, status, hasAccount]
+   302→  );
+   303→
+   304→  const loadQueue = useCallback(async (silent = true) => {
+   305→    try {
+   306→      const res = await apiFetch<{ data: QueueRow[] }>("/api/evaluator/queue?pageSize=100");
+   307→      setQueue(res.data);
+   308→    } catch {
+   309→      /* silent — kanban is best-effort */
+   310→    }
+   311→  }, []);
+   312→
+   313→  useEffect(() => {
+   314→    void load();
+   315→  }, [load]);
+   316→
+   317→  useEffect(() => {
+   318→    if (mode === "kanban") void loadQueue();
+   319→  }, [mode, loadQueue]);
+   320→
+   321→  // 20 s silent poll + focus refresh.
+   322→  useEffect(() => {
+   323→    const id = setInterval(() => {
+   324→      if (!document.hidden) {
+   325→        void load(true);
+   326→        if (mode === "kanban") void loadQueue();
+   327→      }
+   328→    }, 20_000);
+   329→    return () => clearInterval(id);
+   330→  }, [load, loadQueue, mode]);
+   331→  useEffect(() => {
+   332→    const onFocus = () => {
+   333→      void load(true);
+   334→      if (mode === "kanban") void loadQueue();
+   335→    };
+   336→    window.addEventListener("focus", onFocus);
+   337→    document.addEventListener("visibilitychange", onFocus);
+   338→    return () => {
+   339→      window.removeEventListener("focus", onFocus);
+   340→      document.removeEventListener("visibilitychange", onFocus);
+   341→    };
+   342→  }, [load, loadQueue, mode]);
+   343→
+   344→  // Debounced search (350 ms).
+   345→  useEffect(() => {
+   346→    const t = setTimeout(() => {
+   347→      setDebounced(search.trim());
+   348→      setPage(1);
+   349→    }, 350);
+   350→    return () => clearTimeout(t);
+   351→  }, [search]);
+   352→
+   353→  const manualRefresh = useCallback(() => {
+   354→    setSpin(true);
+   355→    void load(true).finally(() => setTimeout(() => setSpin(false), 500));
+   356→  }, [load]);
+   357→
+   358→  const list = rows ?? [];
+   359→  const start = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+   360→  const end = Math.min(page * PAGE_SIZE, total);
+   361→  const completeOnPage = list.filter((r) => r.isProfileComplete).length;
+   362→  const accountsOnPage = list.filter((r) => r.hasAccount).length;
+   363→
+   364→  const kanban = useMemo(() => {
+   365→    const map: Record<StageKey, QueueRow[]> = { "Applied": [], "Under Review": [], "Shortlisted": [], "Rejected": [] };
+   366→    for (const r of queue ?? []) map[stageForStatus(r.status)].push(r);
+   367→    return map;
+   368→  }, [queue]);
+   369→
+   370→  return (
+   371→    <div className="space-y-6">
+   372→      {/* Enterprise page header (PageHeader) — shared anatomy across all views */}
+   373→      <PageHeader
+   374→        title={isAdminView ? "Users" : "Candidates"}
+   375→        description={
+   376→          isAdminView
+   377→            ? "All registered system accounts: profiles, logins, and pipeline activity."
+   378→            : "Every candidate on file: profiles, logins, and pipeline activity."
+   379→        }
+   380→        actions={
+   381→          <>
+   382→            <div className="flex items-center gap-1 rounded-full bg-fog p-1" role="group" aria-label="View mode">
+   383→              <button
+   384→                type="button"
+   385→                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "list" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+   386→                onClick={() => setMode("list")}
+   387→                aria-pressed={mode === "list"}
+   388→              >
+   389→                <List className="h-3.5 w-3.5" aria-hidden />
+   390→                List
+   391→              </button>
+   392→              <button
+   393→                type="button"
+   394→                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${mode === "kanban" ? "bg-white text-ink shadow-sm" : "text-stone hover:text-ink"}`}
+   395→                onClick={() => setMode("kanban")}
+   396→                aria-pressed={mode === "kanban"}
+   397→              >
+   398→                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+   399→                Kanban
+   400→              </button>
+   401→            </div>
+   402→            <button type="button" className={ghostBtn} onClick={manualRefresh}>
+   403→              <RefreshCw className={`h-4 w-4 ${spin ? "animate-spin" : ""}`} aria-hidden />
+   404→              Refresh
+   405→            </button>
+   406→          </>
+   407→        }
+   408→      />
+   409→
+   410→      {/* KPI tiles — Bevel cloud stat cards */}
+   411→      {!error && (rows === null ? (
+   412→        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+   413→          {Array.from({ length: 4 }).map((_, i) => (
+   414→            <div key={i} className="dlg-card p-6">
+   415→              <div className="flex items-start justify-between">
+   416→                <div className="skel h-3 w-20" />
+   417→                <div className="skel h-10 w-10" />
+   418→              </div>
+   419→              <div className="skel mt-4 h-8 w-16" />
+   420→            </div>
+   421→          ))}
+   422→        </div>
+   423→      ) : (
+   424→        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+   425→          <StatCard label="Total on file" value={total} icon={UsersRound} chipTone="plum" hint="all registered candidates" />
+   426→          <StatCard label="Showing" value={`${start}–${end}`} icon={List} chipTone="slate" hint={`of ${total}`} />
+   427→          <StatCard label="Complete profiles" value={completeOnPage} icon={UserCheck} chipTone="emerald" hint="on this page" />
+   428→          <StatCard label="Has login" value={accountsOnPage} icon={KeyRound} chipTone="slate" hint="on this page" />
+   429→        </div>
+   430→      ))}
+   431→
+   432→      {/* Filter toolbar — white card row */}
+   433→      <div className="dlg-card flex flex-wrap items-center gap-3 p-3 sm:p-4">
+   434→        <div className="relative min-w-0 flex-1 basis-56">
+   435→          <IconChip
+   436→            icon={Search}
+   437→            tone="slate"
+   438→            size={28}
+   439→            iconSize={14}
+   440→            className="absolute left-2.5 top-1/2 -translate-y-1/2"
+   441→          />
+   442→          <Input
+   443→            className="dlg-input min-h-[44px] pl-12"
+   444→            placeholder="Search name, email, employee no., mobile…"
+   445→            value={search}
+   446→            onChange={(e) => setSearch(e.target.value)}
+   447→            aria-label="Search candidates"
+   448→          />
+   449→        </div>
+   450→        <Select
+   451→          value={status}
+   452→          onValueChange={(v) => {
+   453→            setStatus(v as typeof status);
+   454→            setPage(1);
+   455→          }}
+   456→        >
+   457→          <SelectTrigger className="dlg-input min-h-[44px] w-40 shrink-0" aria-label="Profile status">
+   458→            <SelectValue />
+   459→          </SelectTrigger>
+   460→          <SelectContent>
+   461→            <SelectItem value="all">All profiles</SelectItem>
+   462→            <SelectItem value="complete">Complete</SelectItem>
+   463→            <SelectItem value="incomplete">Incomplete</SelectItem>
+   464→          </SelectContent>
+   465→        </Select>
+   466→        <Select
+   467→          value={hasAccount}
+   468→          onValueChange={(v) => {
+   469→            setHasAccount(v as typeof hasAccount);
+   470→            setPage(1);
+   471→          }}
+   472→        >
+   473→          <SelectTrigger className="dlg-input min-h-[44px] w-40 shrink-0" aria-label="Has account">
+   474→            <SelectValue />
+   475→          </SelectTrigger>
+   476→          <SelectContent>
+   477→            <SelectItem value="all">All accounts</SelectItem>
+   478→            <SelectItem value="yes">Has login</SelectItem>
+   479→            <SelectItem value="no">No login</SelectItem>
+   480→          </SelectContent>
+   481→        </Select>
+   482→      </div>
+   483→
+   484→      {error ? (
+   485→        <div className="dlg-card p-8">
+   486→          <EmptyState
+   487→            icon={AlertTriangle}
+   488→            tone="rose"
+   489→            title="Couldn't load candidates"
+   490→            description={error}
+   491→            action={
+   492→              <button type="button" className={ghostBtn} onClick={() => void load()}>
+   493→                Retry
+   494→              </button>
+   495→            }
+   496→          />
+   497→        </div>
+   498→      ) : rows === null ? (
+   499→        <SkeletonRows rows={6} rowClassName="h-16 rounded-lg" />
+   500→      ) : mode === "list" ? (
+   501→        <div className="space-y-3">
+   502→          {list.length === 0 ? (
+   503→            <div className="dlg-card p-6 sm:p-10">
+   504→              <EmptyState
+   505→                icon={UsersRound}
+   506→                title="No candidates match"
+   507→                description="Try a different search, or clear the profile and account filters."
+   508→              />
+   509→            </div>
+   510→          ) : (
+   511→            <div className="dlg-card table-card overflow-hidden">
+   512→              <div className="overflow-x-auto scroll-thin">
+   513→                <table className="w-full min-w-[640px] border-collapse text-sm">
+   514→                  <thead>
+   515→                    <tr className="border-b border-[var(--border)] text-left">
+   516→                      <th scope="col" className="eyebrow px-5 py-3">Candidate</th>
+   517→                      <th scope="col" className="eyebrow px-4 py-3">Profile</th>
+   518→                      <th scope="col" className="eyebrow px-4 py-3">Applications</th>
+   519→                      <th scope="col" className="px-4 py-3"><span className="sr-only">Open</span></th>
+   520→                    </tr>
+   521→                  </thead>
+   522→                  <tbody>
+   523→                    {list.map((r) => {
+   524→                      const name = fullName(r);
+   525→                      return (
+   526→                        <tr key={r.id} className="group/row border-b border-[var(--border)] transition-colors last:border-0 hover:bg-fog/60">
+   527→                          <td className="px-5 py-3">
+   528→                            <div className="flex items-center gap-3">
+   529→                              <KanbanAvatar name={name} size={28} />
+   530→                              <div className="min-w-0">
+   531→                                <p className="truncate text-sm font-medium text-ink">{name}</p>
+   532→                                <p className="num truncate text-xs text-stone">
+   533→                                  {[r.emailAddress, r.mobileNumber].filter(Boolean).join(" · ") || "No contact on file"} · #{r.id}
+   534→                                </p>
+   535→                              </div>
+   536→                            </div>
+   537→                          </td>
+   538→                          <td className="px-4 py-3">
+   539→                            <StatusPill
+   540→                              status={r.isProfileComplete ? "Complete" : "Incomplete"}
+   541→                              variant={variantForCompletion(r.isProfileComplete)}
+   542→                            />
+   543→                          </td>
+   544→                          <td className="num px-4 py-3 text-[13px] text-stone">
+   545→                            {r.applicationCount} application{r.applicationCount === 1 ? "" : "s"}
+   546→                          </td>
+   547→                          <td className="px-4 py-3 text-right">
+   548→                            <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 max-lg:opacity-100">
+   549→                              <button
+   550→                                type="button"
+   551→                                className={iconBtn}
+   552→                                aria-label={`Quick view ${name}`}
+   553→                                title="Quick view"
+   554→                                onClick={() => setModalId(r.id)}
+   555→                              >
+   556→                                <ArrowUpRight
+   557→                                  className="h-4 w-4 transition-transform group-hover/row:translate-x-0.5"
+   558→                                  aria-hidden
+   559→                                />
+   560→                              </button>
+   561→                            </div>
+   562→                          </td>
+   563→                        </tr>
+   564→                      );
+   565→                    })}
+   566→                  </tbody>
+   567→                </table>
+   568→              </div>
+   569→            </div>
+   570→          )}
+   571→
+   572→          {/* Pagination */}
+   573→          {total > PAGE_SIZE && (
+   574→            <div className="flex items-center justify-between gap-3 pt-1">
+   575→              <p className="num text-xs text-body-gray">
+   576→                {start}–{end} of {total}
+   577→              </p>
+   578→              <div className="flex items-center gap-2">
+   579→                <button type="button" className={ghostBtn + " min-h-[44px] px-3 text-xs"} disabled={page <= 1} onClick={() => setPage(page - 1)}>
+   580→                  Previous
+   581→                </button>
+   582→                <span className="num text-xs text-stone">
+   583→                  Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+   584→                </span>
+   585→                <button
+   586→                  type="button"
+   587→                  className={ghostBtn + " min-h-[44px] px-3 text-xs"}
+   588→                  disabled={page >= Math.ceil(total / PAGE_SIZE)}
+   589→                  onClick={() => setPage(page + 1)}
+   590→                >
+   591→                  Next
+   592→                </button>
+   593→              </div>
+   594→            </div>
+   595→          )}
+   596→        </div>
+   597→      ) : (
+   598→        /* Kanban — reference board: bordered columns with dot + label + count headers */
+   599→        <div className="flex snap-x snap-proximity items-stretch gap-4 overflow-x-auto scroll-thin pb-2 md:grid md:grid-cols-2 xl:grid-cols-4 md:overflow-visible md:pb-0">
+   600→          {PIPELINE_STAGES.map((stage) => {
+   601→            const cards = kanban[stage];
+   602→            return (
+   603→              <KanbanColumn key={stage} label={stage} stage={stage} count={cards.length}>
+   604→                {cards.map((c) => {
+   605→                    const position = c.job.position?.positionTitle || c.job.title;
+   606→                    const place = c.job.position?.placeOfAssignment ?? null;
+   607→                    const name = fullName(c.applicant);
+   608→                    return (
+   609→                      <button
+   610→                        key={c.id}
+   611→                        type="button"
+   612→                        className={KANBAN_CARD + " focus-ring w-full cursor-pointer p-4 text-left"}
+   613→                        onClick={() => navigate("candidate", { id: String(c.applicantId) })}
+   614→                        aria-label={`Open ${name}'s candidate profile`}
+   615→                      >
+   616→                        <div className="flex items-start gap-2.5">
+   617→                          <KanbanAvatar name={name} />
+   618→                          <div className="min-w-0 flex-1">
+   619→                            <p className="min-w-0 truncate text-sm font-semibold text-ink">{name}</p>
+   620→                            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-stone">
+   621→                              <Building2 className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
+   622→                              <span className="min-w-0 flex-1 truncate">{humanize(position)}</span>
+   623→                            </p>
+   624→                            <p className="mt-1 flex items-center gap-1.5 text-xs text-stone">
+   625→                              {place && (
+   626→                                <>
+   627→                                  <MapPin className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
+   628→                                  <span className="min-w-0 truncate">{place}</span>
+   629→                                  <span className="shrink-0 text-pebble" aria-hidden>·</span>
+   630→                                </>
+   631→                              )}
+   632→                              <Clock className="h-3.5 w-3.5 shrink-0 text-pebble" aria-hidden />
+   633→                              <span className="shrink-0 whitespace-nowrap text-pebble">Applied {appliedAgo(c.dateApplied)}</span>
+   634→                            </p>
+   635→                          </div>
+   636→                          <MatchBadge metCount={c.match?.metCount ?? 0} requiredCount={c.match?.requiredCount ?? 0} />
+   637→                        </div>
+   638→                        {(c.tags ?? []).length > 0 && (
+   639→                          <div className={KANBAN_DIVIDER}>
+   640→                            <KanbanTags tags={c.tags ?? []} />
+   641→                          </div>
+   642→                        )}
+   643→                      </button>
+   644→                    );
+   645→                  })}
+   646→              </KanbanColumn>
+   647→            );
+   648→          })}
+   649→        </div>
+   650→      )}
+   651→
+   652→      <CandidateModal id={modalId} onClose={() => setModalId(null)} />
+   653→    </div>
+   654→  );
+   655→}
+   656→

@@ -48,12 +48,14 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, type ChipTone,
+  EmptyNote, EmptyState, IconChip, LedgerRow, MonogramAvatar, PageHeader, SkeletonRows,
+  StatusPill, VerdictPill, dialogScroll, type ChipTone,
 } from "@/components/ui/shell";
+import { ghostBtn, ctaBtn, ghostBadModifier } from "@/components/ui/buttons";
 import { apiFetch, formatDate, formatDateTime, fullName, humanize, timeAgo } from "@/lib/client";
 import { DocumentPreviewModal, documentStatusChip, fileKind, type PreviewDoc } from "@/components/ui/document-preview";
-import { getStatusMeta, stageForStatus, type Tone } from "@/lib/status";
-import { pillClass, variantForStatus, variantForVerdict, type StatusVariant } from "@/lib/status-ui";
+import { getStatusMeta, stageForStatus } from "@/lib/status";
+import { pillClass, type StatusVariant } from "@/lib/status-ui";
 import { navigate, useHashRoute } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import type { RequirementsReport } from "@/lib/requirements";
@@ -128,83 +130,18 @@ type NoticeSendResult = {
 
 // ── Small shared visuals ────────────────────────────────────────────────────
 
-/** Legacy tone→class bridge (kept for existing importers). */
-export function toneClass(tone: Tone): string {
-  const map: Record<Tone, StatusVariant> = {
-    success: "ok",
-    warning: "warn",
-    danger: "bad",
-    info: "info",
-    primary: "info",
-    neutral: "neutral",
-  };
-  return pillClass(map[tone]);
-}
+// Status pills, verdict pills, the monogram avatar, ledger rows, empty notes
+// and the button capsules are the shared shell primitives (ui/shell +
+// ui/buttons) — single source of truth, no local copies.
 
-/**
- * Canonical stage/status pill. Displays the normalized status label; the
- * variant comes from variantForStatus unless explicitly overridden (used for
- * completion / verdict labels that are not application statuses).
- */
-export function StatusPill({
-  status,
-  variant,
-  className = "",
-}: {
-  status: string | null | undefined;
-  variant?: StatusVariant;
-  className?: string;
-}) {
-  const label = getStatusMeta(status).label;
-  const v: StatusVariant = variant ?? variantForStatus(status);
-  return <span className={cn(pillClass(v), "shrink-0", className)}>{label}</span>;
-}
-
-function verdictMeta(verdict: string): { chip: string; variant: StatusVariant; meaning: string } {
-  switch (verdict) {
-    case "ALL_MET":
-      return { chip: "Qualified", variant: variantForVerdict("Qualified"), meaning: "Meets the minimum requirements" };
-    case "PARTIAL":
-      return { chip: "Partial", variant: variantForVerdict("Partial"), meaning: "Partially meets the minimum requirements" };
-    case "NONE_MET":
-      return { chip: "Not qualified", variant: variantForVerdict("Not qualified"), meaning: "Does not meet the minimum requirements" };
-    case "NEEDS_REVIEW":
-      return { chip: "Verify", variant: variantForVerdict("Verify"), meaning: "Needs manual verification" };
-    case "NO_REQUIREMENTS":
-      return { chip: "No reqs", variant: variantForVerdict("No reqs"), meaning: "No published requirements" };
-    default:
-      return { chip: verdict, variant: variantForVerdict(verdict), meaning: "" };
-  }
-}
-
-/** MQR verdict pill for queue cards / list rows (null when no verdict). */
-export function VerdictPill({ verdict, className = "" }: { verdict: string | null | undefined; className?: string }) {
-  if (!verdict) return null;
-  const vm = verdictMeta(verdict);
-  return <span className={cn(pillClass(vm.variant), "shrink-0", className)}>{vm.chip}</span>;
-}
-
-const ghostBtn =
-  "dlg-ghost inline-flex min-h-[44px] items-center justify-center gap-2 px-4 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50";
-const ctaBtn =
-  "dlg-cta inline-flex min-h-[44px] items-center justify-center gap-2 px-5 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-50";
-const destructiveGhost =
-  "border-[var(--bad)]/30 text-[var(--bad)] hover:bg-[var(--bad-bg)]";
-
-/** Gradient monogram avatar (wave-3) with initials derived from the name. */
-function MonogramAvatar({ name, size = 36, warm = false }: { name: string; size?: number; warm?: boolean }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-  return (
-    <span aria-hidden="true">
-      <Monogram size={size} warm={warm} className="rounded-full">{initials || "?"}</Monogram>
-    </span>
-  );
-}
+/** Requirements verdict → meaning caption (display copy under the panel title). */
+const VERDICT_MEANING: Record<string, string> = {
+  ALL_MET: "Meets the minimum requirements",
+  PARTIAL: "Partially meets the minimum requirements",
+  NONE_MET: "Does not meet the minimum requirements",
+  NEEDS_REVIEW: "Needs manual verification",
+  NO_REQUIREMENTS: "No published requirements",
+};
 
 /** Requirement check status → mini matched/missing indicator chip. */
 function checkChip(status: string): { icon: typeof Check; tone: ChipTone } {
@@ -225,22 +162,6 @@ function str(v: unknown): string {
   if (typeof v === "boolean") return v ? "Yes" : "No";
   const s = String(v).trim();
   return s;
-}
-
-function LedgerRow({ label, value, num = false }: { label: string; value: string; num?: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-divider py-2.5 last:border-0">
-      <span className="shrink-0 pt-0.5 text-xs text-stone">{label}</span>
-      {/* min-w-0: long unbreakable values (emails, URLs) must be allowed to
-          shrink + break inside the flex row, otherwise the row's min-content
-          forces the dialog's grid track wider than small viewports. */}
-      <span className={cn("min-w-0 break-words text-right text-sm text-ink", num && "num")}>{value || "-"}</span>
-    </div>
-  );
-}
-
-function EmptyNote({ children }: { children: React.ReactNode }) {
-  return <p className="py-6 text-center text-sm text-body-gray">{children}</p>;
 }
 
 function snapshotDisplayDate(v: unknown): string {
@@ -307,9 +228,7 @@ function ExperienceCards({ rows }: { rows: SnapRow[] }) {
         <div key={i} className="rounded-lg bg-white p-4">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-ink">{str(r.positionTitle) || "-"}</p>
-            {r.isPresentWork === true && (
-              <span className="dlg-pill shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">Present</span>
-            )}
+            {r.isPresentWork === true && <span className={pillClass("info")}>Present</span>}
           </div>
           <p className="mt-1 text-xs text-stone">{str(r.employerName) || "-"}</p>
           <p className="num mt-0.5 text-xs text-stone">
@@ -403,7 +322,7 @@ function checkPill(status: string): { label: string; variant: StatusVariant } {
 }
 
 function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
-  const vm = verdictMeta(report.verdict);
+  const meaning = VERDICT_MEANING[report.verdict] ?? "";
   const allMet = report.requiredCount > 0 && report.metCount === report.requiredCount;
   const summaryCls = allMet ? "text-[var(--ok)]" : report.metCount > 0 ? "text-[var(--warn)]" : "text-stone";
   return (
@@ -413,10 +332,10 @@ function RequirementsMatchPanel({ report }: { report: RequirementsReport }) {
           <IconChip icon={ListChecks} tone="gold" size={36} iconSize={16} />
           <div className="min-w-0">
             <h3 className="text-[15px] font-semibold leading-6 text-ink">Requirements match</h3>
-            <p className="mt-0.5 text-xs text-stone">{vm.meaning}</p>
+            <p className="mt-0.5 text-xs text-stone">{meaning}</p>
           </div>
         </div>
-        <StatusPill status={vm.chip} variant={vm.variant} className="shrink-0" />
+        <VerdictPill verdict={report.verdict} className="shrink-0" />
       </div>
       <p className={cn("num mt-2 text-sm font-medium", summaryCls)}>
         {report.metCount} of {report.requiredCount} standards met
@@ -544,7 +463,7 @@ function NoticeFormDialog({
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-md">
+      <DialogContent className={cn(dialogScroll, "sm:max-w-md")}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">
             {kind === "interview" ? "Send interview invitation" : "Send skills-exam notice"}
@@ -677,7 +596,7 @@ function DecisionDialog({
   return (
     <>
       <Dialog open onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-lg">
+        <DialogContent className={cn(dialogScroll, "sm:max-w-lg")}>
           <DialogHeader>
             <div className="flex items-center gap-2.5">
               {shortlist ? (
@@ -739,7 +658,7 @@ function DecisionDialog({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={shortlist ? "" : "border border-[var(--bad)]/30 bg-[var(--bad-bg)] text-[var(--bad)] hover:bg-[var(--bad-bg)]/80"}
+              className={shortlist ? "" : cn(ghostBadModifier, "min-h-[44px] px-4 text-sm font-medium")}
               onClick={(e) => {
                 e.preventDefault();
                 void submit();
@@ -839,7 +758,7 @@ function DirectEmailDialog({
   return (
     <>
       <Dialog open onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto scroll-thin sm:max-w-lg">
+        <DialogContent className={cn(dialogScroll, "sm:max-w-lg")}>
           <DialogHeader>
             <DialogTitle className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em]">Send a direct email</DialogTitle>
             <DialogDescription>
@@ -880,7 +799,7 @@ function DirectEmailDialog({
               />
             </div>
             <div>
-              <label className="dlg-ghost focus-ring inline-flex min-h-[44px] cursor-pointer items-center gap-2 px-4 text-sm">
+              <label className={cn(ghostBtn, "cursor-pointer")}>
                 <Paperclip className="h-4 w-4" aria-hidden />
                 Attach files
                 <input
@@ -1371,7 +1290,7 @@ export function ReviewWorkspace({
               </button>
               <button
                 type="button"
-                className={ghostBtn + " w-full " + destructiveGhost}
+                className={cn(ghostBtn, ghostBadModifier, "w-full")}
                 onClick={() => setDecisionKind("Rejected")}
               >
                 <XCircle className="h-4 w-4 text-[var(--bad)]" aria-hidden />
@@ -1393,9 +1312,7 @@ export function ReviewWorkspace({
             <p className="text-xs text-stone">Changing the decision notifies the applicant.</p>
             <button
               type="button"
-              className={
-                ghostBtn + " w-full" + (stage === "Shortlisted" ? " " + destructiveGhost : "")
-              }
+              className={cn(ghostBtn, "w-full", stage === "Shortlisted" && ghostBadModifier)}
               onClick={() =>
                 stage === "Shortlisted"
                   ? setConfirmAction({
@@ -1480,7 +1397,7 @@ export function ReviewWorkspace({
           {stage === "Rejected" && (
             <button
               type="button"
-              className={ghostBtn + " w-full " + destructiveGhost}
+              className={cn(ghostBtn, ghostBadModifier, "w-full")}
               disabled={regretAlreadySent || regretBusy}
               onClick={() => setRegretOpen(true)}
             >
@@ -1502,7 +1419,7 @@ export function ReviewWorkspace({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={confirmAction?.destructive ? "border border-[var(--bad)]/30 bg-[var(--bad-bg)] text-[var(--bad)] hover:bg-[var(--bad-bg)]/80" : ""}
+              className={confirmAction?.destructive ? cn(ghostBadModifier, "min-h-[44px] px-4 text-sm font-medium") : ""}
               onClick={(e) => {
                 e.preventDefault();
                 if (confirmAction) void decide(confirmAction.status);
@@ -1528,7 +1445,7 @@ export function ReviewWorkspace({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="border border-[var(--bad)]/30 bg-[var(--bad-bg)] text-[var(--bad)] hover:bg-[var(--bad-bg)]/80"
+              className={cn(ghostBadModifier, "min-h-[44px] px-4 text-sm font-medium")}
               onClick={(e) => {
                 e.preventDefault();
                 void sendRegret();

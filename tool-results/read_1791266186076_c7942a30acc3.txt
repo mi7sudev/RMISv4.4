@@ -1,0 +1,762 @@
+     1→@import "tailwindcss";
+     2→@import "tw-animate-css";
+     3→
+     4→@custom-variant dark (&:is(.dark *));
+     5→
+     6→/* ============================================================================
+     7→   RMIS × "BEVEL" — Bright cloudlight edition (PROPOSED-RMIS-DESIGN.md).
+     8→   A white editorial canvas: Paper White page, Cloud Card pale-blue surfaces,
+     9→   near-black Ink display type (600 weight, tight -0.03em tracking), Body Gray
+    10→   supporting copy, generous rounded geometry (24-32px cards, 128px capsule
+    11→   buttons, 9999px pills, 32px navigation).
+    12→   Metric accents (Recovery Green / Signal Gold / Sleep Lilac / Coral Signal)
+    13→   are rationed to data visuals and small indicators — never page backgrounds
+    14→   or filled public controls. Business logic untouched.
+    15→
+    16→   REBRAND (user directive): the brand primary is the LEGACY RMIS ELECTRIC
+    17→   BLUE #1591DC (source: RMISv3.8 “Warm Obsidian” design system — its design
+    18→   notes: “RMIS electric blue #1591DC is THE primary — filled CTA fill, focus
+    19→   rings, selection, progress fill; hover darkens to #0E7ABF”). White ink
+    20→   sits on the blue fill (legacy --primary-foreground: #ffffff). Charcoal
+    21→   #1f2025 is demoted from primary control fill to neutral overlays/scrims;
+    22→   Ink #222326 remains display type. The former Bevel Metric Blue #415eee is
+    23→   retired — every “metric-blue/tangerine” token now carries #1591DC so the
+    24→   system speaks with ONE brand blue.
+    25→
+    26→   PALETTE: Paper White #ffffff, Cloud Card #ebf0f8, Ink #222326,
+    27→   Charcoal #1f2025 (neutral only), Body Gray #666a72,
+    28→   RMIS Electric Blue #1591DC (primary · hover #0E7ABF),
+    29→   Recovery Green #31ce01, Signal Gold #ffca00, Sleep Lilac #b9a6ff,
+    30→   Coral Signal #ffab94. Legacy token names are kept for their call sites
+    31→   (e.g. --tangerine-tag, --color-metric-blue → RMIS Electric Blue).
+    32→   RADII: soft cloud geometry — cards 24-32px, imagery/dialogs 16-24px,
+    33→   buttons 128px (capsule), pills/badges 9999px, navigation 32px.
+    34→   ========================================================================== */
+    35→
+    36→:root {
+    37→  /* Dialog palette (preserved names, values are the rebrand) */
+    38→  --tangerine-tag: #1591dc; /* RMIS Electric Blue (name kept for call sites) */
+    39→  --midnight-ink: #222326; /* Ink */
+    40→  --graphite: #4a4d57;
+    41→  --deep-slate: #2a2b31;
+    42→  --carbon: #1f2025; /* Charcoal */
+    43→  --stone: #5d6067; /* 6.3:1 on white, 5.5:1 on Cloud Card (WCAG AA) */
+    44→  --pebble: #666a72; /* 5.4:1 on white, 4.8:1 on Cloud Card (WCAG AA) */
+    45→  --ash: #8d939e;
+    46→  --fog: #f5f8fc; /* mist */
+    47→  --snow: #ffffff;
+    48→  --dusty-rose: #d97a63; /* Coral-leaning */
+    49→  --divider: #d5dce8;
+    50→
+    51→  /* Light rail (Bevel white sidebar) */
+    52→  --rail-bg-top: #ffffff;
+    53→  --rail-bg-bottom: #fbfcfe;
+    54→  --rail-border: #e8edf5;
+    55→  --rail-text: #5d6067;
+    56→  --rail-text-dim: #666a72;
+    57→  --rail-active-bg: #ebf0f8;
+    58→  --rail-hover-bg: #f2f5fa;
+    59→
+    60→  /* Functional status system (softened Bevel tints) */
+    61→  --ok: #1f7a3d;
+    62→  --ok-bg: #e8f5ea;
+    63→  --warn: #8a5f00; /* 5.1:1 on warn-bg (WCAG AA) */
+    64→  --warn-bg: #fbf3dd;
+    65→  --bad: #a8432f; /* 5.3:1 on bad-bg (WCAG AA) */
+    66→  --bad-bg: #fdeeea;
+    67→  --info: #0f68a3; /* RMIS blue family, 5.1:1 on info-bg (WCAG AA) */
+    68→  --info-bg: #e3f1fb;
+    69→  --neutral: #5d6067;
+    70→  --neutral-bg: #f1f3f7;
+    71→
+    72→  /* Data-viz series — lead series carries the brand blue */
+    73→  --viz-1: #1591dc; /* RMIS Electric Blue */
+    74→  --viz-2: #31ce01; /* Recovery Green */
+    75→  --viz-3: #ffca00; /* Signal Gold */
+    76→  --viz-4: #b9a6ff; /* Sleep Lilac */
+    77→  --viz-5: #ffab94; /* Coral Signal */
+    78→
+    79→  /* shadcn token bridge */
+    80→  --background: #ffffff;
+    81→  --foreground: #222326;
+    82→  --card: #ffffff;
+    83→  --card-foreground: #222326;
+    84→  --popover: #ffffff;
+    85→  --popover-foreground: #222326;
+    86→  --primary: #1591dc; /* RMIS Electric Blue — the legacy brand primary (CTA fill) */
+    87→  --primary-foreground: #ffffff; /* white ink on the blue fill (legacy RMIS) */
+    88→  --secondary: #f5f8fc;
+    89→  --secondary-foreground: #222326;
+    90→  --muted: #f5f8fc;
+    91→  --muted-foreground: #5d6067;
+    92→  --accent: #ebf0f8; /* Cloud Card */
+    93→  --accent-foreground: #222326;
+    94→  --destructive: #c05446;
+    95→  --destructive-foreground: #ffffff;
+    96→  --border: #e6ebf3;
+    97→  --input: #d7dfec;
+    98→  --ring: #1591dc; /* RMIS Electric Blue focus */
+    99→  --chart-1: #1591dc;
+   100→  --chart-2: #31ce01;
+   101→  --chart-3: #ffca00;
+   102→  --chart-4: #b9a6ff;
+   103→  --chart-5: #ffab94;
+   104→  --sidebar: #ffffff;
+   105→  --sidebar-foreground: #222326;
+   106→  --sidebar-primary: #1591dc;
+   107→  --sidebar-primary-foreground: #ffffff;
+   108→  --sidebar-accent: #ebf0f8;
+   109→  --sidebar-accent-foreground: #222326;
+   110→  --sidebar-border: #e8edf5;
+   111→  --sidebar-ring: #1591dc;
+   112→  --radius: 1rem;
+   113→}
+   114→
+   115→@theme inline {
+   116→  --color-background: var(--background);
+   117→  --color-foreground: var(--foreground);
+   118→  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   119→  --font-display: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   120→
+   121→  /* ── Bevel type scale (spec-exact, upload/PROPOSED-RMIS-DESIGN.md) ── */
+   122→  --text-caption: 12px;
+   123→  --text-caption--line-height: 1.1;
+   124→  --text-caption--letter-spacing: 0px;
+   125→  --text-nav: 16px;
+   126→  --text-nav--line-height: 1.4;
+   127→  --text-nav--letter-spacing: 0px;
+   128→  --text-brand-nav: 18px;
+   129→  --text-brand-nav--line-height: 1.4;
+   130→  --text-brand-nav--letter-spacing: 0.162px;
+   131→  --text-body: 24px;
+   132→  --text-body--line-height: 1.3;
+   133→  --text-body--letter-spacing: 0px;
+   134→  --text-section-label: 24px;
+   135→  --text-section-label--line-height: 0.9;
+   136→  --text-section-label--letter-spacing: -0.24px;
+   137→  --text-card-heading: 40px;
+   138→  --text-card-heading--line-height: 1;
+   139→  --text-card-heading--letter-spacing: -1.2px;
+   140→  --text-display: 64px;
+   141→  --text-display--line-height: 1;
+   142→  --text-display--letter-spacing: -1.92px;
+   143→  --text-hero-display: 80px;
+   144→  --text-hero-display--line-height: 1;
+   145→  --text-hero-display--letter-spacing: -2.4px;
+   146→  --color-sidebar-ring: var(--sidebar-ring);
+   147→  --color-sidebar-border: var(--sidebar-border);
+   148→  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+   149→  --color-sidebar-accent: var(--sidebar-accent);
+   150→  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+   151→  --color-sidebar-primary: var(--sidebar-primary);
+   152→  --color-sidebar-foreground: var(--sidebar-foreground);
+   153→  --color-sidebar: var(--sidebar);
+   154→  --color-chart-5: var(--chart-5);
+   155→  --color-chart-4: var(--chart-4);
+   156→  --color-chart-3: var(--chart-3);
+   157→  --color-chart-2: var(--chart-2);
+   158→  --color-chart-1: var(--chart-1);
+   159→  --color-ring: var(--ring);
+   160→  --color-input: var(--input);
+   161→  --color-border: var(--border);
+   162→  --color-destructive: var(--destructive);
+   163→  --color-accent-foreground: var(--accent-foreground);
+   164→  --color-accent: var(--accent);
+   165→  --color-muted-foreground: var(--muted-foreground);
+   166→  --color-muted: var(--muted);
+   167→  --color-secondary-foreground: var(--secondary-foreground);
+   168→  --color-secondary: var(--secondary);
+   169→  --color-primary-foreground: var(--primary-foreground);
+   170→  --color-primary: var(--primary);
+   171→  --color-popover-foreground: var(--popover-foreground);
+   172→  --color-popover: var(--popover);
+   173→  --color-card-foreground: var(--card-foreground);
+   174→  --color-card: var(--card);
+   175→
+   176→  /* Brand colors as Tailwind utilities (legacy names kept for call sites) */
+   177→  --color-tangerine: #1591dc; /* RMIS Electric Blue (name kept for call sites) */
+   178→  --color-ink: #222326;
+   179→  --color-graphite: #4a4d57;
+   180→  --color-slate-dark: #2a2b31;
+   181→  --color-carbon: #1f2025;
+   182→  --color-stone: #5d6067;
+   183→  --color-pebble: #666a72;
+   184→  --color-ash: #8d939e;
+   185→  --color-fog: #f5f8fc;
+   186→  --color-snow: #ffffff;
+   187→  --color-dusty-rose: #d97a63;
+   188→  --color-divider: #d5dce8;
+   189→
+   190→  /* Bevel named surfaces & accents as Tailwind utilities */
+   191→  --color-paper: #ffffff;
+   192→  --color-cloud: #ebf0f8;
+   193→  --color-charcoal: #1f2025;
+   194→  --color-body-gray: #747679; /* Spec Body Gray — 4.56:1 on Paper White (AA). Small text on Cloud surfaces uses stone. */
+   195→  --color-metric-blue: #1591dc; /* token renamed by legacy value — one brand blue */
+   196→  --color-recovery-green: #31ce01;
+   197→  --color-signal-gold: #ffca00;
+   198→  --color-sleep-lilac: #b9a6ff;
+   199→  --color-coral-signal: #ffab94;
+   200→
+   201→  /* Hero Sky — hero atmosphere: cool daylight fading into warm paper */
+   202→  --color-hero-sky: #d2e5ff;
+   203→  --color-hero-warm: #fff9ee;
+   204→
+   205→  /* Status colors as Tailwind utilities */
+   206→  --color-ok: var(--ok);
+   207→  --color-ok-bg: var(--ok-bg);
+   208→  --color-warn: var(--warn);
+   209→  --color-warn-bg: var(--warn-bg);
+   210→  --color-bad: var(--bad);
+   211→  --color-bad-bg: var(--bad-bg);
+   212→  --color-info: var(--info);
+   213→  --color-info-bg: var(--info-bg);
+   214→  --color-neutral-ui: var(--neutral);
+   215→  --color-neutral-bg: var(--neutral-bg);
+   216→
+   217→  /* Data-viz series */
+   218→  --color-viz-1: var(--viz-1);
+   219→  --color-viz-2: var(--viz-2);
+   220→  --color-viz-3: var(--viz-3);
+   221→  --color-viz-4: var(--viz-4);
+   222→  --color-viz-5: var(--viz-5);
+   223→
+   224→  /* Radii — Bevel cloud geometry: soft cards, capsule controls. */
+   225→  --radius-xs: 8px;
+   226→  --radius-sm: 12px;
+   227→  --radius-md: 16px;
+   228→  --radius-lg: 16px;
+   229→  --radius-xl: 24px;
+   230→  --radius-2xl: 24px;
+   231→  --radius-3xl: 32px;
+   232→  --radius-4xl: 32px;
+   233→  --radius-dialog-card: 24px;
+   234→  --radius-dialog-small: 16px;
+   235→  --radius-dialog-badge: 9999px;
+   236→  --radius-dialog-button: 128px;
+   237→  --radius-dialog-overlay: 24px;
+   238→  --radius-dialog-inner: 16px;
+   239→
+   240→  /* Elevation system — Bevel keeps elevation scarce and soft */
+   241→  --shadow-e1: 0 1px 2px rgba(31, 32, 37, 0.04);
+   242→  --shadow-e2: 0 2px 8px rgba(31, 32, 37, 0.06);
+   243→  --shadow-e3: 0 8px 24px -8px rgba(31, 32, 37, 0.12);
+   244→  --shadow-e4: 0 16px 48px -16px rgba(31, 32, 37, 0.18);
+   245→  /* Floating imagery lift (community/carousel cards) — spec --shadow-md */
+   246→  --shadow-image-lift: rgba(0, 0, 0, 0.25) 0px 0px 16px -8px;
+   247→  /* Elevated floating cards (QR-style prompts) — spec --shadow-md-2 */
+   248→  --shadow-float: rgba(0, 0, 0, 0.15) 0px 2px 16px 0px;
+   249→  /* Spec white inset glows — top-light inside Charcoal surfaces */
+   250→  --inset-shadow-subtle: rgb(255, 255, 255) 0px 1px 0px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 4px 0px inset;
+   251→  --inset-shadow-subtle-2: rgba(255, 255, 255, 0.36) 0px 1px 0px 0px inset;
+   252→  --inset-shadow-lg: rgb(255, 255, 255) 0px 0px 24px 0px inset;
+   253→  --shadow-cta: 0 1px 2px rgba(31, 32, 37, 0.12);
+   254→  --shadow-cta-hover: rgba(0, 0, 0, 0.15) 0px 2px 16px 0px;
+   255→  --shadow-dialog-subtle: rgba(31, 32, 37, 0.12) 0px 2px 3px -2px;
+   256→  --shadow-dialog-button: rgba(0, 0, 0, 0.04) 0px 1px 2px 0px, rgba(0, 0, 0, 0.02) 0px 2px 4px 0px;
+   257→  --shadow-dialog-fade: rgba(245, 248, 252, 0.5) 0px -40px 40px 0px;
+   258→}
+   259→
+   260→@layer base {
+   261→  * {
+   262→    @apply border-border outline-ring/50;
+   263→  }
+   264→  html {
+   265→    background: #ffffff;
+   266→  }
+   267→  body {
+   268→    @apply bg-background text-foreground;
+   269→    font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   270→    letter-spacing: -0.01em;
+   271→    font-feature-settings: "blwf", "cv03", "cv04", "cv09";
+   272→  }
+   273→  /* Paper White canvas — no ambient mesh. Bevel keeps the shell monochrome;
+   274→     atmosphere belongs to hero visuals (Hero Sky gradient), not the page. */
+   275→  /* Enterprise a11y: visible keyboard focus everywhere (RMIS Electric Blue) */
+   276→  :focus-visible {
+   277→    outline: 2px solid #1591dc;
+   278→    outline-offset: 2px;
+   279→    border-radius: 4px;
+   280→  }
+   281→  .dlg-cta:focus-visible {
+   282→    outline-color: #1591dc;
+   283→  }
+   284→}
+   285→
+   286→/* Dialog typography helpers — Ink 600 display with tight Bevel tracking */
+   287→.font-display {
+   288→  font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   289→  font-weight: 600;
+   290→  letter-spacing: -0.03em;
+   291→}
+   292→.text-display-hero {
+   293→  font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   294→  font-weight: 600;
+   295→  font-size: clamp(42px, 6.5vw, 80px); /* spec hero-display step: 80px */
+   296→  line-height: 1;
+   297→  letter-spacing: -0.03em;
+   298→  color: #222326;
+   299→}
+   300→/* Short-viewport laptops (incl. browser zoom): step the hero headline down
+   301→   to the spec's 64px display step so the frontpage explorer keeps room for
+   302→   the job board without the footer crowding the first screen. */
+   303→@media (max-height: 860px) {
+   304→  .text-display-hero {
+   305→    font-size: clamp(42px, 5vw, 64px); /* spec display step: 64px */
+   306→  }
+   307→}
+   308→.text-heading-lg {
+   309→  font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   310→  font-weight: 600;
+   311→  font-size: clamp(32px, 4vw, 50px);
+   312→  line-height: 1.05;
+   313→  letter-spacing: -0.03em;
+   314→  color: #222326;
+   315→}
+   316→.text-heading-md {
+   317→  font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+   318→  font-weight: 600;
+   319→  font-size: clamp(24px, 3vw, 32px);
+   320→  line-height: 1.1;
+   321→  letter-spacing: -0.02em;
+   322→  color: #222326;
+   323→}
+   324→
+   325→/* Gradient ink text for display moments (restrained, monochrome → blue) */
+   326→.grad-ink {
+   327→  background: linear-gradient(120deg, #222326 30%, #3f4553 60%, #4a5568 90%);
+   328→  -webkit-background-clip: text;
+   329→  background-clip: text;
+   330→  -webkit-text-fill-color: transparent;
+   331→  color: transparent;
+   332→}
+   333→.grad-ember {
+   334→  background: linear-gradient(120deg, #0e7abf, #1591dc 55%, #7fc5ec);
+   335→  -webkit-background-clip: text;
+   336→  background-clip: text;
+   337→  -webkit-text-fill-color: transparent;
+   338→  color: transparent;
+   339→}
+   340→
+   341→/* ── Surfaces ─────────────────────────────────────────────────────────────── */
+   342→
+   343→/* Cloud Feature Card: pale Cloud Card surface, 24px radius, NO border,
+   344→   NO shadow (Bevel rule) — the surface itself is the elevation. */
+   345→.dlg-card {
+   346→  position: relative;
+   347→  background: #ebf0f8;
+   348→  border-radius: 24px;
+   349→}
+   350→/* White variant — for content sitting ON cloud surfaces or hairline tables */
+   351→.dlg-card-plain {
+   352→  background: #ffffff;
+   353→  border-radius: 24px;
+   354→}
+   355→
+   356→/* Hover-lift card utility (opt-in) — image-lift shadow only, never borders */
+   357→.lift {
+   358→  transition: transform 200ms ease, box-shadow 200ms ease;
+   359→}
+   360→.lift:hover {
+   361→  transform: translateY(-2px);
+   362→  box-shadow: rgba(0, 0, 0, 0.25) 0px 0px 16px -8px;
+   363→}
+   364→
+   365→/* Frosted glass — full-width sticky top bar over the white canvas */
+   366→.glass {
+   367→  background: rgba(255, 255, 255, 0.86);
+   368→  backdrop-filter: blur(16px) saturate(1.3);
+   369→  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+   370→}
+   371→
+   372→/* Hero Sky — the Bevel hero atmosphere: cool daylight fading into warm paper.
+   373→   Token pair: --color-hero-sky / --color-hero-warm; this class is the composer. */
+   374→.hero-sky {
+   375→  background: linear-gradient(180deg, #d2e5ff, #fff9ee);
+   376→}
+   377→
+   378→/* Light rail — Bevel white navigation surface */
+   379→.rail {
+   380→  background: linear-gradient(180deg, var(--rail-bg-top) 0%, var(--rail-bg-bottom) 100%);
+   381→  border-right: 1px solid var(--rail-border);
+   382→}
+   383→
+   384→/* ── Buttons ──────────────────────────────────────────────────────────────── */
+   385→
+   386→/* RMIS Electric Blue conversion pill (legacy RMIS primary): #1591DC fill,
+   387→   white ink, 128px capsule radius, 500 weight. Hover darkens to the legacy
+   388→   #0E7ABF step. No gradient, no glow. */
+   389→.dlg-cta {
+   390→  position: relative;
+   391→  background: #1591dc;
+   392→  color: #ffffff;
+   393→  border-radius: 128px;
+   394→  font-weight: 500;
+   395→  box-shadow: var(--shadow-cta);
+   396→  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+   397→}
+   398→.dlg-cta:hover {
+   399→  background: #0e7abf;
+   400→  transform: translateY(-1px);
+   401→  box-shadow: var(--shadow-cta-hover);
+   402→}
+   403→.dlg-cta:active {
+   404→  transform: translateY(0.5px);
+   405→  background: #1591dc;
+   406→}
+   407→.dlg-ghost {
+   408→  background: #ffffff;
+   409→  color: #222326;
+   410→  border-radius: 128px;
+   411→  font-weight: 500;
+   412→  border: 1px solid #dfe6f0;
+   413→  box-shadow: 0 1px 2px rgba(31, 32, 37, 0.04);
+   414→  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+   415→}
+   416→.dlg-ghost:hover {
+   417→  background: #f5f8fc;
+   418→  box-shadow: 0 2px 8px rgba(31, 32, 37, 0.07);
+   419→}
+   420→/* Pills/badges/tags: true capsules */
+   421→.dlg-pill {
+   422→  border-radius: 9999px;
+   423→}
+   424→.dlg-input {
+   425→  border-radius: 12px;
+   426→  background: #ffffff;
+   427→  border: 1px solid #d7dfec;
+   428→  transition: border-color 140ms ease, box-shadow 140ms ease;
+   429→}
+   430→.dlg-input::placeholder {
+   431→  color: #666a72;
+   432→}
+   433→.dlg-input:focus {
+   434→  border-color: #1591dc;
+   435→  box-shadow: 0 0 0 3px rgba(21, 145, 220, 0.15);
+   436→}
+   437→.dlg-underline-input {
+   438→  border-radius: 0;
+   439→  background: transparent;
+   440→  border: none;
+   441→  border-bottom: 1px solid #222326;
+   442→  outline: none;
+   443→}
+   444→.dlg-underline-input::placeholder {
+   445→  color: #666a72;
+   446→}
+   447→
+   448→/* ── Tinted icon chips (flat pale tints — Bevel metric accents) ───────────── */
+   449→
+   450→.chip {
+   451→  display: inline-grid;
+   452→  place-items: center;
+   453→  flex: none;
+   454→  border-radius: 12px;
+   455→}
+   456→.chip-amber {
+   457→  background: #fff4c2;
+   458→  color: #7a6400;
+   459→}
+   460→.chip-emerald {
+   461→  background: #e4f5df;
+   462→  color: #1f7a02;
+   463→}
+   464→.chip-rose {
+   465→  background: #ffe8e0;
+   466→  color: #b34a32;
+   467→}
+   468→.chip-slate {
+   469→  background: #e6ebf3;
+   470→  color: #3f4553;
+   471→}
+   472→.chip-ink {
+   473→  background: #1591dc;
+   474→  color: #ffffff;
+   475→}
+   476→.chip-gold {
+   477→  background: #fff4c2;
+   478→  color: #7a6400;
+   479→}
+   480→.chip-plum {
+   481→  background: #eeebff;
+   482→  color: #5b4bc4;
+   483→}
+   484→
+   485→/* Monogram avatar — RMIS Electric Blue identity mark with white ink.
+   486→   The ramp dips to the legacy hover #0E7ABF so small white initials keep
+   487→   readable contrast on the darker end. */
+   488→.monogram {
+   489→  display: inline-grid;
+   490→  place-items: center;
+   491→  flex: none;
+   492→  border-radius: 9999px;
+   493→  background: linear-gradient(145deg, #22a0e4 0%, #1591dc 55%, #0e7abf 100%);
+   494→  color: #ffffff;
+   495→  font-weight: 600;
+   496→  letter-spacing: 0.02em;
+   497→}
+   498→.monogram-warm {
+   499→  background: linear-gradient(145deg, #0e7abf 0%, #0a5e90 100%);
+   500→  color: #ffffff;
+   501→}
+   502→
+   503→/* ── Enterprise polish additions ─────────────────────────────────────────── */
+   504→
+   505→/* Institutional micro-label — the Bevel eyebrow: stat ledgers, rail group
+   506→   labels, card eyebrows. 11px caps, stone, one letterspacing across the app
+   507→   so micro-typography never drifts between hand-rolled call sites. */
+   508→.eyebrow {
+   509→  font-size: 11px;
+   510→  font-weight: 500;
+   511→  letter-spacing: 0.08em;
+   512→  text-transform: uppercase;
+   513→  color: var(--stone);
+   514→}
+   515→
+   516→/* Numerals: every value, date, currency, table metric */
+   517→.num {
+   518→  font-variant-numeric: tabular-nums;
+   519→  letter-spacing: -0.01em;
+   520→}
+   521→
+   522→/* Focus ring utility for custom interactive elements */
+   523→.focus-ring:focus-visible {
+   524→  outline: 2px solid #1591dc;
+   525→  outline-offset: 2px;
+   526→  border-radius: 8px;
+   527→}
+   528→
+   529→/* Skeleton shimmer */
+   530→.skel {
+   531→  position: relative;
+   532→  overflow: hidden;
+   533→  background: #edf1f7;
+   534→  border-radius: 12px;
+   535→}
+   536→.skel::after {
+   537→  content: "";
+   538→  position: absolute;
+   539→  inset: 0;
+   540→  transform: translateX(-100%);
+   541→  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+   542→  animation: skel-sweep 1.4s ease-in-out infinite;
+   543→}
+   544→@keyframes skel-sweep {
+   545→  100% {
+   546→    transform: translateX(100%);
+   547→  }
+   548→}
+   549→
+   550→/* Status pill variants (icon + tinted bg) — true Bevel capsules.
+   551→   Accessibility: state never rides on hue alone — every pill carries a
+   552→   shape-coded stroke glyph drawn as a clean 24px Lucide-geometry SVG
+   553→   (ok=check · warn=clock · bad=x · info=send · neutral=minus) masked to
+   554→   currentColor. No enclosing disc — just the professional stroke icon. */
+   555→.status-pill {
+   556→  display: inline-flex;
+   557→  align-items: center;
+   558→  gap: 6px;
+   559→  height: 24px;
+   560→  padding: 0 10px;
+   561→  border-radius: 9999px;
+   562→  font-size: 12px;
+   563→  font-weight: 500;
+   564→  line-height: 1;
+   565→  white-space: nowrap;
+   566→}
+   567→.status-pill::before {
+   568→  content: "";
+   569→  width: 12px;
+   570→  height: 12px;
+   571→  flex: none;
+   572→  background: currentColor;
+   573→  -webkit-mask: var(--pill-icon) center / contain no-repeat;
+   574→  mask: var(--pill-icon) center / contain no-repeat;
+   575→}
+   576→.status-pill.status-ok {
+   577→  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m5 12.6 4.5 4.5L19 7.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+   578→  background: var(--ok-bg);
+   579→  color: var(--ok);
+   580→}
+   581→.status-pill.status-warn {
+   582→  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9.2' fill='none' stroke='black' stroke-width='2.4'/%3E%3Cpath d='M12 7.4V12l3.4 2' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+   583→  background: var(--warn-bg);
+   584→  color: var(--warn);
+   585→}
+   586→.status-pill.status-bad {
+   587→  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.6 6.6l10.8 10.8M17.4 6.6 6.6 17.4' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+   588→  background: var(--bad-bg);
+   589→  color: var(--bad);
+   590→}
+   591→.status-pill.status-info {
+   592→  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m22 2-7 20-4-9-9-4Z' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M22 2 11 13' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+   593→  background: var(--info-bg);
+   594→  color: var(--info);
+   595→}
+   596→.status-pill.status-neutral {
+   597→  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5.5 12h13' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+   598→  background: var(--neutral-bg);
+   599→  color: var(--neutral);
+   600→}
+   601→
+   602→/* Icon status chips — tinted disc + clean Lucide-geometry stroke glyph.
+   603→   Same icon language as the status pills (check/clock/x/send/minus) so
+   604→   every status marker across the system agrees on shape AND hue. Tinted
+   605→   bg + colored icon (no solid discs) — QA 2026-02: proper professional
+   606→   icon treatment, no bare dots, no muddy disc-in-disc glyphs. */
+   607→.status-dot {
+   608→  display: inline-flex;
+   609→  align-items: center;
+   610→  justify-content: center;
+   611→  width: 20px;
+   612→  height: 20px;
+   613→  border-radius: 100px;
+   614→  flex: none;
+   615→  background: var(--neutral-bg);
+   616→  color: var(--neutral);
+   617→}
+   618→.status-dot svg {
+   619→  width: 62%;
+   620→  height: 62%;
+   621→}
+   622→.status-dot.dot-ok { background: var(--ok-bg); color: var(--ok); }
+   623→.status-dot.dot-warn { background: var(--warn-bg); color: var(--warn); }
+   624→.status-dot.dot-bad { background: var(--bad-bg); color: var(--bad); }
+   625→.status-dot.dot-info { background: var(--info-bg); color: var(--info); }
+   626→.status-dot.dot-neutral { background: var(--neutral-bg); color: var(--neutral); }
+   627→
+   628→/* Long-list scrollbars (subtle) */
+   629→.scroll-thin {
+   630→  scrollbar-width: thin;
+   631→  scrollbar-color: #d3dcea transparent;
+   632→}
+   633→.scroll-thin::-webkit-scrollbar {
+   634→  width: 6px;
+   635→  height: 6px;
+   636→}
+   637→.scroll-thin::-webkit-scrollbar-thumb {
+   638→  background: #d3dcea;
+   639→  border-radius: 100px;
+   640→}
+   641→.scroll-thin::-webkit-scrollbar-track {
+   642→  background: transparent;
+   643→}
+   644→/* Light rail scrollbar */
+   645→.rail .scroll-thin,
+   646→.rail.scroll-thin {
+   647→  scrollbar-color: #d3dcea transparent;
+   648→}
+   649→.rail .scroll-thin::-webkit-scrollbar-thumb,
+   650→.rail.scroll-thin::-webkit-scrollbar-thumb {
+   651→  background: #d3dcea;
+   652→}
+   653→
+   654→/* ============================================================================
+   655→   Mobile view: overlay-style scrolling (space-free scrollbars).
+   656→   Real phones draw transient overlay scrollbars that never reserve layout
+   657→   space; desktop engines still render classic scrollbars that eat ~15px on
+   658→   the right of the page and squeeze every form/modal opened at a mobile
+   659→   viewport. Below the sm breakpoint we hide scrollbars entirely — scrolling
+   660→   itself is untouched (touch, wheel, trackpad) — so forms use their full
+   661→   width, matching native mobile behavior.
+   662→   ========================================================================= */
+   663→@media (max-width: 639.98px) {
+   664→  *,
+   665→  *::before,
+   666→  *::after {
+   667→    scrollbar-width: none !important;
+   668→    -ms-overflow-style: none !important;
+   669→  }
+   670→  *::-webkit-scrollbar {
+   671→    display: none !important;
+   672→    width: 0 !important;
+   673→    height: 0 !important;
+   674→  }
+   675→  /* Radix scroll-lock gap compensation is pointless once no classic
+   676→     scrollbar exists — never pad the page while a dialog is open. */
+   677→  html body[data-scroll-locked] {
+   678→    margin-right: 0 !important;
+   679→    padding-right: 0 !important;
+   680→  }
+   681→}
+   682→
+   683→/* Sonner toast — soft cloud restyle */
+   684→[data-sonner-toast] {
+   685→  background: #ffffff !important;
+   686→  color: #222326 !important;
+   687→  border: 1px solid rgba(31, 32, 37, 0.06) !important;
+   688→  border-radius: 16px !important;
+   689→  box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 16px 0px !important;
+   690→  font-family: -apple-system, BlinkMacSystemFont, var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif !important;
+   691→}
+   692→[data-sonner-toast] [data-icon] {
+   693→  display: none;
+   694→}
+   695→[data-sonner-toast][data-type="success"]::before,
+   696→[data-sonner-toast][data-type="error"]::before,
+   697→[data-sonner-toast][data-type="warning"]::before {
+   698→  content: "";
+   699→  width: 8px;
+   700→  height: 8px;
+   701→  border-radius: 100px;
+   702→  flex: none;
+   703→  margin-right: 2px;
+   704→}
+   705→[data-sonner-toast][data-type="success"]::before { background: var(--ok); }
+   706→[data-sonner-toast][data-type="error"]::before { background: var(--bad); }
+   707→[data-sonner-toast][data-type="warning"]::before { background: var(--warn); }
+   708→[data-sonner-toast] [data-title] {
+   709→  font-size: 13px;
+   710→  font-weight: 500;
+   711→  letter-spacing: -0.01em;
+   712→}
+   713→[data-sonner-toast] [data-description] {
+   714→  font-size: 12px;
+   715→  color: #5d6067;
+   716→}
+   717→
+   718→/* Rich-text content rendering (job descriptions etc.) */
+   719→.rich-text p {
+   720→  margin: 0 0 0.75em;
+   721→  line-height: 1.6;
+   722→}
+   723→.rich-text ul,
+   724→.rich-text ol {
+   725→  margin: 0 0 0.75em 1.25em;
+   726→  line-height: 1.6;
+   727→}
+   728→.rich-text ul {
+   729→  list-style: disc;
+   730→}
+   731→.rich-text ol {
+   732→  list-style: decimal;
+   733→}
+   734→.rich-text strong {
+   735→  color: #222326;
+   736→  font-weight: 500;
+   737→}
+   738→.rich-text a {
+   739→  color: #222326;
+   740→  text-decoration: underline;
+   741→  text-underline-offset: 2px;
+   742→}
+   743→
+   744→/* Hairline table polish */
+   745→.table-card {
+   746→  /* Establish the containing block for absolutely-positioned descendants
+   747→     (e.g. sr-only header labels). Without it those spans anchor to the
+   748→     initial containing block, escape the card's overflow clip, and widen
+   749→     the root scroller on mobile (R-03: zero horizontal scroll). */
+   750→  position: relative;
+   751→}
+   752→.table-card thead th {
+   753→  border-bottom: 1px solid var(--border);
+   754→  /* Guarantee the institutional micro-label anatomy on every hairline table,
+   755→     even where a call site's utility classes drift: 11px caps, stone. */
+   756→  font-size: 11px;
+   757→  font-weight: 500;
+   758→  letter-spacing: 0.08em;
+   759→  text-transform: uppercase;
+   760→  color: var(--stone);
+   761→}
+   762→

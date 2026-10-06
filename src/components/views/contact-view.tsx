@@ -13,7 +13,7 @@ import { LifeBuoy, Mail, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PageHeader } from "@/components/ui/shell";
+import { IconChip, PageHeader } from "@/components/ui/shell";
 import { apiFetch } from "@/lib/client";
 
 type Status = "idle" | "busy" | "sent";
@@ -67,9 +67,7 @@ export default function ContactView() {
         <div className="dlg-card p-5 sm:p-6">
           {status === "sent" ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-cloud text-metric-blue">
-                <LifeBuoy className="h-6 w-6" aria-hidden="true" />
-              </span>
+              <IconChip icon={LifeBuoy} tone="blue" size={48} iconSize={24} />
               <h2 className="text-2xl font-semibold leading-[1.1] tracking-[-0.01em] text-ink">Inquiry received</h2>
               <p className="max-w-sm text-sm leading-relaxed text-body-gray">
                 Thank you, your request is now in the HR queue. Keep an eye on your inbox for the
@@ -162,9 +160,7 @@ export default function ContactView() {
         <aside className="space-y-3">
           {CHANNELS.map((c) => (
             <div key={c.label} className="dlg-card flex items-start gap-3.5 p-4">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cloud text-metric-blue">
-                <c.icon className="h-5 w-5" aria-hidden="true" />
-              </span>
+              <IconChip icon={c.icon} tone="blue" size={40} iconSize={20} />
               <div className="min-w-0">
                 <p className="eyebrow">{c.label}</p>
                 <p className="mt-1 text-sm leading-relaxed text-stone">{c.value}</p>

@@ -37,10 +37,10 @@ export function AppShell({
 
         {/* Content column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile top bar with sheet menu — dark premium strip */}
-          <div
-            className="rail sticky top-0 z-40 flex h-16 items-center gap-1.5 px-3 text-[var(--rail-text)] sm:px-4 lg:hidden"
-          >
+          {/* Mobile top bar with sheet menu — light rail strip. Composed
+              inline instead of the .rail class: a horizontal bar takes a
+              bottom hairline, not the rail's right-side border. */}
+          <div className="sticky top-0 z-40 flex h-16 items-center gap-1.5 border-b border-[var(--rail-border)] bg-[linear-gradient(180deg,var(--rail-bg-top)_0%,var(--rail-bg-bottom)_100%)] px-3 text-[var(--rail-text)] sm:px-4 lg:hidden">
             <MobileNav view={view} />
             <button
               onClick={() => {

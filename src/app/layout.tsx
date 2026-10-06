@@ -1,20 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, DM_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 
-// Dialog type system: Inter for body/UI; DM Sans (PP Radio Grotesk substitute,
-// light geometric grotesque) for display headings.
+// Dialog type system: Inter for body/UI and display headings (the Bevel
+// display classes all resolve to the same system+Inter stack — one font,
+// zero dead font downloads).
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const radio = DM_Sans({
-  variable: "--font-radio",
-  subsets: ["latin"],
-  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -31,10 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${radio.variable} antialiased bg-background text-foreground`}>
+      <body className={`${inter.variable} antialiased bg-background text-foreground`}>
         {children}
-        <Toaster />
-        <Sonner richColors position="top-right" />
+        <Sonner position="top-right" />
       </body>
     </html>
   );

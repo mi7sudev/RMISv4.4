@@ -16,15 +16,20 @@ import {
 } from "@/components/ui/breadcrumb";
 import CommandMenu from "@/components/shell/command-menu";
 import { NotificationCenter } from "@/components/shell/notifications-panel";
+import { NAV_CONFIG } from "@/components/shell/nav-rail";
 import { useSession } from "@/components/session-provider";
 import { humanize } from "@/lib/client";
 import type { ViewParams } from "@/lib/router";
 
+// Labels for views that do NOT sit in the rail (detail views, the public
+// board). Rail views take their label from the user's role NAV_CONFIG below,
+// so the breadcrumb always agrees with the rail (QA 2026-02: ADMIN sees
+// "Users" for candidates; the jobs views read "Jobs", never "Positions").
 const VIEW_LABELS: Record<string, string> = {
   job: "Job Workspace",
   candidate: "Candidate Profile",
   "evaluator-review": "Review",
-  jobs: "Positions",
+  jobs: "Vacant Positions",
   operations: "Command Center",
   recruitment: "Jobs",
   candidates: "Candidates",
@@ -57,7 +62,15 @@ export function WorkspaceHeader({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const label = VIEW_LABELS[view] ?? humanize(view) ?? "Workspace";
+  // Role-aware label: the rail's NAV_CONFIG entry wins for views that live
+  // in the rail (ADMIN "candidates" → "Users", "recruitment" → "Jobs");
+  // everything else falls back to VIEW_LABELS, then humanize.
+  const railLabel = user
+    ? (NAV_CONFIG[user.role] ?? [])
+        .flatMap((g) => g.items)
+        .find((i) => i.view === view)?.label
+    : undefined;
+  const label = railLabel ?? VIEW_LABELS[view] ?? humanize(view) ?? "Workspace";
 
   return (
     <div className="w-full">

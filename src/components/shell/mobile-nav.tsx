@@ -37,7 +37,7 @@ export function MobileNav({ view }: { view: string }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
-          className="grid h-11 w-11 shrink-0 place-items-center text-ink hover:bg-[var(--rail-hover-bg)]"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-[var(--rail-hover-bg)]"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />

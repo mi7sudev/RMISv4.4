@@ -13,15 +13,16 @@ import {
   Inbox, LayoutDashboard, RefreshCw, UserX,
 } from "lucide-react";
 import {
-  EmptyState, IconChip, Monogram, PageHeader, SkeletonRows, StatCell, StatLedger,
-  StatLedgerSkeleton, StatusPill, type ChipTone,
+  EmptyState, IconChip, Monogram, nameInitials, PageHeader, SkeletonRows, StatCell, StatLedger,
+  StatLedgerSkeleton, StatusPill,
 } from "@/components/ui/shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, deadlineState, formatDate, fullName } from "@/lib/client";
 import { navigate } from "@/lib/router";
-import { getStatusMeta, stageForStatus, PIPELINE_STAGES, type StageKey } from "@/lib/status";
-import { variantForStatus } from "@/lib/status-ui";
-import { ghostBtn } from "@/components/views/recruitment";
+import { getStatusMeta, stageForStatus, PIPELINE_STAGES } from "@/lib/status";
+import { STAGE_VIZ } from "@/lib/status-ui";
+import { useFocusRefresh } from "@/lib/use-focus-refresh";
+import { ghostBtn } from "@/components/ui/buttons";
 
 type Stats = {
   totalUsers: number;
@@ -63,25 +64,9 @@ type JobRow = {
   position: { placeOfAssignment: string | null; division: string | null } | null;
 };
 
-/** First-letter monogram text ("?" when empty). */
-function initialsOf(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
-
-/** Stage colors for the pipeline sparkline (same tokens as the analytics funnel). */
-const STAGE_SPARK: Record<StageKey, string> = {
-  "Applied": "var(--info)",
-  "Under Review": "var(--warn)",
-  "Shortlisted": "var(--ok)",
-  "Rejected": "var(--bad)",
-};
+/** Stage colors for the pipeline sparkline — the shared STAGE_VIZ map
+    (same tokens as the analytics funnel). */
+const STAGE_SPARK = STAGE_VIZ;
 
 /** Tiny stacked pipeline bar for the stat card aside — built only from byStatus wire data. */
 function PipelineSpark({ byStatus }: { byStatus: { status: string; count: number }[] }) {
@@ -146,15 +131,7 @@ export default function CommandCenter() {
     }, 30_000);
     return () => clearInterval(id);
   }, [load]);
-  useEffect(() => {
-    const onFocus = () => void load(true);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [load]);
+  useFocusRefresh(load);
 
   const manualRefresh = useCallback(() => {
     setSpin(true);
@@ -190,12 +167,18 @@ export default function CommandCenter() {
     return (
       <div className="space-y-6">
         {header}
-        <div className="dlg-card p-8 text-center space-y-4">
-          <AlertTriangle className="h-8 w-8 text-dusty-rose mx-auto" aria-hidden />
-          <p className="text-sm text-stone">{error}</p>
-          <button type="button" className={ghostBtn} onClick={() => void load()}>
-            Retry
-          </button>
+        <div className="dlg-card p-8">
+          <EmptyState
+            icon={AlertTriangle}
+            tone="rose"
+            title="Couldn't load the command center"
+            description={error}
+            action={
+              <button type="button" className={ghostBtn} onClick={() => void load()}>
+                Retry
+              </button>
+            }
+          />
         </div>
       </div>
     );
@@ -280,7 +263,7 @@ export default function CommandCenter() {
               <div className="dlg-card p-6 sm:p-10">
                 <EmptyState
                   icon={Briefcase}
-                  title="No active job postings right now."
+                  title="No active job postings right now"
                   description="Publish a posting in recruitment to start receiving applications."
                   action={
                     <button
@@ -338,7 +321,7 @@ export default function CommandCenter() {
               <div className="dlg-card p-6 sm:p-10">
                 <EmptyState
                   icon={Inbox}
-                  title="No applications yet."
+                  title="No applications yet"
                   description="Recent applications will appear here as candidates apply."
                   compact
                 />
@@ -353,7 +336,7 @@ export default function CommandCenter() {
                     onClick={() => navigate("candidate", { id: String(r.applicant.id) })}
                   >
                     <span aria-hidden="true" className="contents">
-                      <Monogram size={28} className="rounded-full">{initialsOf(fullName(r.applicant))}</Monogram>
+                      <Monogram size={28} className="rounded-full">{nameInitials(fullName(r.applicant))}</Monogram>
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">{fullName(r.applicant)}</p>
@@ -361,7 +344,7 @@ export default function CommandCenter() {
                         {[r.positionTitle || r.jobTitle, formatDate(r.dateApplied)].filter(Boolean).join(" · ")}
                       </p>
                     </div>
-                    <StatusPill status={getStatusMeta(r.status).label} variant={variantForStatus(r.status)} />
+                    <StatusPill status={r.status} />
                   </button>
                 ))}
               </div>
@@ -405,7 +388,7 @@ export default function CommandCenter() {
           </div>
           {/* Quiet ledger tile — fog panel so the alerts read as one anchored
               group under the cloud Overview card, not loose text on paper. */}
-          <div className="space-y-2.5 rounded-[16px] bg-fog p-4">
+          <div className="space-y-2.5 rounded-lg bg-fog p-4">
             {(
               [
                 [CalendarClock, stats.needsAttention.deadlinesThisWeek, "posting deadline(s) within 7 days", "warn"],
