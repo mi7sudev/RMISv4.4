@@ -18,20 +18,20 @@
 // interior tiles inside the detail modal, capsule CTAs, body-gray copy.
 // ============================================================================
 
-import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
   AlertCircle,
   ArrowRight,
   BadgeCheck,
+  Bookmark,
   Briefcase,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   Inbox,
   MapPin,
-  Minus,
-  Plus,
   RefreshCw,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EmptyState, IconChip, PageHeader, StatusPill } from "@/components/ui/shell";
-import { apiFetch, deadlineState, formatCurrency, formatDate, humanize } from "@/lib/client";
+import { apiFetch, deadlineState, formatCurrency, formatDate, humanize, timeAgo } from "@/lib/client";
 import { navigate, type ApplicationWire, type JobWire, type PositionWire } from "@/lib/router";
 import { currentStageLabel, stageForStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -195,6 +195,43 @@ function JourneyTimeline({ status }: { status: string }) {
       })}
     </div>
   );
+}
+
+/** Posting age source — editorial publish date, else the record timestamp. */
+function postedAt(job: JobWire): string {
+  return job.publishDate ?? job.publishedAt;
+}
+
+// Shared with the frontpage explorer — bookmarks saved here show as saved
+// there and vice versa.
+const SAVED_KEY = "rmis-frontpage-saved-jobs";
+
+/** Client-persisted bookmark list (same store as the frontpage). */
+function useSavedJobs() {
+  const [saved, setSaved] = useState<number[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(SAVED_KEY);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+      return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggle = useCallback((id: number) => {
+    setSaved((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try {
+        window.localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+      } catch {
+        /* storage unavailable — in-session state still works */
+      }
+      return next;
+    });
+  }, []);
+
+  return { saved, toggle };
 }
 
 // ── Application journey card (right rail) ───────────────────────────────────
@@ -456,83 +493,88 @@ function QuickFact({ label, value, danger }: { label: string; value: string; dan
   );
 }
 
-/** The board card register, ported: momentum rule, humanized title + gold
- *  Applied pill, pipe-separated vitals (place | type | pay | closes), square
- *  ember "+/−" toggle and the in-place quick view (clamped description ·
- *  six QuickFacts · actions). "Apply now" and "Read full description" both
- *  deep-link into the job's full posting on the Positions board. */
+/** The frontpage job card, ported for the applicant: title + division +
+ *  place + pay + clamped snippet, bottom register (posted age · quick-view
+ *  chevron · bookmark), in-place quick view. Applicant extras kept: the gold
+ *  Applied pill rides beside the title, and the quick view's "Apply now" CTA
+ *  deep-links into the job's full posting on the Positions board. */
 function JobListCard({
   job,
   applied,
   expanded,
+  saved,
   onToggle,
+  onSave,
   onOpen,
 }: {
   job: JobWire;
   applied: boolean;
   expanded: boolean;
+  saved: boolean;
   onToggle: () => void;
+  onSave: () => void;
   onOpen: () => void;
 }) {
   const reduced = useReducedMotion();
   const pos = job.position;
   const title = pos?.positionTitle || job.title || "Position Title Unavailable";
-  const place = jobPlace(job);
+  const company = pos?.division || "DOST-MIRDC";
   const salary = pos?.salaryAmount ?? null;
   const deadline = job.deadlineDate;
   const overdue = deadline ? new Date(deadline).getTime() < Date.now() : false;
 
-  // Meta — pipe-separated vitals, the card register (place | type | pay |
-  // closes); overdue flips the closer to red.
-  const meta: { label: string; className?: string }[] = [{ label: place }];
-  if (job.positionType) meta.push({ label: humanize(job.positionType) });
-  if (salary != null) meta.push({ label: `${formatCurrency(salary)} monthly`, className: "num" });
-  meta.push({
-    label: overdue ? "Closed" : deadline ? `Closes ${formatDate(deadline)}` : "Open until filled",
-    className: overdue ? "font-semibold text-[var(--bad)]" : "num",
-  });
-
   return (
-    <div className="dlg-card lift group relative overflow-hidden">
-      {/* Metric-blue rule — wipes in across the card on hover */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 origin-left scale-x-0 bg-metric-blue transition-transform duration-500 ease-out group-hover:scale-x-100"
-      />
-      <div className="flex items-stretch">
+    <article className="dlg-card lift">
+      {/* Open target — title, division, vitals, snippet. Opens the full
+          posting, the same jump the frontpage card's select makes. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`View ${humanize(title)}`}
+        className="focus-ring block w-full px-4 pt-4 text-left sm:px-5 sm:pt-5"
+      >
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h3 className="min-w-0 text-lg font-semibold leading-snug text-ink">{humanize(title)}</h3>
+          {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
+        </div>
+        <p className="mt-1 text-lg text-ink">{company}</p>
+        <p className="mt-2.5 text-sm text-stone">{jobPlace(job)}</p>
+        {salary != null && <p className="num mt-0.5 text-sm text-stone">{formatCurrency(salary)} per month</p>}
+        {job.briefDescription && (
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone">{job.briefDescription}</p>
+        )}
+      </button>
+
+      {/* Bottom register — posted age left, quick-view + bookmark right */}
+      <div className="flex items-center justify-between gap-2 px-2.5 pb-2 sm:px-3.5">
         <button
           type="button"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-label={expanded ? `Collapse: ${title}` : `Expand: ${title}`}
-          className="focus-ring min-w-0 flex-1 px-5 py-6 text-left sm:px-8 sm:py-7"
+          onClick={onOpen}
+          className="focus-ring num rounded-full px-2 py-1.5 text-xs text-stone transition-colors hover:text-ink"
+          aria-label={`Open ${humanize(title)}`}
         >
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <h3 className="min-w-0 text-lg font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-2xl">{humanize(title)}</h3>
-            {applied && <StatusPill status="Applied" variant="info" className="shrink-0" />}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-stone">
-            {meta.map((m, idx) => (
-              <Fragment key={idx}>
-                {idx > 0 && (
-                  <span aria-hidden="true" className="select-none text-pebble">
-                    |
-                  </span>
-                )}
-                <span className={m.className}>{m.label}</span>
-              </Fragment>
-            ))}
-          </div>
+          {timeAgo(postedAt(job))}
         </button>
-        <div className="flex shrink-0 items-center pr-4 sm:pr-6">
+        <div className="flex items-center">
           <button
             type="button"
             onClick={onToggle}
             aria-expanded={expanded}
-            aria-label={expanded ? `Hide quick view: ${title}` : `Quick view: ${title}`}
-            className="dlg-cta focus-ring grid h-11 w-11 shrink-0 place-items-center"
+            aria-label={expanded ? `Collapse: ${humanize(title)}` : `Quick view: ${humanize(title)}`}
+            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
           >
-            {expanded ? <Minus className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-5 w-5" strokeWidth={2.5} />}
+            <ChevronDown
+              className={cn("h-[18px] w-[18px] transition-transform duration-200", expanded && "rotate-180")}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            aria-pressed={saved}
+            aria-label={saved ? `Remove ${humanize(title)} from saved` : `Save ${humanize(title)}`}
+            className="focus-ring grid h-9 w-9 place-items-center rounded-full text-stone transition-colors hover:bg-white/70 hover:text-ink"
+          >
+            <Bookmark className={cn("h-[18px] w-[18px]", saved && "fill-current text-metric-blue")} />
           </button>
         </div>
       </div>
@@ -551,7 +593,7 @@ function JobListCard({
             transition={reduced ? { duration: 0.15, ease: "linear" } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="border-t border-divider px-5 pb-7 pt-5 sm:px-8 sm:pb-8 sm:pt-6">
+            <div className="border-t border-divider px-4 pb-6 pt-4 sm:px-5 sm:pt-5">
               {job.briefDescription && (
                 <div>
                   <h4 className="text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Job description</h4>
@@ -610,7 +652,7 @@ function JobListCard({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </article>
   );
 }
 
@@ -631,12 +673,19 @@ function HomeSkeleton() {
           <div className="skel h-6 w-36" />
           <div className="space-y-4 sm:space-y-5">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="dlg-card flex items-center gap-5 px-6 py-7 sm:px-8">
-                <div className="min-w-0 flex-1 space-y-3.5">
-                  <div className="skel h-7 w-3/4" />
+              <div key={i} className="dlg-card px-5 py-5 sm:px-6">
+                <div className="min-w-0 space-y-3">
+                  <div className="skel h-6 w-3/4" />
                   <div className="skel h-5 w-1/2" />
+                  <div className="skel h-4 w-2/3" />
                 </div>
-                <div className="skel h-11 w-11 shrink-0" />
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="skel h-4 w-14 rounded-full" />
+                  <div className="flex items-center gap-1.5">
+                    <div className="skel h-9 w-9 rounded-full" />
+                    <div className="skel h-9 w-9 rounded-full" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -663,6 +712,8 @@ export default function ApplicantHome() {
   const [detail, setDetail] = useState<ApplicationWire | null>(null);
   // Quick view — single-expand: opening one card closes the previous one.
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  // Bookmarks — the same client store the frontpage explorer uses.
+  const { saved, toggle: toggleSave } = useSavedJobs();
 
   const reload = useCallback(async (silent: boolean) => {
     try {
@@ -870,7 +921,9 @@ export default function ApplicantHome() {
                     job={j}
                     applied={(j.applications?.length ?? 0) > 0}
                     expanded={expandedId === j.id}
+                    saved={saved.includes(j.id)}
                     onToggle={() => setExpandedId(expandedId === j.id ? null : j.id)}
+                    onSave={() => toggleSave(j.id)}
                     onOpen={() => navigate("jobs", { job: String(j.id) })}
                   />
                 ))}

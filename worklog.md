@@ -879,3 +879,19 @@ Work Log:
 
 Stage Summary:
 - Journey timeline renders one unbroken progress line in solid brand blue; gradient and center gap eliminated
+
+---
+Task ID: 5
+Agent: Z.ai Code (main)
+Task: Redesign applicant home "Job Openings / Apply Now" cards to match the frontpage job list cards
+
+Work Log:
+- Ported the frontpage JobListCard anatomy into applicant-home.tsx: title + division + place + pay + 2-line snippet, bottom register (posted age | chevron quick-view | bookmark)
+- Replaced the square blue +/− toggle and pipe-separated meta row with the frontpage's round icon buttons
+- Added useSavedJobs hook (same localStorage key rmis-frontpage-saved-jobs) so bookmarks sync with the frontpage
+- Preserved applicant features: gold Applied pill beside title, quick view with Apply now CTA + Read full description + QuickFacts grid
+- Card body click now opens the full posting (frontpage select-equivalent); chevron expands in-place quick view
+- Updated loading skeleton to the new card proportions; lint clean
+
+Stage Summary:
+- Apply Now section now visually matches the frontpage job cards; verified desktop + mobile, quick view, bookmark toggle (fills blue), no console errors
