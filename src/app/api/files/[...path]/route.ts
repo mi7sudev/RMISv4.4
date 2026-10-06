@@ -1,5 +1,6 @@
 // ============================================================================
 // RMIS — File serving (spec §6.4, §10). GET /api/files/<applicantId>/<file>.
+// A leading "upload" segment is tolerated (doc.filePath form) and stripped.
 // Any signed-in user; APPLICANT → own directory only (403 otherwise);
 // EVALUATOR/ADMIN → any. `.meta.json` sidecars are never served. Path
 // containment guard. Inline disposition with the original filename (RFC 5987);
@@ -21,6 +22,9 @@ export const GET = handleApi(async (req: Request, { params }: { params: Promise<
 
   const { path: segments } = await params;
   if (!segments || segments.length < 2) throw new ApiError("Not found", 404);
+  // Accept both /api/files/<id>/<file> and /api/files/upload/<id>/<file>.
+  if (segments[0] === "upload") segments.shift();
+  if (segments.length < 2) throw new ApiError("Not found", 404);
 
   // Containment guard: the resolved path must stay inside the upload root.
   const resolved = path.resolve(UPLOAD_ROOT, ...segments);

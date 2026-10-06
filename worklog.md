@@ -1012,3 +1012,19 @@ Work Log:
 
 Stage Summary:
 - Rating moved from 6.5/10 → ~8.5/10 vs enterprise parsers: validation+normalization layer, quality scoring with review flags, parser metadata/observability, image (vision) support, full CS-212 schema coverage (IDs, physical, voluntary work, skills), concurrent processing, and a reproducible benchmark suite with a filled-2026 regression fixture. Remaining gap to close later: per-field source provenance (cell/bbox), skills taxonomy normalization, correction feedback loop, and async job queue for very large batches.
+
+---
+Task ID: 9
+Agent: Z.ai Code (main)
+Task: Profile Section 7 (Documents) — make uploaded document rows clickable and viewable in a modal
+
+Work Log:
+- Located DocumentsSection (src/components/views/profile/documents-section.tsx) and the file-serving route (src/app/api/files/[...path]/route.ts).
+- Found latent bug: route resolved paths against upload/ root but existing callers used doc.filePath URLs that include an "upload/" prefix → 404s for profile picture & candidate-detail links. Fixed route to strip a leading "upload" segment; both URL forms now resolve (verified 200 in dev.log).
+- Added preview modal to DocumentsSection: row name/chip area is now a click target + explicit Eye icon button per row; checkbox & delete remain independent.
+- Modal renders PDFs inline via iframe (62vh), images via <img>, and Word/Excel via a "No inline preview" download card. Header shows file name, category · size · date, extraction StatusPill. Footer has "Open in new tab" (dlg-ghost) and "Download" (primary, download attribute).
+- Loading spinner overlay while iframe/image loads; Escape/overlay close via Radix Dialog.
+- Verified with agent-browser as testapplicant: PDF modal rendered actual PDS page, XLSX fallback card shown, Escape closes, /api/files/* all 200, lint clean.
+
+Stage Summary:
+- Documents section rows are now click-to-view with a Bevel-styled preview modal; pre-existing broken file URLs (profile picture, candidate-detail) silently repaired by the route fix. No schema or API contract changes.

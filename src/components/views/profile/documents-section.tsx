@@ -7,6 +7,9 @@
 // toasts; rows show name / size / category / date (+ status pill for
 // extractable categories, extraction error via tooltip) with single and
 // checkbox batch delete.
+// Rows are clickable: the name/chip area (or the eye button) opens a preview
+// modal — PDFs render inline in an iframe, images in an <img>, Word/Excel
+// fall back to a download card. Checkbox and delete stay independent.
 // Bevel pass: local white section panel, cloud/60 tiles, StatusPill document
 // statuses, .num metrics, functional --bad destructive styling. All behavior
 // unchanged.
@@ -14,7 +17,25 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileText, FileUp, Loader2, Paperclip, Trash2, type LucideIcon } from "lucide-react";
+import {
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  FileUp,
+  Loader2,
+  Paperclip,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +123,24 @@ function fileKind(name: string): string {
   return ext ? ext.toUpperCase().slice(0, 4) : "FILE";
 }
 
+/** How the preview modal renders a document: inline PDF, inline image, or download fallback. */
+type PreviewKind = "pdf" | "image" | "none";
+
+function previewKind(doc: DocumentWire): PreviewKind {
+  const mime = (doc.mimeType || "").toLowerCase();
+  if (mime === "application/pdf") return "pdf";
+  if (mime.startsWith("image/")) return "image";
+  const ext = (doc.originalName.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "").toLowerCase();
+  if (ext === "pdf") return "pdf";
+  if (["png", "jpg", "jpeg", "gif", "webp", "bmp"].includes(ext)) return "image";
+  return "none";
+}
+
+/** Signed file URL — the route strips the leading "upload" segment itself. */
+function fileUrl(doc: DocumentWire): string {
+  return `/api/files/${doc.filePath}`;
+}
+
 /** Document extraction status → label + functional variant (§2 status system). */
 function statusChip(doc: DocumentWire): { label: string; variant: StatusVariant } | null {
   if (!EXTRACTABLE.includes(doc.category)) return null;
@@ -132,8 +171,17 @@ export default function DocumentsSection({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteTargets, setDeleteTargets] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [preview, setPreview] = useState<DocumentWire | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [savedFlash, flashSaved] = useSavedFlash();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const openPreview = (doc: DocumentWire) => {
+    setPreviewLoading(true);
+    setPreview(doc);
+  };
+
+  const previewKindValue = preview ? previewKind(preview) : "none";
 
   const uploadFiles = async (files: FileList) => {
     if (!category) {
@@ -300,20 +348,32 @@ export default function DocumentsSection({
                   <Checkbox
                     checked={selected.has(doc.id)}
                     onCheckedChange={() => toggle(doc.id)}
+                    onClick={(e) => e.stopPropagation()}
                     aria-label={`Select ${doc.originalName}`}
                     className="shrink-0"
                   />
-                  <span className="chip chip-slate h-6 shrink-0 px-2 text-[10px] font-semibold tracking-wide" aria-hidden="true">
-                    {fileKind(doc.originalName)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink" title={doc.originalName}>
-                      {doc.originalName}
-                    </p>
-                    <p className="num text-xs text-stone">
-                      {humanize(doc.category)} · {Math.max(1, Math.round(doc.size / 1024))} KB · {formatDate(doc.createdAt)}
-                    </p>
-                  </div>
+                  {/* Clickable view target: chip + name/meta open the preview modal. */}
+                  <button
+                    type="button"
+                    onClick={() => openPreview(doc)}
+                    className="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left focus-ring"
+                    aria-label={`View ${doc.originalName}`}
+                  >
+                    <span className="chip chip-slate h-6 shrink-0 px-2 text-[10px] font-semibold tracking-wide" aria-hidden="true">
+                      {fileKind(doc.originalName)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="truncate text-sm font-medium text-ink transition-colors group-hover:text-primary group-focus-visible:text-primary"
+                        title={doc.originalName}
+                      >
+                        {doc.originalName}
+                      </p>
+                      <p className="num text-xs text-stone">
+                        {humanize(doc.category)} · {Math.max(1, Math.round(doc.size / 1024))} KB · {formatDate(doc.createdAt)}
+                      </p>
+                    </div>
+                  </button>
                   {chip && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -324,6 +384,14 @@ export default function DocumentsSection({
                       )}
                     </Tooltip>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => openPreview(doc)}
+                    aria-label={`View ${doc.originalName}`}
+                    className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-full text-stone transition-colors hover:bg-white hover:text-ink"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setDeleteTargets([doc.id])}
@@ -364,6 +432,105 @@ export default function DocumentsSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Document preview modal — click a row to view it here */}
+      <Dialog
+        open={preview !== null}
+        onOpenChange={(o) => {
+          if (!o) setPreview(null);
+        }}
+      >
+        {preview && (
+          <DialogContent className="dlg-card-plain flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+            <DialogHeader className="gap-0.5 border-b border-divider px-5 py-4 text-left sm:pr-14">
+              <div className="flex min-w-0 items-center gap-3">
+                <IconChip icon={FileText} tone="slate" size={36} iconSize={16} />
+                <div className="min-w-0 flex-1">
+                  <DialogTitle
+                    className="truncate text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg"
+                    title={preview.originalName}
+                  >
+                    {preview.originalName}
+                  </DialogTitle>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <DialogDescription className="num text-xs text-body-gray">
+                      {humanize(preview.category)} · {Math.max(1, Math.round(preview.size / 1024))} KB · {formatDate(preview.createdAt)}
+                    </DialogDescription>
+                    {statusChip(preview) && (
+                      <StatusPill
+                        status={statusChip(preview)!.label}
+                        variant={statusChip(preview)!.variant}
+                        className="cursor-default"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              {previewKindValue === "pdf" ? (
+                <div className="relative h-[62vh] overflow-hidden rounded-lg border border-divider bg-white">
+                  {previewLoading && (
+                    <div className="absolute inset-0 z-10 grid place-items-center bg-white/80">
+                      <Loader2 className="h-6 w-6 animate-spin text-stone" />
+                    </div>
+                  )}
+                  <iframe
+                    src={fileUrl(preview)}
+                    title={`Preview of ${preview.originalName}`}
+                    className="h-full w-full"
+                    onLoad={() => setPreviewLoading(false)}
+                  />
+                </div>
+              ) : previewKindValue === "image" ? (
+                <div className="relative grid min-h-[40vh] place-items-center overflow-hidden rounded-lg border border-divider bg-cloud/40 p-3">
+                  {previewLoading && (
+                    <div className="absolute inset-0 z-10 grid place-items-center bg-white/80">
+                      <Loader2 className="h-6 w-6 animate-spin text-stone" />
+                    </div>
+                  )}
+                  <img
+                    src={fileUrl(preview)}
+                    alt={`Preview of ${preview.originalName}`}
+                    className="max-h-[62vh] w-auto max-w-full rounded object-contain"
+                    onLoad={() => setPreviewLoading(false)}
+                    onError={() => setPreviewLoading(false)}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-divider bg-cloud/40 px-6 py-10 text-center">
+                  <IconChip icon={FileText} tone="slate" size={48} iconSize={20} />
+                  <div>
+                    <p className="text-sm font-medium text-ink">
+                      No inline preview for {fileKind(preview.originalName)} files
+                    </p>
+                    <p className="mt-1 text-xs text-body-gray">Download the file to view it on your device.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex-row items-center justify-between gap-2 border-t border-divider px-5 py-4">
+              <a
+                href={fileUrl(preview)}
+                target="_blank"
+                rel="noreferrer"
+                className="dlg-ghost inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 text-sm"
+              >
+                <ExternalLink className="h-4 w-4" /> Open in new tab
+              </a>
+              <a
+                href={fileUrl(preview)}
+                download={preview.originalName}
+                className="focus-ring inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Download className="h-4 w-4" /> Download
+              </a>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </SectionPanel>
   );
 }
