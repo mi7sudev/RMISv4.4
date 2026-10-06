@@ -157,21 +157,25 @@ function JourneyTimeline({ status }: { status: string }) {
         return (
           <div key={`${s.label}-${i}`} className="flex flex-col items-center gap-1.5 text-center">
             <div className="flex w-full items-center">
-              {/* Traversed connectors pick up a subtle ok→warn gradient tint. */}
+              {/* Traversed connectors render in solid brand blue. Negative
+                  outer margins bridge the grid's gap-1 so each rail reads
+                  as one continuous line, not segments with center gaps. */}
               <div
                 className={cn(
                   "h-px flex-1",
-                  i === 0 ? "bg-transparent" : reached ? "bg-gradient-to-r from-[var(--ok)]/60 to-[var(--warn)]/45" : "bg-divider"
+                  i > 0 && "-ml-1",
+                  i === 0 ? "bg-transparent" : reached ? "bg-primary" : "bg-divider"
                 )}
               />
               <CheckpointDot state={s.state} />
               <div
                 className={cn(
                   "h-px flex-1",
+                  i < steps.length - 1 && "-mr-1",
                   i === steps.length - 1
                     ? "bg-transparent"
                     : steps[i + 1].state !== "pending"
-                      ? "bg-gradient-to-r from-[var(--ok)]/60 to-[var(--warn)]/45"
+                      ? "bg-primary"
                       : "bg-divider"
                 )}
               />

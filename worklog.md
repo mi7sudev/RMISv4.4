@@ -866,3 +866,16 @@ Work Log:
 
 Stage Summary:
 - Verified in browser at 1280x800 and 390x844: brand mark + agency name render directly under the headline, CTA below, job cards untouched
+
+---
+Task ID: 4
+Agent: Z.ai Code (main)
+Task: Fix "Your Applications In Progress" journey timeline — center gap + gradient color
+
+Work Log:
+- Root cause: JourneyTimeline (applicant-home.tsx) splits connectors per grid column; grid gap-1 produced visible breaks at column boundaries; traversed segments used ok->warn gradient
+- Fix: negative outer margins (-ml-1/-mr-1) bridge the gap so each rail is one continuous line; traversed segments now solid bg-primary (#1591dc RMIS Electric Blue)
+- Verified as testapplicant in browser at 1280x800 + 390x844: blue Submitted->Review segment continuous, pending segment continuous gray, dots keep state colors, no console errors
+
+Stage Summary:
+- Journey timeline renders one unbroken progress line in solid brand blue; gradient and center gap eliminated
