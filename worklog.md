@@ -971,3 +971,26 @@ Work Log:
 
 Stage Summary:
 - System status discs now 18px with 11.5px glyphs — legible but not bulky across funnel, pipelines, tables, and rails.
+
+---
+Task ID: 10
+Agent: Z.ai Code (main)
+Task: Make sure the PDS extraction supports the uploaded formats/versions — SIMBAJON 2017 xlsx + pdf, DELIMIOS-PDS.xlsx, and the blank "cs form 2026.xlsx" (CS Form 212 Revised 2026 edition).
+
+Work Log:
+- Inspected workbook geometry of all files (scripts/inspect-pds.ts, scripts/dump-pds.ts): multi-sheet C1–C4 + Lookup (2017) and C1–C4 + C5–C11 continuation sheets (2026); found hidden helper columns P/Q (dropdown option lists "Single/Married/Separated", country names) leaking into scanRight results across blank value areas.
+- pds-extract.ts deterministic parser upgrades:
+  - scanRight now stops after 3 consecutive empty cells and skips template captions (CAPTION_RE) — kills the "extensionName=Married"/"citizenship=Separated" junk from helper columns; added scanAbove for underline-caption address blocks.
+  - Address extraction rewritten caption-anchored: houseNumber/street/subdivision/barangay/city/province/zipCode + joined presentAddress (residential preferred over permanent).
+  - findRow rejects section banners on RAW text (roman-numeral titles, "(Continuation)" rows) so tables always anchor on real column headers.
+  - Section clamp accepts 2026 "Continue on sheet C<n>" notes; entries with no non-null values are dropped; caption-echo rows (TITLE OF…/POSITION TITLE/NAME OF SCHOOL/CAREER SERVICE RA 1080) rejected in builds.
+  - 2026 support: detectRevision two-pass prefers "Revised <year>" footer → day-first (dd/mm/yyyy) date parsing via pdsDayFirst + ambiguity heuristics; trainings header anchored on "TITLE OF LEARNING…" caption (not the VI./VII. banner); license/validity columns (NUMBER + Date of Validity/Valid Until) extracted.
+  - Percent-formatted rating cells surface as "88.53%" (cellNF + cellDisplay) instead of raw 0.8853; whitespace (\r\n) collapsed in values; put() drops N/A + captions; mobile takes first valid PH number from "09270035829 / 09922092759" (fits optStr(20)).
+- PDF pipeline: extractPdfText now rebuilds VISUAL ROWS from glyph coordinates (pdf.js via unpdf — group by baseline y, insert "│" on x-gaps, per-page sections) instead of jumbled text; AI prompt rewritten with PDS item-number anchors, name-ordering rule, educationLevel normalization, blank-template caption warning, and 16k budget. SIMBAJON PDF: 137→149 fields with correct name split (SIMBAJON/YONZON/SHAUN WESLEY), full address, 4 work rows, 13 trainings, rating 88.53% + license 596531.
+- Anti-hallucination: sanitizeAiExtraction filters caption-identical AI values, enforces Jr/Sr-only extensionName, suppresses gender/civilStatus/citizenship guesses on the xlsx path when the deterministic parser found the form empty, and drops caption-echo table rows; extract route returns merged:null when the merge has 0 fields so the UI shows the per-document blank-template guidance.
+- Regression harnesses kept: scripts/test-pds.ts, scripts/test-pds-2026-filled.ts (fills the blank 2026 template programmatically), scripts/test-pds-pdf.ts.
+- Verified in browser as testapplicant: Clear → upload DELIMIOS-PDS.xlsx → EXTRACTED in 719ms → auto-apply (13 personal, 3 education, 1 work, 18 trainings) → form shows MAR JAMES KENITTE / DELIMIOS / 09319312627; uploaded filled-2026 simulation → birth date 2001-12-29 (day-first proven in UI), 2 work / 2 trainings / 1 eligibility; uploaded blank cs form 2026.xlsx → friendly "blank CS Form 212 template" error, no junk data, no lock; profile restored with DELIMIOS extraction. Lint clean, dev.log clean.
+
+Stage Summary:
+- All four uploaded files are supported end-to-end: 2017 xlsx (deterministic, high fidelity, fast ~100ms), 2017 pdf (AI on coordinate-rebuilt rows), DELIMIOS xlsx, and the Revised 2026 edition (blank template correctly refused with guidance; filled 2026 parses with dd/mm/yyyy dates, percent ratings, license columns, C5–C11 continuation sheets).
+- Parser is version-adaptive (probes labels, resolves columns from headers) so future agency re-revisions keep working; AI fallback hardened against blank-template hallucination.

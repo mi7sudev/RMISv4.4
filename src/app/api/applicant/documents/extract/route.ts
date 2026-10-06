@@ -15,7 +15,6 @@ import { db } from "@/lib/db";
 import { EXTRACTABLE_CATEGORIES } from "@/lib/validation";
 import { extractFromDocument, countExtractedFields, mergeExtractions, type ExtractionResult } from "@/lib/pds-extract";
 import path from "path";
-
 type ExtractOutcome = {
   id: string;
   status: "EXTRACTED" | "PARTIALLY_EXTRACTED" | "FAILED";
@@ -138,7 +137,12 @@ export const POST = handleApi(async (req: Request) => {
           });
         }
 
-        const merged = mergeExtractions(results.map((r) => r.extraction ?? null));
+        // merged = per-field highest-confidence merge across docs — but only
+        // when it carries actual data. An empty merge (blank CS Form 212
+        // template, hallucination-free AI nulls) must surface as null so
+        // clients fall back to the per-document error messages.
+        const mergedRaw = mergeExtractions(results.map((r) => r.extraction ?? null));
+        const merged = mergedRaw && countExtractedFields(mergedRaw) > 0 ? mergedRaw : null;
         finish(JSON.stringify({ results, merged }));
       } catch {
         finish(JSON.stringify({ results: [], merged: null, error: "Extraction failed. Please try again." }));

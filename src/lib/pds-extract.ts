@@ -6,11 +6,14 @@
 // Prompt contract: extract only what is clearly present; NEVER fabricate;
 // not found ⇒ null + confidence "none"; dates → YYYY-MM-DD; JSON only.
 // The deterministic parser is VERSION-ADAPTIVE: it handles the official
-// multi-sheet CS Form 212 (Revised 2017 and agency re-revisions of any year,
-// including 2026-era templates), its continuation sheets, and older/lower
-// single-sheet legacy PDS layouts, by probing labels with boilerplate
-// stripped and resolving table columns from their header rows instead of
-// assuming one template's geometry.
+// multi-sheet CS Form 212 — Revised 2017 AND Revised 2026 (agency copies of
+// both, e.g. "SIMBAJON_…(2017 Revised Edition)….xlsx", "cs form 2026.xlsx") —
+// plus its continuation sheets and older/lower single-sheet legacy PDS
+// layouts, by probing labels with boilerplate stripped and resolving table
+// columns from their header rows instead of assuming one template's geometry.
+// 2026 deltas handled: dd/mm/yyyy dates (day-first parsing), "SEX AT BIRTH",
+// UMID/PhilSys ID labels, L&D (VI) before Voluntary Work (VII), "Continue on
+// sheet C<n>" notes, "Valid Until" license columns, C5–C11 continuation sheets.
 // ============================================================================
 
 import * as XLSX from "xlsx";
@@ -38,7 +41,12 @@ const cv = (value: string | number | null, confidence: ConfidentValue["confidenc
 // LEARNING AND DEVELOPMENT …") must never anchor a table — the real table
 // header sits 1–2 rows below them. "(Continue on separate sheet …)" notes,
 // signature rows, and template disclaimer banners are never data.
-const NOISE = /cs\s*form|page\s*\d+\s*of|signature|do not abbreviate|^\s*[ivx]+\.\s*$|^\s*[ivxlc]+\s*\.\s|^section\b|continue\s*on\s*separate|over-\s*mark|demonstration\s*data|do\s*not\s*submit/i;
+const NOISE = /cs\s*form|page\s*\d+\s*of|signature|do not abbreviate|^\s*[ivx]+\.\s*$|^\s*[ivxlc]+\s*\.\s|^section\b|continue\s*on\s*(a\s+)?(the\s+)?(separate\s+)?sheet|continue\s*on\s*separate|administering|e-?signature|over-\s*mark|demonstration\s*data|do\s*not\s*submit/i;
+
+// Template sub-captions printed inside value areas ("House/Block/Lot No.",
+// "NAME EXTENSION (JR., SR)", "Pls. indicate country:") — never applicant
+// data, so label scanners must hop over them.
+const CAPTION_RE = /name\s*extension|house\/?block|^street$|subdivision\/?village|city\/?municipality|^barangay$|^province$|^zip\s*code|if\s*holder|pls\.?\s*indicate|dual\s*citizenship|by\s*birth|by\s*naturalization|inclusive\s*dates|write\s*in\s*full|continue\s*on|do\s*not\s*abbreviate/i;
 
 function cellText(v: unknown): string {
   if (v == null) return "";
@@ -50,7 +58,17 @@ function cellText(v: unknown): string {
     if (obj.result != null) return String(obj.result);
     return "";
   }
-  return String(v).trim();
+  return String(v).replace(/\s+/g, " ").trim();
+}
+
+// Percent-formatted numeric cells (CSC exam ratings are stored as 0.8853 with
+// a "0.00%" display format) must surface as "88.53%", not a raw fraction.
+function cellDisplay(ws: XLSX.WorkSheet, r: number, c: number): string {
+  const cell = ws[XLSX.utils.encode_cell({ r, c })] as XLSX.CellObject | undefined;
+  if (cell && typeof cell.v === "number" && typeof cell.z === "string" && cell.z.includes("%") && Math.abs(cell.v) <= 1.5) {
+    return `${Math.round(cell.v * 10000) / 100}%`;
+  }
+  return cellText(cell?.v);
 }
 
 // PDS versions differ in how much boilerplate they embed inside label cells
@@ -78,25 +96,56 @@ function findRow(ws: XLSX.WorkSheet, labelRe: RegExp, maxRow = 80, startRow?: nu
   const rEnd = Math.min(range.e.r, maxRow);
   for (let r = startRow ?? range.s.r; r <= rEnd; r++) {
     for (let c = range.s.c; c <= Math.min(range.e.c, range.s.c + 14); c++) {
-      const t = probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+      const raw = cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+      if (!raw) continue;
+      // Section banners ("VI. LEARNING AND DEVELOPMENT …", "WORK EXPERIENCE
+      // (Continuation)") must never anchor a table — only column headers may.
+      if (/^\s*[ivxlc]+\s*\.\s/i.test(raw) || /\(\s*continuation\s*\)\s*$/i.test(raw)) continue;
+      const t = probeText(raw);
       if (t && labelRe.test(t) && !NOISE.test(t)) return { row: r, col: c };
     }
   }
   return null;
 }
 
+// Agency templates hide dropdown option lists ("Single/Married/Separated",
+// country names) in helper columns BESIDE the form. A label's value always
+// sits within a cell or two, so the scan stops after a run of empty cells —
+// it must never walk into those helper columns across a blank value area.
+const SCAN_GAP = 3;
 function scanRight(ws: XLSX.WorkSheet, row: number, startCol: number, maxScan = 12): string {
   const ref = ws["!ref"];
   if (!ref) return "";
   const range = XLSX.utils.decode_range(ref);
+  let gap = 0;
   for (let c = startCol + 1; c <= Math.min(range.e.c, startCol + maxScan); c++) {
-    const cell = ws[XLSX.utils.encode_cell({ r: row, c })];
-    const t = cellText(cell?.v);
-    if (t && !NOISE.test(t) && !/^(yes|no)$/i.test(t) && !/^\d{1,2}$/.test(t)) return t;
+    const t = cellText(ws[XLSX.utils.encode_cell({ r: row, c })]?.v);
+    if (!t || CAPTION_RE.test(t) || NOISE.test(t) || /^(yes|no)$/i.test(t) || /^\d{1,2}$/.test(t)) {
+      if (++gap >= SCAN_GAP) break;
+      continue;
+    }
+    return t;
   }
   return "";
 }
 
+// PDS address blocks print underline captions ("House/Block/Lot No.",
+// "Subdivision/Village", …) directly BENEATH their value cell.
+function scanAbove(ws: XLSX.WorkSheet, row: number, col: number, maxUp = 2): string {
+  for (let r = row - 1; r >= Math.max(0, row - maxUp); r--) {
+    const t = cellText(ws[XLSX.utils.encode_cell({ r, c: col })]?.v);
+    if (!t) continue;
+    if (CAPTION_RE.test(t) || NOISE.test(t)) return "";
+    return t;
+  }
+  return "";
+}
+
+// The 2026 edition prints dates as dd/mm/yyyy (2017: mm/dd/yyyy). The flag is
+// set per parse from the detected revision; ambiguous d/m strings resolve
+// through it, unambiguous ones self-detect. Safe across awaits: the parse
+// pipeline up to normDate use is fully synchronous.
+let pdsDayFirst = false;
 function normDate(v: string): string {
   if (!v) return "";
   // Excel serial?
@@ -106,10 +155,19 @@ function normDate(v: string): string {
     d.setUTCDate(d.getUTCDate() + Math.floor(num));
     return d.toISOString().slice(0, 10);
   }
+  const m = v.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    let dayFirst = pdsDayFirst;
+    if (a > 12) dayFirst = true;
+    else if (b > 12) dayFirst = false;
+    const mo = dayFirst ? b : a;
+    const day = dayFirst ? a : b;
+    return `${m[3]}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
   const parsed = new Date(v);
   if (!Number.isNaN(parsed.getTime()) && /\d{4}/.test(v)) return parsed.toISOString().slice(0, 10);
-  const m = v.match(/(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
-  if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
   return "";
 }
 
@@ -187,19 +245,25 @@ function parseTableAcrossSheets(wb: XLSX.WorkBook, spec: TableSpec): ExtractionS
     // tested on the RAW text because probeText strips its parentheses.
     let sectionEnd = Math.min(ref.e.r, header.row + spec.maxRows);
     for (let r = header.row + 1; r <= sectionEnd; r++) {
-      const raw = [0, 1, 2].map((c) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join(" ");
-      const probe = [0, 1, 2].map((c) => probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join(" ");
-      const tail = [3, 4, 5, 6, 7].map((c) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join("");
-      if (/continue on separate|signature/i.test(raw) || (/^\s*[ivxlc]+\s*\.\s/i.test(probe) && tail === "")) {
+      const cells = (c: number) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+      const raw = [0, 1, 2, 3, 4, 5, 6, 7].map(cells).join(" ");
+      const probe = [0, 1, 2].map((c) => probeText(cells(c))).join(" ");
+      const tail = [3, 4, 5, 6, 7].map(cells).join("");
+      // "Continue on separate sheet …" (2017) and "Continue on sheet C5 …"
+      // (2026) both close a section; so do signature rows and the next
+      // roman-numeral section title.
+      if (/continue\s+on\s+(a\s+)?(the\s+)?(separate|sheet)|signature|administering/i.test(raw) || (/^\s*[ivxlc]+\s*\.\s/i.test(probe) && tail === "")) {
         sectionEnd = r - 1;
         break;
       }
     }
     for (let r = header.row + 1; r <= sectionEnd; r++) {
-      const get: TableRowGetter = (c) => (c >= 0 ? cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v) : "");
+      const get: TableRowGetter = (c) => (c >= 0 ? cellDisplay(ws, r, c) : "");
       try {
         const entry = spec.build(get, cols);
-        if (entry) entries.push(entry);
+        // Never emit rows that resolved to nothing (blank templates leave
+        // empty shells behind).
+        if (entry && Object.values(entry).some((v) => v && v.value !== null && v.value !== "")) entries.push(entry);
       } catch {
         // malformed row — skip
       }
@@ -233,7 +297,7 @@ const TABLE_SPECS: TableSpec[] = [
       const school = get(cols.school);
       const degree = get(cols.degree);
       if (isNA(school) && isNA(degree)) return null;
-      if (NOISE.test(school + degree)) return null;
+      if (NOISE.test(school + degree) || /name\s+of\s+school/i.test(school)) return null;
       const entry: ExtractionSection = {};
       const level = get(cols.level);
       if (!isNA(level)) entry.educationLevel = cv(EDUCATION_LEVEL_MAP(level), "medium");
@@ -259,6 +323,8 @@ const TABLE_SPECS: TableSpec[] = [
       rating: { re: /rating/i, fallback: [5] },
       examDate: { re: /date\s*of\s*exam|conferment/i, fallback: [6] },
       examPlace: { re: /place\s*of\s*exam/i, fallback: [7] },
+      license: { re: /license/i, fallback: [11] },
+      validity: { re: /validity|valid\s*until/i, fallback: [12] },
     },
     maxRows: 40,
     build: (get, cols) => {
@@ -279,10 +345,16 @@ const TABLE_SPECS: TableSpec[] = [
         (v) => plausible(v, 3) && !/^[\d.,\s]+$/.test(v)
       );
       if (isNA(title) || NOISE.test(title)) return null;
-      const entry: ExtractionSection = { title: cv(title.replace(/\s*\(.*?\)\s*$/, "")) };
+      const cleanTitle = title.replace(/\s*\(.*?\)\s*$/, "").trim();
+      if (!cleanTitle || /career\s+service\s*\/?\s*ra\s*1080/i.test(cleanTitle)) return null;
+      const entry: ExtractionSection = { title: cv(cleanTitle) };
       if (ratingCell && /^\d/.test(ratingCell)) entry.rating = cv(ratingCell, "medium");
       if (dateCell) entry.examDate = cv(normDate(dateCell) || dateCell, "medium");
       if (placeCell) entry.examPlace = cv(placeCell, "medium");
+      const license = get(cols.license);
+      if (!isNA(license) && license.length > 2 && !NOISE.test(license)) entry.licenseNumber = cv(license, "medium");
+      const validity = get(cols.validity);
+      if (!isNA(validity) && validity.length > 2 && !NOISE.test(validity)) entry.licenseValidity = cv(normDate(validity) || validity, "medium");
       return entry;
     },
   },
@@ -299,7 +371,7 @@ const TABLE_SPECS: TableSpec[] = [
     maxRows: 200,
     build: (get, cols) => {
       const position = pickCell([cols.title, cols.title - 1, cols.title + 1], [cols.from, cols.to], get, (v) => plausible(v, 3));
-      if (!position || NOISE.test(position)) return null;
+      if (!position || NOISE.test(position) || /^position\s+title/i.test(position)) return null;
       const entry: ExtractionSection = { positionTitle: cv(position) };
       const employer = pickCell([cols.employer, cols.employer - 1], [cols.from, cols.to], get, (v) => !isNA(v) && v.length > 2);
       if (employer) entry.employerName = cv(employer, "medium");
@@ -319,7 +391,12 @@ const TABLE_SPECS: TableSpec[] = [
   },
   {
     key: "trainings",
-    headerRe: /title\s*of\s*(learning|training)|learning\s*(and|&)\s*development/i,
+    // Primary anchor is the column caption ("TITLE OF LEARNING AND
+    // DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS") — the section banner
+    // ("VI. LEARNING AND DEVELOPMENT …") and its "(Continuation)" variant
+    // must not anchor, or the caption row leaks in as a data row.
+    headerRe: /title\s*of\s*(learning|training)/i,
+    fallbackHeaderRe: /learning\s*(and|&)\s*development/i,
     fields: {
       title: { fallback: [0, 1] },
       from: { re: /^from\b/i, fallback: [4, 2] },
@@ -330,7 +407,7 @@ const TABLE_SPECS: TableSpec[] = [
     maxRows: 200,
     build: (get, cols) => {
       const title = pickCell([cols.title, cols.title + 1], [cols.from, cols.to], get, (v) => plausible(v, 4));
-      if (isNA(title) || NOISE.test(title) || /^\d+$/.test(title)) return null;
+      if (isNA(title) || NOISE.test(title) || /^\d+$/.test(title) || /^title\s+of\s+(learning|training)/i.test(title)) return null;
       const entry: ExtractionSection = { title: cv(title) };
       const dFrom = normDate(get(cols.from));
       if (dFrom) entry.dateFrom = cv(dFrom, "medium");
@@ -362,7 +439,8 @@ const TABLE_SPECS: TableSpec[] = [
   },
 ];
 
-function detectRevision(wb: XLSX.WorkBook): string | null {
+function detectRevision(wb: XLSX.WorkBook): { label: string; year: number | null } {
+  let formOnly = false;
   for (const name of wb.SheetNames) {
     if (/lookup/i.test(name)) continue;
     const ws = wb.Sheets[name];
@@ -371,19 +449,21 @@ function detectRevision(wb: XLSX.WorkBook): string | null {
     for (let r = ref.s.r; r <= Math.min(ref.e.r, 120); r++) {
       for (let c = ref.s.c; c <= Math.min(ref.e.c, ref.s.c + 15); c++) {
         const t = cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+        // The explicit "Revised <year>" footer wins over the bare form
+        // number so the 2026 edition is never mislabelled "CS Form 212".
         const m = t.match(/revised\s*(20\d{2})/i);
-        if (m) return `CS Form 212 (Revised ${m[1]})`;
-        if (/cs\s*form\s*no\.?\s*\.?\s*212/i.test(t)) return "CS Form 212";
+        if (m) return { label: `CS Form 212 (Revised ${m[1]})`, year: Number(m[1]) };
+        if (/cs\s*form\s*no\.?\s*\.?\s*212/i.test(t)) formOnly = true;
       }
     }
   }
-  return null;
+  return { label: formOnly ? "CS Form 212" : "", year: null };
 }
 
 export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   let wb: XLSX.WorkBook;
   try {
-    wb = XLSX.readFile(filePath, { cellDates: false });
+    wb = XLSX.readFile(filePath, { cellDates: false, cellNF: true });
   } catch {
     return null;
   }
@@ -398,12 +478,15 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   if (!looksLikePds) return null;
 
   const result: ExtractionResult = { warnings: [] };
-  const revision = detectRevision(wb);
-  if (revision) result.warnings?.push(`Detected ${revision} layout.`);
+  const rev = detectRevision(wb);
+  pdsDayFirst = (rev.year ?? 0) >= 2026;
+  if (rev.label) result.warnings?.push(`Detected ${rev.label} layout.`);
 
   const personal: ExtractionSection = {};
   const put = (key: string, v: string, conf: ConfidentValue["confidence"] = "high") => {
-    if (v) personal[key] = cv(v, conf);
+    const t = String(v).replace(/\s+/g, " ").trim();
+    if (!t || isNA(t) || CAPTION_RE.test(t)) return;
+    personal[key] = cv(t, conf);
   };
 
   const surname = findRow(ws, /sur\s*name/i) || findRow(ws, /^surname/i);
@@ -418,7 +501,7 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   if (dob) put("birthDate", normDate(scanRight(ws, dob.row, dob.col)), "high");
   const pob = findRow(ws, /place\s*of\s*birth/i);
   if (pob) put("birthPlace", scanRight(ws, pob.row, pob.col));
-  const sex = findRow(ws, /^sex|gender/i);
+  const sex = findRow(ws, /\bsex\b|\bgender\b/i); // "5. SEX" (2017) / "5. SEX AT BIRTH" (2026)
   if (sex) {
     const raw = scanRight(ws, sex.row, sex.col);
     const m = raw.match(/male|female/i);
@@ -432,18 +515,57 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
   }
   const cit = findRow(ws, /citizenship/i);
   if (cit) put("citizenship", scanRight(ws, cit.row, cit.col));
-  const res = findRow(ws, /residential\s*address|house\/?street|house\s*no/i);
-  if (res) {
-    put("houseNumber", scanRight(ws, res.row, res.col));
-    const block = [res.row, res.row + 1, res.row + 2].map((r) => scanRight(ws, r, res.col)).filter(Boolean);
-    if (block.length > 0) put("presentAddress", block.join(", "), "medium");
-  }
-  const zip = findRow(ws, /zip\s*code/i);
-  if (zip) put("zipCode", scanRight(ws, zip.row, zip.col));
+
+  // Address blocks — caption-anchored: each underline caption ("House/Block/
+  // Lot No.", "Subdivision/Village", …) sits directly BENEATH its value cell,
+  // and the ZIP caption carries its value to its right. Residential wins over
+  // permanent when both are filled.
+  const permAnchor = findRow(ws, /permanent\s*address/i);
+  const resAnchor = findRow(ws, /residential\s*address/i);
+  type AddrVals = Partial<Record<"houseNumber" | "street" | "subdivision" | "barangay" | "city" | "province" | "zipCode", string>>;
+  const readAddressBlock = (anchor: { row: number; col: number } | null, hardEnd?: number): AddrVals => {
+    const vals: AddrVals = {};
+    if (!anchor) return vals;
+    const ref = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+    const endRow = Math.min(hardEnd ?? ref?.e.r ?? anchor.row, anchor.row + 10);
+    const cEnd = Math.min(ref?.e.c ?? anchor.col + 8, anchor.col + 8);
+    for (let r = anchor.row; r <= endRow; r++) {
+      for (let c = anchor.col; c <= cEnd; c++) {
+        const t = cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+        if (!t) continue;
+        const cap = /house\/?block/i.test(t) ? "houseNumber"
+          : /^street$/i.test(t) ? "street"
+          : /subdivision/i.test(t) ? "subdivision"
+          : /^barangay$/i.test(t) ? "barangay"
+          : /city\/?municipality/i.test(t) ? "city"
+          : /^province$/i.test(t) ? "province"
+          : /^zip\s*code/i.test(t) ? "zipCode"
+          : null;
+        if (!cap || vals[cap]) continue;
+        const value = cap === "zipCode" ? scanRight(ws, r, c) : scanAbove(ws, r, c);
+        if (value && !isNA(value)) vals[cap] = value;
+      }
+    }
+    return vals;
+  };
+  const addr: AddrVals = {
+    ...readAddressBlock(permAnchor),
+    ...readAddressBlock(resAnchor, permAnchor ? permAnchor.row - 1 : undefined),
+  };
+  for (const [k, v] of Object.entries(addr)) if (v) put(k, v, "medium");
+  const presentAddress = (["houseNumber", "street", "subdivision", "barangay", "city", "province"] as const)
+    .map((k) => addr[k])
+    .filter(Boolean)
+    .join(", ");
+  if (presentAddress) put("presentAddress", presentAddress, "medium");
+
   const tel = findRow(ws, /tele(phone)?\s*\/?\s*mobile|mobile/i);
   if (tel) {
-    const raw = scanRight(ws, tel.row, tel.col).replace(/\s+/g, "");
-    if (/^[\d+()-]{7,15}$/.test(raw)) put("mobileNumber", raw);
+    // "09270035829 / 09922092759" — several numbers may share the cell; the
+    // profile keeps one, so take the first valid PH-style number.
+    const digits = scanRight(ws, tel.row, tel.col).replace(/[\s()\-]/g, "");
+    const m = digits.match(/(?:\+?63|0)\d{9,10}|\d{7,12}/);
+    if (m) put("mobileNumber", m[0]);
   }
   const email = findRow(ws, /e-?mail/i);
   if (email) {
@@ -494,6 +616,8 @@ export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
 // ── AI extraction (z-ai-web-dev-sdk — backend only) ─────────────────────────
 
 const AI_JSON_PROMPT = (category: string, text: string) => `You are a data-extraction engine for Philippine government recruitment (CSC forms).
+You are reading a CS Form 212 Personal Data Sheet (any revision year) converted from PDF, so the text stream is JUMBLED: labels and their values are often separated, and checkbox options ("Male", "Single", "Filipino", "N/A") appear as bare words.
+Use the item numbers as anchors: item 2 = SURNAME then FIRST NAME then MIDDLE NAME then NAME EXTENSION; 3 = date of birth; 4 = place of birth; 5 = sex; 6 = civil status; 16 = citizenship; 17/18 = residential/permanent address; 20 = mobile; 21 = email; 22-25 = family; 26 = education table; 27 = eligibility table; 28 = work experience table; 29/30 = trainings; 31 = special skills; 32 = non-academic distinctions.
 From the following ${category} document text, extract structured data as STRICT JSON with this exact shape (omit sections you find nothing for):
 {
   "personalInfo": { "<field>": {"value": <string|number|null>, "confidence": "high"|"medium"|"low"} },
@@ -504,11 +628,17 @@ From the following ${category} document text, extract structured data as STRICT 
   "awards": [ { "details": {...}, "recognitionType": {...}, "provider": {...}, "dateGranted": {...} } ]
 }
 personalInfo fields may include: firstName, middleName, lastName, extensionName, birthDate, birthPlace, gender, civilStatus, citizenship, mobileNumber, emailAddress, houseNumber, street, subdivision, barangay, city, province, zipCode.
-Rules: extract ONLY what is clearly present; NEVER fabricate; not found ⇒ value null with confidence "none"; all values in the {value, confidence} shape; dates formatted YYYY-MM-DD; respond with JSON only — no markdown fences, no commentary.
+Rules:
+- extract ONLY what is clearly present; NEVER fabricate; not found ⇒ value null with confidence "none"; all values in the {value, confidence} shape; dates formatted YYYY-MM-DD (respect the form's stated mm/dd/yyyy or dd/mm/yyyy order); respond with JSON only — no markdown fences, no commentary.
+- The document may be a BLANK template. Text that is itself a template caption ("SURNAME", "FIRST NAME", "NAME EXTENSION (JR., SR)", "Pls. indicate country:", "House/Block/Lot No.") is NEVER a value — return null instead. Checkbox options (Male, Single, Filipino) are only values if the form clearly marks them selected.
+- The surname is the family name printed right after the SURNAME label of item 2 — never mistake the middle name or the father's/mother's name for the surname.
+- "N/A" means the field is empty ⇒ null. Skip education/eligibility rows whose cells are all N/A.
+- educationLevel MUST be exactly one of: "Elementary", "Secondary", "Vocational / Trade", "College", "Graduate Studies" (map "Senior High School" → Secondary-with-course, "Bachelor of…" rows → College).
+- Keep the applicant's original casing/spacing for names and addresses; join multi-line values with a single space.
 
-DOCUMENT TEXT (truncated):
+DOCUMENT TEXT (truncated, "│" marks cell boundaries; rows are top-to-bottom):
 """
-${text.slice(0, 12000)}
+${text.slice(0, 16000)}
 """`;
 
 function parseAiJson(raw: string): ExtractionResult | null {
@@ -520,6 +650,50 @@ function parseAiJson(raw: string): ExtractionResult | null {
   } catch {
     return null;
   }
+}
+
+// The AI reads raw cell/text soup that includes the form's own captions and
+// dropdown option lists. On a BLANK template its only "values" are those
+// captions — a hallucination class the deterministic parser is immune to.
+// Filter them before merging: caption-identical strings are never applicant
+// data, name extensions are Jr/Sr-style honorifics only, and checkbox fields
+// (gender/civil status/citizenship) are UNKNOWABLE from plain Excel cell text
+// (they live in form controls), so the xlsx path drops those guesses when the
+// deterministic parser confirmed the form is otherwise empty.
+const AI_CAPTION_VALUE = /^(surname|last\s*name|first\s*name|given\s*name|middle\s*name|name\s*extension|date\s*of\s*birth|place\s*of\s*birth|civil\s*status|sex(\s*at\s*birth)?|gender|citizenship|residential\s*address|permanent\s*address|zip\s*code|mobile\s*no\.?|telephone\s*no\.?|tele(phone)?\s*no\.?|e-?mail(\s*address)?(\s*if\s*any)?|agency\s*employee\s*no\.?|height.*|weight.*|blood\s*type|gsis\s*id\s*no\.?|umid\s*id\s*no\.?|pag-?ibig\s*id\s*no\.?|philhealth\s*no\.?|sss\s*no\.?|tin\s*no\.?|philsys.*|pls\.?\s*indicate.*|if\s*holder.*|house\/?block.*|subdivision.*|city\/?municipality.*|^street$|^barangay$|^province$|dual\s*citizenship|by\s*birth|by\s*naturalization|n\/?a\.?|none)$/i;
+const AI_TABLE_CAPTION = /^(n\/?a\.?|none|name\s*of\s*school|position\s*title|title\s*of\s*(learning|training).*|career\s*service.*ra\s*1080.*|civil\s*service\s*eligib.*|non-?academic\s*distinctions.*|inclusive\s*dates.*|department\s*\/?\s*agency.*|scholarship.*|highest\s*level.*|number\s*of\s*hours.*|type\s*of\s*l\s*&\s*d.*|conducted.*)$/i;
+
+function sanitizeAiExtraction(
+  result: ExtractionResult | null,
+  opts: { dropCheckboxGuesses?: boolean } = {}
+): ExtractionResult | null {
+  if (!result) return null;
+  const out: ExtractionResult = { ...result };
+  if (out.personalInfo) {
+    const clean: ExtractionSection = {};
+    for (const [k, v] of Object.entries(out.personalInfo)) {
+      if (v?.value == null || v.value === "") continue;
+      const s = String(v.value).trim();
+      if (AI_CAPTION_VALUE.test(s)) continue;
+      if (k === "extensionName" && !/^(jr|sr|iii|iv|v)\.?$/i.test(s)) continue;
+      if (opts.dropCheckboxGuesses && (k === "gender" || k === "civilStatus" || k === "citizenship")) continue;
+      clean[k] = v;
+    }
+    out.personalInfo = Object.keys(clean).length > 0 ? clean : undefined;
+  }
+  const filterRows = (rows?: ExtractionSection[], fields: string[] = []) =>
+    rows?.filter((row) =>
+      fields.some((f) => {
+        const v = row[f]?.value;
+        return v != null && String(v).trim() !== "" && !AI_TABLE_CAPTION.test(String(v).trim());
+      })
+    );
+  out.educations = filterRows(out.educations, ["schoolName"]);
+  out.workExperiences = filterRows(out.workExperiences, ["positionTitle"]);
+  out.trainings = filterRows(out.trainings, ["title"]);
+  out.eligibilities = filterRows(out.eligibilities, ["title"]);
+  out.awards = filterRows(out.awards, ["details"]);
+  return out;
 }
 
 async function aiExtractText(text: string, category: string): Promise<ExtractionResult | null> {
@@ -565,13 +739,59 @@ export function extractExcelText(filePath: string): string {
 
 export async function extractPdfText(filePath: string): Promise<string> {
   try {
-    const { extractText, getDocumentProxy } = await import("unpdf");
+    const { getDocumentProxy } = await import("unpdf");
     const buffer = fs.readFileSync(filePath);
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
-    const { text } = await extractText(pdf, { mergePages: true });
-    return text.slice(0, 16000);
+    // Form PDFs (like the PDS) store glyphs with coordinates, so the raw text
+    // stream is jumbled and labels get separated from their values. Rebuild
+    // VISUAL LINES by grouping glyphs on the same baseline (y) and inserting
+    // a "│" cell separator on wide horizontal gaps — the AI then sees the
+    // form's rows the way a human does.
+    const pages: string[] = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const tc = await page.getTextContent();
+      const items = tc.items as Array<{ str?: string; transform?: number[]; width?: number }>;
+      const lines: Array<{ y: number; parts: Array<{ x: number; str: string; w: number }> }> = [];
+      for (const it of items) {
+        const s = it.str?.trim();
+        if (!s || !it.transform) continue;
+        const y = it.transform[5];
+        let line = lines.find((l) => Math.abs(l.y - y) <= 3);
+        if (!line) {
+          line = { y, parts: [] };
+          lines.push(line);
+        }
+        line.parts.push({ x: it.transform[4], str: s, w: it.width ?? 0 });
+      }
+      lines.sort((a, b) => b.y - a.y);
+      const rows: string[] = [];
+      for (const l of lines) {
+        l.parts.sort((a, b) => a.x - b.x);
+        let row = "";
+        let prevEnd = -Infinity;
+        for (const part of l.parts) {
+          if (prevEnd > -Infinity && part.x - prevEnd > 18) row += " │ ";
+          else if (row) row += " ";
+          row += part.str;
+          prevEnd = part.x + part.w;
+        }
+        if (row.trim()) rows.push(row.trim());
+      }
+      pages.push(rows.join("\n"));
+    }
+    return pages.map((t, i) => `=== Page ${i + 1} ===\n${t}`).join("\n").slice(0, 16000);
   } catch {
-    return "";
+    // Fallback: plain merged text (no coordinates).
+    try {
+      const { extractText, getDocumentProxy } = await import("unpdf");
+      const buffer = fs.readFileSync(filePath);
+      const pdf = await getDocumentProxy(new Uint8Array(buffer));
+      const { text } = await extractText(pdf, { mergePages: true });
+      return text.slice(0, 16000);
+    } catch {
+      return "";
+    }
   }
 }
 
@@ -658,7 +878,12 @@ export async function extractFromDocument(
     if (deterministic && countExtractedFields(deterministic) >= 3) return { result: deterministic };
     const text = extractExcelText(filePath);
     if (text.trim().length > 40) {
-      const ai = await aiExtractText(text, category);
+      // When the deterministic parser RECOGNIZED the form but found nothing
+      // in it, the file is a blank template — checkbox guesses from raw cell
+      // text would be pure fabrication, so they are suppressed.
+      const ai = sanitizeAiExtraction(await aiExtractText(text, category), {
+        dropCheckboxGuesses: !!deterministic && countExtractedFields(deterministic) === 0,
+      });
       return { result: mergeExtractions([deterministic, ai]) };
     }
     return { result: deterministic };
@@ -666,12 +891,12 @@ export async function extractFromDocument(
   if (ext === ".pdf") {
     const text = await extractPdfText(filePath);
     if (!text.trim()) return { result: null, error: "Could not read text from this PDF. Try uploading the Excel version of the PDS." };
-    return { result: await aiExtractText(text, category) };
+    return { result: sanitizeAiExtraction(await aiExtractText(text, category)) };
   }
   if (ext === ".docx" || ext === ".doc") {
     const text = await extractDocxText(filePath);
     if (!text.trim()) return { result: null, error: "Could not read this document. Try a DOCX or XLSX file." };
-    return { result: await aiExtractText(text, category) };
+    return { result: sanitizeAiExtraction(await aiExtractText(text, category)) };
   }
   if (/\.(png|jpg|jpeg|gif|webp|bmp)$/.test(ext)) {
     return { result: null, error: "Image extraction is not available in this deployment. Please upload the PDS as XLSX, PDF, or DOCX." };

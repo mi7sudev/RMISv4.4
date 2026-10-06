@@ -1,0 +1,681 @@
+     1→// ============================================================================
+     2→// RMIS — Document extraction pipeline (spec §8.5 deterministic PDS parser,
+     3→// §8.6 AI fallback). SERVER-SIDE ONLY.
+     4→//   xlsx/xls/xlsm → deterministic label-anchored parser first, AI fallback
+     5→//   pdf  → unpdf text → AI      docx → mammoth text → AI      images → AI vision
+     6→// Prompt contract: extract only what is clearly present; NEVER fabricate;
+     7→// not found ⇒ null + confidence "none"; dates → YYYY-MM-DD; JSON only.
+     8→// The deterministic parser is VERSION-ADAPTIVE: it handles the official
+     9→// multi-sheet CS Form 212 (Revised 2017 and agency re-revisions of any year,
+    10→// including 2026-era templates), its continuation sheets, and older/lower
+    11→// single-sheet legacy PDS layouts, by probing labels with boilerplate
+    12→// stripped and resolving table columns from their header rows instead of
+    13→// assuming one template's geometry.
+    14→// ============================================================================
+    15→
+    16→import * as XLSX from "xlsx";
+    17→import fs from "fs";
+    18→import path from "path";
+    19→
+    20→export type ConfidentValue = { value: string | number | boolean | null; confidence: "high" | "medium" | "low" | "none" };
+    21→export type ExtractionSection = Record<string, ConfidentValue>;
+    22→export type ExtractionResult = {
+    23→  personalInfo?: ExtractionSection;
+    24→  educations?: ExtractionSection[];
+    25→  workExperiences?: ExtractionSection[];
+    26→  trainings?: ExtractionSection[];
+    27→  eligibilities?: ExtractionSection[];
+    28→  awards?: ExtractionSection[];
+    29→  warnings?: string[];
+    30→};
+    31→
+    32→const cv = (value: string | number | null, confidence: ConfidentValue["confidence"] = "high"): ConfidentValue =>
+    33→  ({ value: value === "" ? null : value, confidence });
+    34→
+    35→// ── Deterministic PDS parsing (CS Form 212 — version-adaptive) ──────────────
+    36→
+    37→// Roman-numeral section titles ("IV. CIVIL SERVICE ELIGIBILITY", "VII.
+    38→// LEARNING AND DEVELOPMENT …") must never anchor a table — the real table
+    39→// header sits 1–2 rows below them. "(Continue on separate sheet …)" notes,
+    40→// signature rows, and template disclaimer banners are never data.
+    41→const NOISE = /cs\s*form|page\s*\d+\s*of|signature|do not abbreviate|^\s*[ivx]+\.\s*$|^\s*[ivxlc]+\s*\.\s|^section\b|continue\s*on\s*separate|over-\s*mark|demonstration\s*data|do\s*not\s*submit/i;
+    42→
+    43→function cellText(v: unknown): string {
+    44→  if (v == null) return "";
+    45→  if (typeof v === "number") return String(v);
+    46→  if (typeof v === "boolean") return v ? "Yes" : "";
+    47→  if (typeof v === "object" && v !== null) {
+    48→    const obj = v as { text?: string; result?: unknown };
+    49→    if (typeof obj.text === "string") return obj.text;
+    50→    if (obj.result != null) return String(obj.result);
+    51→    return "";
+    52→  }
+    53→  return String(v).trim();
+    54→}
+    55→
+    56→// PDS versions differ in how much boilerplate they embed inside label cells
+    57→// ("POSITION TITLE (Write in full/Do not abbreviate)", "(mm/dd/yyyy)",
+    58→// "(Continue on separate sheet if necessary)"). Probing the text with
+    59→// parentheticals stripped keeps real headers recognizable while page footers
+    60→// ("CS FORM 212 (Revised 2017), Page 1 of 4") are still rejected by NOISE.
+    61→function probeText(v: unknown): string {
+    62→  return cellText(v).replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+    63→}
+    64→
+    65→// "N/A" markers mean the applicant left the cell blank — treat as empty.
+    66→const isNA = (s: string) => !s || /^n\/?a\.?$/i.test(s.trim());
+    67→
+    68→// Real PDS cell values are short; anything beyond this is template
+    69→// boilerplate (disclaimer banners, instructions) that some versions embed in
+    70→// data rows — never extract it as content.
+    71→const MAX_VALUE_LEN = 160;
+    72→const plausible = (v: string, min: number) => !isNA(v) && v.length >= min && v.length <= MAX_VALUE_LEN;
+    73→
+    74→function findRow(ws: XLSX.WorkSheet, labelRe: RegExp, maxRow = 80, startRow?: number): { row: number; col: number } | null {
+    75→  const ref = ws["!ref"];
+    76→  if (!ref) return null;
+    77→  const range = XLSX.utils.decode_range(ref);
+    78→  const rEnd = Math.min(range.e.r, maxRow);
+    79→  for (let r = startRow ?? range.s.r; r <= rEnd; r++) {
+    80→    for (let c = range.s.c; c <= Math.min(range.e.c, range.s.c + 14); c++) {
+    81→      const t = probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+    82→      if (t && labelRe.test(t) && !NOISE.test(t)) return { row: r, col: c };
+    83→    }
+    84→  }
+    85→  return null;
+    86→}
+    87→
+    88→function scanRight(ws: XLSX.WorkSheet, row: number, startCol: number, maxScan = 12): string {
+    89→  const ref = ws["!ref"];
+    90→  if (!ref) return "";
+    91→  const range = XLSX.utils.decode_range(ref);
+    92→  for (let c = startCol + 1; c <= Math.min(range.e.c, startCol + maxScan); c++) {
+    93→    const cell = ws[XLSX.utils.encode_cell({ r: row, c })];
+    94→    const t = cellText(cell?.v);
+    95→    if (t && !NOISE.test(t) && !/^(yes|no)$/i.test(t) && !/^\d{1,2}$/.test(t)) return t;
+    96→  }
+    97→  return "";
+    98→}
+    99→
+   100→function normDate(v: string): string {
+   101→  if (!v) return "";
+   102→  // Excel serial?
+   103→  const num = Number(v);
+   104→  if (!Number.isNaN(num) && num > 20000 && num < 80000) {
+   105→    const d = new Date(Date.UTC(1899, 11, 30) as unknown as number);
+   106→    d.setUTCDate(d.getUTCDate() + Math.floor(num));
+   107→    return d.toISOString().slice(0, 10);
+   108→  }
+   109→  const parsed = new Date(v);
+   110→  if (!Number.isNaN(parsed.getTime()) && /\d{4}/.test(v)) return parsed.toISOString().slice(0, 10);
+   111→  const m = v.match(/(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
+   112→  if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+   113→  return "";
+   114→}
+   115→
+   116→const year4 = (v: string): string => (/^\d{4}$/.test(v.trim()) ? v.trim() : (v.match(/\d{4}/)?.[0] ?? ""));
+   117→
+   118→// ── Version-adaptive table reader ────────────────────────────────────────────
+   119→// Every PDS section table (education, eligibility, work, training, awards) is
+   120→// located by its HEADER ROW and each field's column is RESOLVED from the
+   121→// header labels (header row + up to 3 rows below, covering two-row headers
+   122→// with From/To sub-rows). Hardcoded column geometry from one template becomes
+   123→// only a fallback, so re-revisions and older/lower layouts that shifted
+   124→// columns still parse. Tables are collected from EVERY sheet (main pages and
+   125→// continuation sheets alike; Lookup sheets excluded).
+   126→
+   127→type TableRowGetter = (col: number) => string;
+   128→
+   129→type TableSpec = {
+   130→  key: "educations" | "workExperiences" | "trainings" | "eligibilities" | "awards";
+   131→  headerRe: RegExp;
+   132→  fallbackHeaderRe?: RegExp;
+   133→  fields: Record<string, { re?: RegExp; fallback: number[] }>;
+   134→  maxRows: number;
+   135→  build: (get: TableRowGetter, cols: Record<string, number>) => ExtractionSection | null;
+   136→};
+   137→
+   138→function resolveColumns(ws: XLSX.WorkSheet, headerRow: number, fields: TableSpec["fields"]): Record<string, number> {
+   139→  const ref = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+   140→  const cStart = ref ? ref.s.c : 0;
+   141→  const cEnd = ref ? Math.min(ref.e.c, ref.s.c + 14) : 14;
+   142→  const cols: Record<string, number> = {};
+   143→  for (const [key, spec] of Object.entries(fields)) {
+   144→    cols[key] = -1;
+   145→    if (spec.re) {
+   146→      for (let r = headerRow; r <= headerRow + 3 && cols[key] === -1; r++) {
+   147→        for (let c = cStart; c <= cEnd; c++) {
+   148→          const t = probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+   149→          if (t && spec.re.test(t) && !NOISE.test(t)) {
+   150→            cols[key] = c;
+   151→            break;
+   152→          }
+   153→        }
+   154→      }
+   155→    }
+   156→    if (cols[key] === -1) cols[key] = spec.fallback[0] ?? -1;
+   157→  }
+   158→  return cols;
+   159→}
+   160→
+   161→// Pick the first candidate cell that satisfies pred, skipping columns that
+   162→// belong to other resolved fields (e.g. the To-date column next to a merged
+   163→// title) and the header column's merge-neighbors only when they are free.
+   164→function pickCell(cands: number[], exclude: number[], get: TableRowGetter, pred: (v: string) => boolean): string {
+   165→  for (const c of cands) {
+   166→    if (c < 0 || exclude.includes(c)) continue;
+   167→    const v = get(c);
+   168→    if (pred(v)) return v;
+   169→  }
+   170→  return "";
+   171→}
+   172→
+   173→function parseTableAcrossSheets(wb: XLSX.WorkBook, spec: TableSpec): ExtractionSection[] {
+   174→  const entries: ExtractionSection[] = [];
+   175→  for (const name of wb.SheetNames) {
+   176→    if (/lookup/i.test(name)) continue;
+   177→    const ws = wb.Sheets[name];
+   178→    if (!ws) continue;
+   179→    const header = findRow(ws, spec.headerRe, 250) ?? (spec.fallbackHeaderRe ? findRow(ws, spec.fallbackHeaderRe, 250) : null);
+   180→    if (!header) continue;
+   181→    const cols = resolveColumns(ws, header.row, spec.fields);
+   182→    const ref = XLSX.utils.decode_range(ws["!ref"]!);
+   183→    // A section table ends at the next "(Continue on separate sheet …)" note,
+   184→    // the next roman-numeral section title, or a signature row — without this
+   185→    // clamp the scan bleeds into the FOLLOWING section's table (e.g. the
+   186→    // eligibility window reading the work-experience header row). The note is
+   187→    // tested on the RAW text because probeText strips its parentheses.
+   188→    let sectionEnd = Math.min(ref.e.r, header.row + spec.maxRows);
+   189→    for (let r = header.row + 1; r <= sectionEnd; r++) {
+   190→      const raw = [0, 1, 2].map((c) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join(" ");
+   191→      const probe = [0, 1, 2].map((c) => probeText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join(" ");
+   192→      const tail = [3, 4, 5, 6, 7].map((c) => cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v)).join("");
+   193→      if (/continue on separate|signature/i.test(raw) || (/^\s*[ivxlc]+\s*\.\s/i.test(probe) && tail === "")) {
+   194→        sectionEnd = r - 1;
+   195→        break;
+   196→      }
+   197→    }
+   198→    for (let r = header.row + 1; r <= sectionEnd; r++) {
+   199→      const get: TableRowGetter = (c) => (c >= 0 ? cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v) : "");
+   200→      try {
+   201→        const entry = spec.build(get, cols);
+   202→        if (entry) entries.push(entry);
+   203→      } catch {
+   204→        // malformed row — skip
+   205→      }
+   206→    }
+   207→  }
+   208→  return entries;
+   209→}
+   210→
+   211→const EDUCATION_LEVEL_MAP = (raw: string): string =>
+   212→  /elementary/i.test(raw) ? "Elementary"
+   213→  : /secondary|high\s*school/i.test(raw) ? "Secondary"
+   214→  : /vocational|trade/i.test(raw) ? "Vocational / Trade"
+   215→  : /graduate|post/i.test(raw) ? "Graduate Studies"
+   216→  : "College";
+   217→
+   218→const TABLE_SPECS: TableSpec[] = [
+   219→  {
+   220→    key: "educations",
+   221→    headerRe: /name\s*of\s*school/i,
+   222→    fields: {
+   223→      level: { re: /\blevel\b/i, fallback: [1] },
+   224→      school: { re: /name\s*of\s*school/i, fallback: [3] },
+   225→      degree: { re: /degree|course/i, fallback: [6] },
+   226→      from: { re: /^from\b/i, fallback: [9] },
+   227→      to: { re: /^to\b/i, fallback: [10] },
+   228→      graduated: { re: /year\s*graduated/i, fallback: [12] },
+   229→      honors: { re: /scholarship|honors/i, fallback: [13] },
+   230→    },
+   231→    maxRows: 40,
+   232→    build: (get, cols) => {
+   233→      const school = get(cols.school);
+   234→      const degree = get(cols.degree);
+   235→      if (isNA(school) && isNA(degree)) return null;
+   236→      if (NOISE.test(school + degree)) return null;
+   237→      const entry: ExtractionSection = {};
+   238→      const level = get(cols.level);
+   239→      if (!isNA(level)) entry.educationLevel = cv(EDUCATION_LEVEL_MAP(level), "medium");
+   240→      if (!isNA(school)) entry.schoolName = cv(school);
+   241→      if (!isNA(degree) && !/^graduated$/i.test(degree)) entry.course = cv(degree, "medium");
+   242→      const from = year4(get(cols.from));
+   243→      if (from) entry.yearFrom = cv(from, "medium");
+   244→      const to = year4(get(cols.to));
+   245→      if (to) entry.yearTo = cv(to, "medium");
+   246→      const grad = year4(get(cols.graduated));
+   247→      if (grad) entry.yearGraduated = cv(grad, "medium");
+   248→      const honors = get(cols.honors);
+   249→      if (!isNA(honors)) entry.awards = cv(honors, "medium");
+   250→      return Object.keys(entry).length > 0 ? entry : null;
+   251→    },
+   252→  },
+   253→  {
+   254→    key: "eligibilities",
+   255→    headerRe: /career\s*service\/?\s*ra\s*1080|date\s*of\s*examination|conferment/i,
+   256→    fallbackHeaderRe: /civil\s*service\s*eligib|\beligib/i,
+   257→    fields: {
+   258→      title: { fallback: [1, 2] },
+   259→      rating: { re: /rating/i, fallback: [5] },
+   260→      examDate: { re: /date\s*of\s*exam|conferment/i, fallback: [6] },
+   261→      examPlace: { re: /place\s*of\s*exam/i, fallback: [7] },
+   262→    },
+   263→    maxRows: 40,
+   264→    build: (get, cols) => {
+   265→      const ratingCell = get(cols.rating);
+   266→      const dateCell = get(cols.examDate);
+   267→      const placeCell = get(cols.examPlace);
+   268→      // A row repeating the column captions (older variants anchor one row
+   269→      // higher) is a header, not data: 2+ caption cells give it away.
+   270→      const captionHits = [ratingCell, dateCell, placeCell].filter((v) => /rating|exam|conferment|place/i.test(v)).length;
+   271→      if (captionHits >= 2) return null;
+   272→      // The title cell is the only unlabeled column (older variants place it
+   273→      // one column off) — exclude the resolved rating/date/place columns and
+   274→      // never accept a purely numeric cell (that is the rating).
+   275→      const title = pickCell(
+   276→        [cols.title, cols.title - 1, cols.title + 1],
+   277→        [cols.rating, cols.examDate, cols.examPlace],
+   278→        get,
+   279→        (v) => plausible(v, 3) && !/^[\d.,\s]+$/.test(v)
+   280→      );
+   281→      if (isNA(title) || NOISE.test(title)) return null;
+   282→      const entry: ExtractionSection = { title: cv(title.replace(/\s*\(.*?\)\s*$/, "")) };
+   283→      if (ratingCell && /^\d/.test(ratingCell)) entry.rating = cv(ratingCell, "medium");
+   284→      if (dateCell) entry.examDate = cv(normDate(dateCell) || dateCell, "medium");
+   285→      if (placeCell) entry.examPlace = cv(placeCell, "medium");
+   286→      return entry;
+   287→    },
+   288→  },
+   289→  {
+   290→    key: "workExperiences",
+   291→    headerRe: /position\s*title/i,
+   292→    fields: {
+   293→      from: { re: /^from\b/i, fallback: [0, 1] },
+   294→      to: { re: /^to\b/i, fallback: [2, 3] },
+   295→      title: { re: /position\s*title/i, fallback: [4, 3] },
+   296→      employer: { re: /department|agency|company/i, fallback: [6, 5] },
+   297→      salary: { re: /monthly\s*salary/i, fallback: [9, 8] },
+   298→    },
+   299→    maxRows: 200,
+   300→    build: (get, cols) => {
+   301→      const position = pickCell([cols.title, cols.title - 1, cols.title + 1], [cols.from, cols.to], get, (v) => plausible(v, 3));
+   302→      if (!position || NOISE.test(position)) return null;
+   303→      const entry: ExtractionSection = { positionTitle: cv(position) };
+   304→      const employer = pickCell([cols.employer, cols.employer - 1], [cols.from, cols.to], get, (v) => !isNA(v) && v.length > 2);
+   305→      if (employer) entry.employerName = cv(employer, "medium");
+   306→      const dFrom = normDate(get(cols.from));
+   307→      if (dFrom) entry.dateFrom = cv(dFrom, "medium");
+   308→      const toRaw = get(cols.to);
+   309→      const dTo = normDate(toRaw);
+   310→      if (dTo) entry.dateTo = cv(dTo, "medium");
+   311→      else if (isNA(toRaw) || /present/i.test(toRaw)) entry.isPresentWork = cv("true", "medium");
+   312→      const salary = get(cols.salary);
+   313→      if (!isNA(salary)) {
+   314→        const n = Number(salary.replace(/[^\d.]/g, ""));
+   315→        if (!Number.isNaN(n) && n > 0) entry.monthlySalary = cv(n, "medium");
+   316→      }
+   317→      return entry;
+   318→    },
+   319→  },
+   320→  {
+   321→    key: "trainings",
+   322→    headerRe: /title\s*of\s*(learning|training)|learning\s*(and|&)\s*development/i,
+   323→    fields: {
+   324→      title: { fallback: [0, 1] },
+   325→      from: { re: /^from\b/i, fallback: [4, 2] },
+   326→      to: { re: /^to\b/i, fallback: [5, 3] },
+   327→      hours: { re: /number\s*of\s*hours|hours/i, fallback: [6] },
+   328→      type: { re: /type\s*of/i, fallback: [7] },
+   329→    },
+   330→    maxRows: 200,
+   331→    build: (get, cols) => {
+   332→      const title = pickCell([cols.title, cols.title + 1], [cols.from, cols.to], get, (v) => plausible(v, 4));
+   333→      if (isNA(title) || NOISE.test(title) || /^\d+$/.test(title)) return null;
+   334→      const entry: ExtractionSection = { title: cv(title) };
+   335→      const dFrom = normDate(get(cols.from));
+   336→      if (dFrom) entry.dateFrom = cv(dFrom, "medium");
+   337→      const dTo = normDate(get(cols.to));
+   338→      if (dTo) entry.dateTo = cv(dTo, "medium");
+   339→      const hours = get(cols.hours);
+   340→      const hNum = Number(String(hours).replace(/[^\d.]/g, ""));
+   341→      if (!isNA(hours) && !Number.isNaN(hNum) && hNum > 0) entry.numberHours = cv(hNum, "medium");
+   342→      const type = get(cols.type);
+   343→      if (!isNA(type) && type.length > 2 && !NOISE.test(type)) entry.typeOfTraining = cv(type, "medium");
+   344→      return entry;
+   345→    },
+   346→  },
+   347→  {
+   348→    key: "awards",
+   349→    headerRe: /non-?academic\s*distinctions/i,
+   350→    fields: {
+   351→      details: { re: /non-?academic\s*distinctions/i, fallback: [3] },
+   352→    },
+   353→    maxRows: 60,
+   354→    build: (get, cols) => {
+   355→      // The distinctions cell is a merge whose anchor often sits one column
+   356→      // left of its caption; the Special Skills and Membership columns share
+   357→      // the row and must NOT leak in.
+   358→      const details = pickCell([cols.details, cols.details - 1, cols.details + 1], [], get, (v) => plausible(v, 7));
+   359→      if (!details || NOISE.test(details) || /^\d+$/.test(details) || /membership|special\s*skills|hobbies/i.test(details)) return null;
+   360→      return { details: cv(details), recognitionType: cv("Award", "medium") };
+   361→    },
+   362→  },
+   363→];
+   364→
+   365→function detectRevision(wb: XLSX.WorkBook): string | null {
+   366→  for (const name of wb.SheetNames) {
+   367→    if (/lookup/i.test(name)) continue;
+   368→    const ws = wb.Sheets[name];
+   369→    const ref = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+   370→    if (!ref) continue;
+   371→    for (let r = ref.s.r; r <= Math.min(ref.e.r, 120); r++) {
+   372→      for (let c = ref.s.c; c <= Math.min(ref.e.c, ref.s.c + 15); c++) {
+   373→        const t = cellText(ws[XLSX.utils.encode_cell({ r, c })]?.v);
+   374→        const m = t.match(/revised\s*(20\d{2})/i);
+   375→        if (m) return `CS Form 212 (Revised ${m[1]})`;
+   376→        if (/cs\s*form\s*no\.?\s*\.?\s*212/i.test(t)) return "CS Form 212";
+   377→      }
+   378→    }
+   379→  }
+   380→  return null;
+   381→}
+   382→
+   383→export function parsePdsWorkbook(filePath: string): ExtractionResult | null {
+   384→  let wb: XLSX.WorkBook;
+   385→  try {
+   386→    wb = XLSX.readFile(filePath, { cellDates: false });
+   387→  } catch {
+   388→    return null;
+   389→  }
+   390→  const sheetName = wb.SheetNames.find((n) => /C1|Sheet1|personal/i.test(n)) || wb.SheetNames[0];
+   391→  if (!sheetName) return null;
+   392→  const ws = wb.Sheets[sheetName];
+   393→  const a1 = probeText(ws["A1"]?.v ?? ws["A2"]?.v ?? ws["A3"]?.v);
+   394→  const looksLikePds =
+   395→    /personal\s*data\s*sheet/i.test(a1) ||
+   396→    wb.SheetNames.some((n) => /C\d/i.test(n)) ||
+   397→    !!findRow(ws, /personal\s*data\s*sheet/i, 12);
+   398→  if (!looksLikePds) return null;
+   399→
+   400→  const result: ExtractionResult = { warnings: [] };
+   401→  const revision = detectRevision(wb);
+   402→  if (revision) result.warnings?.push(`Detected ${revision} layout.`);
+   403→
+   404→  const personal: ExtractionSection = {};
+   405→  const put = (key: string, v: string, conf: ConfidentValue["confidence"] = "high") => {
+   406→    if (v) personal[key] = cv(v, conf);
+   407→  };
+   408→
+   409→  const surname = findRow(ws, /sur\s*name/i) || findRow(ws, /^surname/i);
+   410→  if (surname) put("lastName", scanRight(ws, surname.row, surname.col));
+   411→  const given = findRow(ws, /given\s*name|first\s*name/i);
+   412→  if (given) put("firstName", scanRight(ws, given.row, given.col));
+   413→  const middle = findRow(ws, /middle\s*name/i);
+   414→  if (middle) put("middleName", scanRight(ws, middle.row, middle.col));
+   415→  const ext = findRow(ws, /name\s*extension/i);
+   416→  if (ext) put("extensionName", scanRight(ws, ext.row, ext.col));
+   417→  const dob = findRow(ws, /date\s*of\s*birth/i);
+   418→  if (dob) put("birthDate", normDate(scanRight(ws, dob.row, dob.col)), "high");
+   419→  const pob = findRow(ws, /place\s*of\s*birth/i);
+   420→  if (pob) put("birthPlace", scanRight(ws, pob.row, pob.col));
+   421→  const sex = findRow(ws, /^sex|gender/i);
+   422→  if (sex) {
+   423→    const raw = scanRight(ws, sex.row, sex.col);
+   424→    const m = raw.match(/male|female/i);
+   425→    if (m) put("gender", m[0][0].toUpperCase() + m[0].slice(1).toLowerCase());
+   426→  }
+   427→  const cs = findRow(ws, /civil\s*status/i);
+   428→  if (cs) {
+   429→    const raw = scanRight(ws, cs.row, cs.col).toLowerCase();
+   430→    const hit = ["single", "married", "widowed", "separated", "divorced"].find((s) => raw.includes(s));
+   431→    if (hit) put("civilStatus", hit[0].toUpperCase() + hit.slice(1));
+   432→  }
+   433→  const cit = findRow(ws, /citizenship/i);
+   434→  if (cit) put("citizenship", scanRight(ws, cit.row, cit.col));
+   435→  const res = findRow(ws, /residential\s*address|house\/?street|house\s*no/i);
+   436→  if (res) {
+   437→    put("houseNumber", scanRight(ws, res.row, res.col));
+   438→    const block = [res.row, res.row + 1, res.row + 2].map((r) => scanRight(ws, r, res.col)).filter(Boolean);
+   439→    if (block.length > 0) put("presentAddress", block.join(", "), "medium");
+   440→  }
+   441→  const zip = findRow(ws, /zip\s*code/i);
+   442→  if (zip) put("zipCode", scanRight(ws, zip.row, zip.col));
+   443→  const tel = findRow(ws, /tele(phone)?\s*\/?\s*mobile|mobile/i);
+   444→  if (tel) {
+   445→    const raw = scanRight(ws, tel.row, tel.col).replace(/\s+/g, "");
+   446→    if (/^[\d+()-]{7,15}$/.test(raw)) put("mobileNumber", raw);
+   447→  }
+   448→  const email = findRow(ws, /e-?mail/i);
+   449→  if (email) {
+   450→    const raw = scanRight(ws, email.row, email.col);
+   451→    if (raw.includes("@")) put("emailAddress", raw);
+   452→  }
+   453→
+   454→  const fieldsExtracted = Object.keys(personal).length;
+   455→  if (fieldsExtracted === 0 && wb.SheetNames.length <= 1) {
+   456→    result.warnings?.push("No PDS labels recognized");
+   457→    return result;
+   458→  }
+   459→  if (fieldsExtracted > 0) result.personalInfo = personal;
+   460→
+   461→  // ── Section tables — header-resolved, collected across every sheet ────────
+   462→  for (const spec of TABLE_SPECS) {
+   463→    const entries = dedupeSectionArray(parseTableAcrossSheets(wb, spec), spec.key);
+   464→    if (entries.length > 0) result[spec.key] = entries;
+   465→  }
+   466→
+   467→  // ── Legacy/lower-version fallback: simple label:value education rows ──────
+   468→  // Older single-sheet PDS exports list educational background as plain
+   469→  // "ELEMENTARY: <school>" style rows instead of a headered table.
+   470→  if (!result.educations) {
+   471→    const legacyEdu: ExtractionSection[] = [];
+   472→    for (const name of wb.SheetNames) {
+   473→      if (/lookup/i.test(name)) continue;
+   474→      const s = wb.Sheets[name];
+   475→      const ref = s["!ref"] ? XLSX.utils.decode_range(s["!ref"]) : null;
+   476→      if (!ref) continue;
+   477→      for (let r = ref.s.r; r <= Math.min(ref.e.r, 120); r++) {
+   478→        for (let c = ref.s.c; c <= Math.min(ref.e.c, ref.s.c + 3); c++) {
+   479→          const label = probeText(s[XLSX.utils.encode_cell({ r, c })]?.v);
+   480→          if (!/^(elementary|secondary|high\s*school|vocational|college|bachelor|graduate|post\s*graduate)/i.test(label)) continue;
+   481→          const value = scanRight(s, r, c);
+   482→          if (isNA(value) || value.length < 3) continue;
+   483→          legacyEdu.push({ educationLevel: cv(EDUCATION_LEVEL_MAP(label), "medium"), schoolName: cv(value, "medium") });
+   484→        }
+   485→      }
+   486→    }
+   487→    const deduped = dedupeSectionArray(legacyEdu, "educations");
+   488→    if (deduped.length > 0 && deduped.length <= 8) result.educations = deduped;
+   489→  }
+   490→
+   491→  return result;
+   492→}
+   493→
+   494→// ── AI extraction (z-ai-web-dev-sdk — backend only) ─────────────────────────
+   495→
+   496→const AI_JSON_PROMPT = (category: string, text: string) => `You are a data-extraction engine for Philippine government recruitment (CSC forms).
+   497→From the following ${category} document text, extract structured data as STRICT JSON with this exact shape (omit sections you find nothing for):
+   498→{
+   499→  "personalInfo": { "<field>": {"value": <string|number|null>, "confidence": "high"|"medium"|"low"} },
+   500→  "educations": [ { "educationLevel": {...}, "course": {...}, "schoolName": {...}, "yearFrom": {...}, "yearTo": {...}, "yearGraduated": {...}, "awards": {...} } ],
+   501→  "workExperiences": [ { "positionTitle": {...}, "employerName": {...}, "dateFrom": {...}, "dateTo": {...}, "monthlySalary": {...}, "isPresentWork": {...} } ],
+   502→  "trainings": [ { "title": {...}, "numberHours": {...}, "typeOfTraining": {...}, "dateFrom": {...}, "dateTo": {...} } ],
+   503→  "eligibilities": [ { "title": {...}, "rating": {...}, "examDate": {...}, "examPlace": {...}, "licenseNumber": {...}, "licenseValidity": {...} } ],
+   504→  "awards": [ { "details": {...}, "recognitionType": {...}, "provider": {...}, "dateGranted": {...} } ]
+   505→}
+   506→personalInfo fields may include: firstName, middleName, lastName, extensionName, birthDate, birthPlace, gender, civilStatus, citizenship, mobileNumber, emailAddress, houseNumber, street, subdivision, barangay, city, province, zipCode.
+   507→Rules: extract ONLY what is clearly present; NEVER fabricate; not found ⇒ value null with confidence "none"; all values in the {value, confidence} shape; dates formatted YYYY-MM-DD; respond with JSON only — no markdown fences, no commentary.
+   508→
+   509→DOCUMENT TEXT (truncated):
+   510→"""
+   511→${text.slice(0, 12000)}
+   512→"""`;
+   513→
+   514→function parseAiJson(raw: string): ExtractionResult | null {
+   515→  const start = raw.indexOf("{");
+   516→  const end = raw.lastIndexOf("}");
+   517→  if (start === -1 || end === -1) return null;
+   518→  try {
+   519→    return JSON.parse(raw.slice(start, end + 1)) as ExtractionResult;
+   520→  } catch {
+   521→    return null;
+   522→  }
+   523→}
+   524→
+   525→async function aiExtractText(text: string, category: string): Promise<ExtractionResult | null> {
+   526→  try {
+   527→    const ZAI = (await import("z-ai-web-dev-sdk")).default;
+   528→    const zai = await ZAI.create();
+   529→    const completion = await zai.chat.completions.create({
+   530→      messages: [
+   531→        { role: "assistant", content: "You extract structured data from documents and reply with JSON only." },
+   532→        { role: "user", content: AI_JSON_PROMPT(category, text) },
+   533→      ],
+   534→      thinking: { type: "disabled" },
+   535→    });
+   536→    const raw = completion.choices[0]?.message?.content || "";
+   537→    return parseAiJson(raw);
+   538→  } catch (e) {
+   539→    console.error("[EXTRACT] AI failed:", e instanceof Error ? e.message : e);
+   540→    return null;
+   541→  }
+   542→}
+   543→
+   544→// ── Text extraction helpers ─────────────────────────────────────────────────
+   545→
+   546→export function extractExcelText(filePath: string): string {
+   547→  try {
+   548→    const wb = XLSX.readFile(filePath, { cellDates: false });
+   549→    const parts: string[] = [];
+   550→    for (const name of wb.SheetNames) {
+   551→      if (/lookup/i.test(name)) continue;
+   552→      const ws = wb.Sheets[name];
+   553→      parts.push(`## Sheet: ${name}`);
+   554→      const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false });
+   555→      for (const row of rows.slice(0, 300)) {
+   556→        const cells = (row as unknown[]).map((c) => cellText(c)).filter(Boolean);
+   557→        if (cells.length > 0) parts.push(cells.join(" | "));
+   558→      }
+   559→    }
+   560→    return parts.join("\n").slice(0, 16000);
+   561→  } catch {
+   562→    return "";
+   563→  }
+   564→}
+   565→
+   566→export async function extractPdfText(filePath: string): Promise<string> {
+   567→  try {
+   568→    const { extractText, getDocumentProxy } = await import("unpdf");
+   569→    const buffer = fs.readFileSync(filePath);
+   570→    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+   571→    const { text } = await extractText(pdf, { mergePages: true });
+   572→    return text.slice(0, 16000);
+   573→  } catch {
+   574→    return "";
+   575→  }
+   576→}
+   577→
+   578→export async function extractDocxText(filePath: string): Promise<string> {
+   579→  try {
+   580→    const mammoth = await import("mammoth");
+   581→    const result = await mammoth.extractRawText({ path: filePath });
+   582→    return result.value.slice(0, 12000);
+   583→  } catch {
+   584→    return "";
+   585→  }
+   586→}
+   587→
+   588→// ── Entry point ─────────────────────────────────────────────────────────────
+   589→
+   590→export function countExtractedFields(result: ExtractionResult | null): number {
+   591→  if (!result) return 0;
+   592→  let n = 0;
+   593→  const countSection = (s?: ExtractionSection) => { if (s) n += Object.values(s).filter((v) => v && v.value !== null && v.value !== "").length; };
+   594→  countSection(result.personalInfo);
+   595→  for (const arr of [result.educations, result.workExperiences, result.trainings, result.eligibilities, result.awards]) {
+   596→    for (const s of arr ?? []) countSection(s);
+   597→  }
+   598→  return n;
+   599→}
+   600→
+   601→export function mergeExtractions(results: (ExtractionResult | null)[]): ExtractionResult | null {
+   602→  const valid = results.filter((r): r is ExtractionResult => !!r);
+   603→  if (valid.length === 0) return null;
+   604→  const merged: ExtractionResult = { warnings: [] };
+   605→  // personal: per-field highest-confidence non-null wins
+   606→  const rank: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
+   607→  const personal: ExtractionSection = {};
+   608→  for (const r of valid) {
+   609→    for (const [k, v] of Object.entries(r.personalInfo ?? {})) {
+   610→      if (v.value === null || v.value === "") continue;
+   611→      const cur = personal[k];
+   612→      if (!cur || (rank[v.confidence] ?? 0) > (rank[cur.confidence] ?? 0)) personal[k] = v;
+   613→    }
+   614→  }
+   615→  if (Object.keys(personal).length > 0) merged.personalInfo = personal;
+   616→  const mergeArr = (key: keyof ExtractionResult) => {
+   617→    const all = valid.flatMap((r) => (r[key] as ExtractionSection[] | undefined) ?? []);
+   618→    if (all.length > 0) (merged as Record<string, unknown>)[key as string] = dedupeSectionArray(all, key as string);
+   619→  };
+   620→  mergeArr("educations");
+   621→  mergeArr("workExperiences");
+   622→  mergeArr("trainings");
+   623→  mergeArr("eligibilities");
+   624→  mergeArr("awards");
+   625→  merged.warnings = valid.flatMap((r) => r.warnings ?? []);
+   626→  return merged;
+   627→}
+   628→
+   629→function dedupeSectionArray(arr: ExtractionSection[], key: string): ExtractionSection[] {
+   630→  const seen = new Set<string>();
+   631→  const out: ExtractionSection[] = [];
+   632→  for (const item of arr) {
+   633→    const sig =
+   634→      key === "trainings" ? `${item.title?.value ?? ""}|${item.dateFrom?.value ?? ""}`
+   635→      : key === "awards" ? `${item.details?.value ?? ""}`
+   636→      : key === "workExperiences" ? `${item.positionTitle?.value ?? ""}|${item.employerName?.value ?? ""}|${item.dateFrom?.value ?? ""}`
+   637→      : key === "eligibilities" ? `${item.title?.value ?? ""}|${item.examDate?.value ?? ""}`
+   638→      : `${item.educationLevel?.value ?? ""}|${item.schoolName?.value ?? ""}`;
+   639→    if (seen.has(sig)) continue;
+   640→    seen.add(sig);
+   641→    out.push(item);
+   642→  }
+   643→  return out;
+   644→}
+   645→
+   646→/**
+   647→ * Extract structured data from a stored document (spec §6.4). Deterministic
+   648→ * parser first for PDS × Excel; AI fallback otherwise.
+   649→ */
+   650→export async function extractFromDocument(
+   651→  filePath: string,
+   652→  category: string,
+   653→  mimeType: string
+   654→): Promise<{ result: ExtractionResult | null; error?: string }> {
+   655→  const ext = path.extname(filePath).toLowerCase();
+   656→  if (/\.(xlsx|xls|xlsm)$/.test(ext)) {
+   657→    const deterministic = parsePdsWorkbook(filePath);
+   658→    if (deterministic && countExtractedFields(deterministic) >= 3) return { result: deterministic };
+   659→    const text = extractExcelText(filePath);
+   660→    if (text.trim().length > 40) {
+   661→      const ai = await aiExtractText(text, category);
+   662→      return { result: mergeExtractions([deterministic, ai]) };
+   663→    }
+   664→    return { result: deterministic };
+   665→  }
+   666→  if (ext === ".pdf") {
+   667→    const text = await extractPdfText(filePath);
+   668→    if (!text.trim()) return { result: null, error: "Could not read text from this PDF. Try uploading the Excel version of the PDS." };
+   669→    return { result: await aiExtractText(text, category) };
+   670→  }
+   671→  if (ext === ".docx" || ext === ".doc") {
+   672→    const text = await extractDocxText(filePath);
+   673→    if (!text.trim()) return { result: null, error: "Could not read this document. Try a DOCX or XLSX file." };
+   674→    return { result: await aiExtractText(text, category) };
+   675→  }
+   676→  if (/\.(png|jpg|jpeg|gif|webp|bmp)$/.test(ext)) {
+   677→    return { result: null, error: "Image extraction is not available in this deployment. Please upload the PDS as XLSX, PDF, or DOCX." };
+   678→  }
+   679→  return { result: null, error: `Unsupported file type for extraction (${mimeType}).` };
+   680→}
+   681→
