@@ -64,8 +64,8 @@
   --warn-bg: #fbf3dd;
   --bad: #a8432f; /* 5.3:1 on bad-bg (WCAG AA) */
   --bad-bg: #fdeeea;
-  --info: #4a4d57;
-  --info-bg: #eef1f6;
+  --info: #0f68a3; /* RMIS blue family, 5.1:1 on info-bg (WCAG AA) */
+  --info-bg: #e3f1fb;
   --neutral: #5d6067;
   --neutral-bg: #f1f3f7;
 
@@ -549,8 +549,9 @@
 
 /* Status pill variants (icon + tinted bg) — true Bevel capsules.
    Accessibility: state never rides on hue alone — every pill carries a
-   shape-coded glyph (ok=check · warn=clock · bad=alert · info=info ·
-   neutral=minus) knocked out of a currentColor disc via mask. */
+   shape-coded stroke glyph drawn as a clean 24px Lucide-geometry SVG
+   (ok=check · warn=clock · bad=x · info=send · neutral=minus) masked to
+   currentColor. No enclosing disc — just the professional stroke icon. */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -573,36 +574,36 @@
   mask: var(--pill-icon) center / contain no-repeat;
 }
 .status-pill.status-ok {
-  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='m7.4 12.3 3 3 6.2-6.8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m5 12.6 4.5 4.5L19 7.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background: var(--ok-bg);
   color: var(--ok);
 }
 .status-pill.status-warn {
-  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M12 7v5.2l3.1 1.9' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9.2' fill='none' stroke='black' stroke-width='2.4'/%3E%3Cpath d='M12 7.4V12l3.4 2' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background: var(--warn-bg);
   color: var(--warn);
 }
 .status-pill.status-bad {
-  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M12 6.6v5.6' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='16.4' r='1.4' fill='black'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.6 6.6l10.8 10.8M17.4 6.6 6.6 17.4' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
   background: var(--bad-bg);
   color: var(--bad);
 }
 .status-pill.status-info {
-  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M12 16.2v-5' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='7.8' r='1.4' fill='black'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m22 2-7 20-4-9-9-4Z' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M22 2 11 13' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background: var(--info-bg);
   color: var(--info);
 }
 .status-pill.status-neutral {
-  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Cpath d='M8 12h8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' fill='black' mask='url(%23m)'/%3E%3C/svg%3E");
+  --pill-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5.5 12h13' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
   background: var(--neutral-bg);
   color: var(--neutral);
 }
 
-/* Icon status discs — shape-coded markers for pipelines and timelines.
-   Same glyph family as the status pills, so state reads from the glyph,
-   not the hue (color is reinforcement, never the sole signal).
-   20px base: bumped from 18px after user QA ("increase just a little") —
-   reads clearly next to 13-14px table text without overpowering pills. */
+/* Icon status chips — tinted disc + clean Lucide-geometry stroke glyph.
+   Same icon language as the status pills (check/clock/x/send/minus) so
+   every status marker across the system agrees on shape AND hue. Tinted
+   bg + colored icon (no solid discs) — QA 2026-02: proper professional
+   icon treatment, no bare dots, no muddy disc-in-disc glyphs. */
 .status-dot {
   display: inline-flex;
   align-items: center;
@@ -611,17 +612,18 @@
   height: 20px;
   border-radius: 100px;
   flex: none;
-  color: #ffffff;
+  background: var(--neutral-bg);
+  color: var(--neutral);
 }
 .status-dot svg {
-  width: 64%;
-  height: 64%;
+  width: 62%;
+  height: 62%;
 }
-.status-dot.dot-ok { background: var(--ok); }
-.status-dot.dot-warn { background: var(--warn); }
-.status-dot.dot-bad { background: var(--bad); }
-.status-dot.dot-info { background: var(--info); }
-.status-dot.dot-neutral { background: #b9c2d0; }
+.status-dot.dot-ok { background: var(--ok-bg); color: var(--ok); }
+.status-dot.dot-warn { background: var(--warn-bg); color: var(--warn); }
+.status-dot.dot-bad { background: var(--bad-bg); color: var(--bad); }
+.status-dot.dot-info { background: var(--info-bg); color: var(--info); }
+.status-dot.dot-neutral { background: var(--neutral-bg); color: var(--neutral); }
 
 /* Long-list scrollbars (subtle) */
 .scroll-thin {

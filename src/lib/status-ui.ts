@@ -14,7 +14,10 @@ const TONE_TO_VARIANT: Record<Tone, StatusVariant> = {
   warning: "warn",
   danger: "bad",
   info: "info",
-  primary: "info",
+  // "primary" statuses are the in-review family (Under Review / Screening /
+  // Evaluation / Interview…) — they must render as the amber clock chip so
+  // tables agree with the pipeline funnel and filter tabs (QA 2026-02).
+  primary: "warn",
   neutral: "neutral",
 };
 
